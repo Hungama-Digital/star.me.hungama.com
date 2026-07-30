@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StarME · Star in your own Micro Drama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0C0A10; --surface:#171320; --surface2:#1F1A2B; --line:#2B2438;
+  --orange:#FF5A1F; --orange-deep:#D8430E; --gold:#E9BF6B; --text:#F5F0EA;
+  --dim:#9C93AB; --good:#59C98A; --love1:#43102B; --love2:#B01A55;
+  --act1:#0B1C2E; --act2:#1E5C8C;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#06050A;font-family:'Inter',system-ui,sans-serif;color:var(--text);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;min-height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.disp{font-family:'Anton','Arial Narrow',sans-serif;letter-spacing:.02em;text-transform:uppercase}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px}
+.logo{display:flex;align-items:baseline;gap:7px}
+.logo .fast{font-family:'Anton';font-size:19px;letter-spacing:.06em}
+.logo .tv{font-size:10px;color:var(--orange);font-weight:700;letter-spacing:.28em;transform:translateY(-1px)}
+.wallet{display:none;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600}
+.wallet .coin{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE9B0,var(--gold) 60%,#8A6A24)}
+.wallet.show{display:flex}
+
+/* stepper */
+.steps{display:flex;gap:5px;padding:2px 18px 12px}
+.steps i{height:3px;flex:1;border-radius:2px;background:var(--line);transition:background .35s}
+.steps i.on{background:var(--orange)}
+
+.stage{flex:1;overflow-y:auto;padding:6px 18px 110px;-webkit-overflow-scrolling:touch}
+.screen{display:none;animation:fadeUp .4s ease both}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.screen{animation:none}}
+
+h1.hero{font-size:44px;line-height:.98}
+h2{font-family:'Anton';font-size:26px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:6px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+p.lead{color:var(--dim);font-size:14px;line-height:1.55;margin-bottom:18px}
+.small{font-size:12px;color:var(--dim);line-height:1.5}
+
+/* hero card */
+.herocard{margin-top:8px;border-radius:20px;overflow:hidden;position:relative;background:
+  linear-gradient(160deg,rgba(12,10,16,.1) 30%,rgba(12,10,16,.92) 78%),
+  radial-gradient(120% 90% at 80% 0%,#B01A55 0%,#43102B 45%,#12080F 100%);
+  border:1px solid var(--line);padding:26px 20px 22px;min-height:330px;display:flex;flex-direction:column;justify-content:flex-end}
+.marquee{position:absolute;top:16px;left:20px;display:flex;gap:6px}
+.marquee b{width:6px;height:6px;border-radius:50%;background:var(--gold);opacity:.35;animation:tw 1.6s infinite}
+.marquee b:nth-child(2){animation-delay:.2s}.marquee b:nth-child(3){animation-delay:.4s}
+.marquee b:nth-child(4){animation-delay:.6s}.marquee b:nth-child(5){animation-delay:.8s}
+@keyframes tw{0%,100%{opacity:.3}50%{opacity:1}}
+.herocard .tag{color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;margin-bottom:8px}
+.herocard .sub{color:#E8D9DF;font-size:13px;margin-top:10px;line-height:1.5;max-width:30ch}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;
+  background:linear-gradient(180deg,var(--orange),var(--orange-deep));color:#fff;font-family:'Inter';font-weight:700;
+  font-size:15px;padding:16px;cursor:pointer;transition:transform .12s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:600}
+.btn.gold{background:linear-gradient(180deg,#F2CD82,#C99B3F);color:#241A05}
+.cta-dock{position:absolute;left:0;right:0;bottom:0;padding:14px 18px calc(16px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(12,10,16,0),rgba(12,10,16,.94) 40%)}
+
+/* cards & lists */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px}
+.rowline{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.rowline:last-child{border-bottom:0}
+.rowline b{font-weight:600}
+.price{font-family:'Anton';font-size:34px;letter-spacing:.02em}
+.price s{font-size:16px;color:var(--dim);margin-left:8px;font-family:'Inter'}
+.checkline{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--dim);margin:8px 0;line-height:1.45}
+.checkline .tick{color:var(--good);font-weight:700;flex:0 0 auto}
+
+/* capture */
+.frame{position:relative;border-radius:20px;border:1px dashed #4A3F60;background:var(--surface);
+  aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:14px}
+.frame img{width:100%;height:100%;object-fit:cover}
+.oval{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.oval::before{content:"";width:62%;height:74%;border:2px solid rgba(233,191,107,.7);border-radius:50%/46%}
+.frame .hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:12px;color:var(--dim)}
+.filepick{display:flex;gap:10px}
+.filepick label{flex:1}
+input[type=file]{display:none}
+.pill{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-radius:12px;
+  padding:13px;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface2)}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:14px 0 6px}
+.field input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:12px;color:var(--text);
+  padding:14px;font-size:15px;font-family:'Inter'}
+.field input:focus{outline:2px solid var(--orange);outline-offset:1px}
+
+/* verify list */
+.verify{margin-top:6px}
+.vrow{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+.vrow:last-child{border:0}
+.vrow .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.3s}
+.vrow.ok .dot{border-color:var(--good);background:rgba(89,201,138,.12);color:var(--good)}
+.vrow.run .dot{border-color:var(--orange)}
+.vrow .lab{flex:1}
+.vrow .st{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.vrow.ok .st{color:var(--good)}
+
+/* consent */
+.consentbox{background:var(--surface2);border:1px solid var(--line);border-radius:14px;max-height:230px;overflow-y:auto;
+  padding:16px;font-size:12.5px;line-height:1.6;color:#CFC7DC;margin-bottom:14px}
+.consentbox h3{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px}
+.consentbox h3:first-child{margin-top:0}
+.chk{display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.5;margin:12px 0;cursor:pointer}
+.chk input{width:19px;height:19px;accent-color:var(--orange);flex:0 0 auto;margin-top:1px}
+.sigwrap{border:1px dashed #4A3F60;border-radius:14px;background:#100D17;position:relative;height:140px;overflow:hidden}
+.sigwrap canvas{width:100%;height:100%;touch-action:none;display:block}
+.sigwrap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5B5170;font-size:13px;pointer-events:none}
+.sigbar{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.sigbar button{background:none;border:0;color:var(--orange);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter'}
+.ledger{background:rgba(89,201,138,.08);border:1px solid rgba(89,201,138,.35);border-radius:12px;padding:12px 14px;font-size:12.5px;color:#BFE9CF;margin-top:12px;display:none}
+.ledger.show{display:block}
+
+/* concepts */
+.shelf{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.shell{border-radius:16px;overflow:hidden;border:1px solid var(--line);position:relative;aspect-ratio:3/4.1;cursor:pointer;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:14px;transition:transform .15s,outline .15s;outline:2px solid transparent}
+.shell:active{transform:scale(.97)}
+.shell.sel{outline:2px solid var(--orange)}
+.shell .g{position:absolute;inset:0}
+.shell.love .g{background:radial-gradient(130% 100% at 75% 0%,var(--love2),var(--love1) 60%,#0E0710)}
+.shell.act .g{background:radial-gradient(130% 100% at 25% 0%,var(--act2),var(--act1) 62%,#070C12)}
+.shell .g::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(8,6,12,.9))}
+.shell .zt{position:relative;font-family:'Anton';font-size:21px;line-height:1;text-transform:uppercase}
+.shell .zk{position:relative;font-size:10.5px;color:#D8CFE2;letter-spacing:.18em;text-transform:uppercase;margin-top:6px}
+.shell.lock{opacity:.45;pointer-events:none}
+.shell .soon{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;letter-spacing:.14em;background:rgba(0,0,0,.55);
+  border:1px solid var(--line);border-radius:999px;padding:4px 8px;text-transform:uppercase;color:var(--dim)}
+.rolegrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.role{border:1px solid var(--line);border-radius:14px;padding:16px 14px;background:var(--surface);cursor:pointer;outline:2px solid transparent}
+.role.sel{outline:2px solid var(--orange);background:var(--surface2)}
+.role b{display:block;font-size:14px;margin-bottom:4px}
+.role span{font-size:12px;color:var(--dim);line-height:1.4;display:block}
+
+/* packages */
+.pkg{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--surface);
+  margin-bottom:11px;cursor:pointer;outline:2px solid transparent}
+.pkg.sel{outline:2px solid var(--orange);background:var(--surface2)}
+.pkg .eps{font-family:'Anton';font-size:26px;width:44px;text-align:center;color:var(--gold);flex:0 0 auto;line-height:1}
+.pkg .eps small{display:block;font-family:'Inter';font-size:9px;letter-spacing:.14em;color:var(--dim);margin-top:2px}
+.pkg .nm{flex:1}
+.pkg .nm b{display:block;font-size:15px}
+.pkg .nm span{font-size:12px;color:var(--dim)}
+.pkg .cr{font-weight:700;font-size:14px;display:flex;align-items:center;gap:5px}
+.pkg .coin{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE9B0,var(--gold) 60%,#8A6A24)}
+.pkg.best::after{content:"Most chosen";position:absolute;transform:translateY(-30px);font-size:9px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.pkg{position:relative}
+
+/* countdown & render */
+.count{font-family:'Anton';font-size:64px;text-align:center;letter-spacing:.04em;margin:16px 0 4px;font-variant-numeric:tabular-nums}
+.count small{display:block;font-family:'Inter';font-size:11px;letter-spacing:.3em;color:var(--dim);text-transform:uppercase;margin-top:6px}
+.renderer{display:none}
+.renderer.show{display:block}
+.rbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:14px 0 10px}
+.rbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--gold));transition:width .5s}
+.rstep{text-align:center;font-size:13px;color:var(--dim);min-height:20px}
+
+/* premiere */
+.posterwrap{border-radius:18px;overflow:hidden;border:1px solid #3A3050;box-shadow:0 24px 60px rgba(0,0,0,.6);margin-bottom:16px}
+.posterwrap canvas{width:100%;display:block}
+.eplist{margin-top:6px}
+.ep{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.ep:last-child{border:0}
+.ep .n{font-family:'Anton';color:var(--gold);width:26px;font-size:16px}
+.ep .t{flex:1}
+.ep .lk{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.ep.locked{opacity:.4}
+.sharegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.provenance{margin-top:14px;font-size:11px;color:var(--dim);line-height:1.6;border-top:1px solid var(--line);padding-top:12px}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-right:6px;margin-top:6px}
+.toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:#241E33;border:1px solid var(--line);
+  color:var(--text);font-size:13px;padding:11px 18px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;z-index:50}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.demonote{position:absolute;top:10px;right:12px;font-size:9px;letter-spacing:.16em;color:#5B5170;text-transform:uppercase;z-index:5}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="demonote">Internal demo · Draft 1</div>
+  <div class="top">
+    <div class="logo"><span class="fast">FAST</span><span class="tv">TV</span></div>
+    <div class="wallet" id="wallet"><span class="coin"></span><span id="walletAmt">0</span></div>
+  </div>
+  <div class="steps" id="steps"></div>
+  <div class="stage" id="stage">
+
+    <!-- 0 · PROMO -->
+    <section class="screen" data-s="0">
+      <div class="herocard">
+        <div class="marquee"><b></b><b></b><b></b><b></b><b></b></div>
+        <div class="tag">A StarME Original · Only on Fast TV</div>
+        <h1 class="hero disp">Star in your<br>own Micro<br>Drama</h1>
+        <div class="sub">Upload one photo. Choose your story. In 12 hours, you are the lead.</div>
+      </div>
+      <div class="checkline"><span class="tick">✓</span> Crafted by the studio behind Fast TV, live in 90 countries</div>
+      <div class="checkline"><span class="tick">✓</span> Your face only, verified. Your data, always deletable</div>
+      <div class="checkline"><span class="tick">✓</span> Premieres with your name in the opening credits</div>
+    </section>
+
+    <!-- 1 · SUBSCRIBE -->
+    <section class="screen" data-s="1">
+      <div class="eyebrow">Step 1 · Membership</div>
+      <h2>Your debut starts with Fast TV</h2>
+      <p class="lead">One membership unlocks the full Micro Drama universe and your StarME welcome credits.</p>
+      <div class="card">
+        <div class="price">₹499<s>per year</s></div>
+        <div class="rowline"><span>Fast TV · every Micro Drama</span><b>Included</b></div>
+        <div class="rowline"><span>My Endings · choose your endings</span><b>Included</b></div>
+        <div class="rowline"><span>StarME welcome credits</span><b style="color:var(--gold)">200 credits</b></div>
+        <div class="rowline"><span>One free re-render per drama</span><b>Included</b></div>
+      </div>
+      <p class="small">UPI, cards and all major wallets accepted. Cancel anytime.</p>
+    </section>
+
+    <!-- 2 · CAPTURE -->
+    <section class="screen" data-s="2">
+      <div class="eyebrow">Step 2 · Your close-up</div>
+      <h2>Let's see the star</h2>
+      <p class="lead">One clear, front-facing photo in even light. This is the face we cast, so make it a good one.</p>
+      <div class="frame" id="frame">
+        <div class="oval" id="oval"></div>
+        <img id="preview" alt="" style="display:none">
+        <div class="hint" id="frameHint">Face inside the ring · no sunglasses · no filters</div>
+      </div>
+      <div class="filepick">
+        <label class="pill">📷 Take selfie<input type="file" accept="image/*" capture="user" id="camIn"></label>
+        <label class="pill">🖼 Upload photo<input type="file" accept="image/*" id="fileIn"></label>
+      </div>
+      <div class="field">
+        <label for="starName">Your name, as it appears in the credits</label>
+        <input type="text" id="starName" placeholder="e.g. Aarav Mehta" maxlength="28" autocomplete="name">
+      </div>
+      <div class="verify card" id="verify" style="display:none;margin-top:16px">
+        <div class="vrow" id="v1"><span class="dot"></span><span class="lab">Live selfie matches this photo</span><span class="st">Waiting</span></div>
+        <div class="vrow" id="v2"><span class="dot"></span><span class="lab">Face is yours · own face only</span><span class="st">Waiting</span></div>
+        <div class="vrow" id="v3"><span class="dot"></span><span class="lab">Age check · 18 and above</span><span class="st">Waiting</span></div>
+        <div class="vrow" id="v4"><span class="dot"></span><span class="lab">Photo quality for casting</span><span class="st">Waiting</span></div>
+      </div>
+      <p class="small" style="margin-top:12px">StarME casts you and only you. A drama starring anyone else needs their own verified selfie and signed consent on their own device.</p>
+    </section>
+
+    <!-- 3 · CONSENT -->
+    <section class="screen" data-s="3">
+      <div class="eyebrow">Step 3 · Your consent, on record</div>
+      <h2>Read, tick and sign</h2>
+      <p class="lead">Plain language, no fine print. A signed copy stays in your consent ledger and travels with every render.</p>
+      <div class="consentbox" id="consentText">
+        <h3>What you are agreeing to</h3>
+        <p>You grant Hungama Digital Media Entertainment a licence to use the photo you provided and a face template derived from it, solely to create the personalised Micro Drama episodes you order on StarME, including your poster and trailer.</p>
+        <h3>What we will never do</h3>
+        <p>We will not use your likeness in advertising, in other people's dramas or to train models, and we will never place any other person's face in your drama or your face in anyone else's without a separate verified consent from that person.</p>
+        <h3>Generation partner</h3>
+        <p>Rendering uses licensed third party generation technology. Your signed consent is recorded against every render, as required by our generation partner's norms for real-person likenesses.</p>
+        <h3>Your controls</h3>
+        <p>You can revoke this consent at any time in Settings. On revocation we stop new renders immediately and delete your photo and face template within 30 days. Delivered episodes you choose to keep remain yours.</p>
+        <h3>Provenance</h3>
+        <p>Every episode carries content credentials and a watermark identifying it as AI personalised content, so your drama is always clearly yours and clearly crafted.</p>
+        <h3>Eligibility</h3>
+        <p>StarME is for adults. Our checks refuse any face assessed as under 18, with no manual override.</p>
+      </div>
+      <label class="chk"><input type="checkbox" id="chk1"><span>I confirm the photo is of me, I am 18 or older and I agree to the likeness licence above.</span></label>
+      <label class="chk"><input type="checkbox" id="chk2"><span>I understand I can revoke consent anytime and my biometric data will be deleted within 30 days.</span></label>
+      <div class="field"><label>Sign with your finger</label></div>
+      <div class="sigwrap"><canvas id="sig"></canvas><div class="ph" id="sigPh">Sign here</div></div>
+      <div class="sigbar"><span class="small" id="sigDate"></span><button id="sigClear" type="button">Clear signature</button></div>
+      <div class="ledger" id="ledger">✓ Signed copy saved to your consent ledger · Ref <b id="ledgerRef"></b></div>
+    </section>
+
+    <!-- 4 · CONCEPT -->
+    <section class="screen" data-s="4">
+      <div class="eyebrow">Step 4 · Your story</div>
+      <h2>Pick your world</h2>
+      <p class="lead">Two worlds are casting now. Four more open soon.</p>
+      <div class="shelf">
+        <div class="shell love" data-shell="love"><div class="g"></div><div class="zt">Pehla<br>Pyaar</div><div class="zk">Love story</div></div>
+        <div class="shell act" data-shell="act"><div class="g"></div><div class="zt">Hukum</div><div class="zk">Action drama</div></div>
+        <div class="shell lock love"><div class="g"></div><span class="soon">Soon</span><div class="zt">Gharana</div><div class="zk">Family saga</div></div>
+        <div class="shell lock act"><div class="g"></div><span class="soon">Soon</span><div class="zt">Badla</div><div class="zk">Revenge thriller</div></div>
+        <div class="shell lock love"><div class="g"></div><span class="soon">Soon</span><div class="zt">Campus</div><div class="zk">Campus romance</div></div>
+        <div class="shell lock act"><div class="g"></div><span class="soon">Soon</span><div class="zt">Jugaad</div><div class="zk">Comedy</div></div>
+      </div>
+      <div id="roleBlock" style="display:none">
+        <div class="field"><label>Your role</label></div>
+        <div class="rolegrid" id="roleGrid"></div>
+      </div>
+    </section>
+
+    <!-- 5 · PACKAGE -->
+    <section class="screen" data-s="5">
+      <div class="eyebrow">Step 5 · Your billing</div>
+      <h2>How big is your debut?</h2>
+      <p class="lead">Every tier premieres with your poster and your name in the credits.</p>
+      <div id="pkgList"></div>
+      <p class="small" id="pkgNote"></p>
+    </section>
+
+    <!-- 6 · COUNTDOWN -->
+    <section class="screen" data-s="6">
+      <div class="eyebrow">In production</div>
+      <h2 id="prodTitle">Lights. Camera. You.</h2>
+      <p class="lead" id="prodLead">Our studio is directing your drama now. We will notify you the moment it premieres.</p>
+      <div class="card">
+        <div class="count" id="countdown">11:59:59<small>Until your premiere</small></div>
+        <div class="renderer" id="renderer">
+          <div class="rbar"><i id="rfill"></i></div>
+          <div class="rstep" id="rstep"></div>
+        </div>
+      </div>
+      <div class="checkline"><span class="tick">✓</span> <span id="orderSummary"></span></div>
+      <div class="checkline"><span class="tick">✓</span> Consent ref <span id="orderRef" style="color:var(--gold);font-weight:600"></span> attached to this render</div>
+      <div class="checkline"><span class="tick">✓</span> Human quality check before delivery · one free re-render if we miss</div>
+    </section>
+
+    <!-- 7 · PREMIERE -->
+    <section class="screen" data-s="7">
+      <div class="eyebrow">Tonight's premiere</div>
+      <h2 id="premTitle">Presenting you</h2>
+      <p class="lead">Your poster, your billing, your season. Full episodes live inside Fast TV; the trailer is yours to share anywhere.</p>
+      <div class="posterwrap"><canvas id="poster" width="900" height="1350"></canvas></div>
+      <div class="sharegrid">
+        <button class="btn gold" id="dlPoster" type="button">Save poster</button>
+        <button class="btn ghost" id="shareTrailer" type="button">Share trailer</button>
+      </div>
+      <div class="card eplist" style="margin-top:16px" id="epList"></div>
+      <div class="provenance">
+        <div class="badge">AI personalised</div><div class="badge">Content credentials</div><div class="badge">Watermarked</div>
+        <p style="margin-top:8px">This drama was created with your signed consent and carries provenance credentials. Manage or revoke your likeness anytime in Settings.</p>
+      </div>
+    </section>
+
+  </div>
+  <div class="cta-dock"><button class="btn" id="cta" type="button">Start your debut</button></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const BRAND="StarME";
+const $=id=>document.getElementById(id);
+const state={step:0,credits:0,photo:null,name:"",shell:null,role:null,pkg:null,ref:null,signed:false,checks:false,verified:false,countTimer:null};
+
+const SHELLS={
+  love:{title:"Pehla Pyaar",kicker:"A love story",cls:"love",roles:[
+    {id:"aarav",name:"The Dreamer",desc:"Small town heart, big city love. The lead everyone roots for."},
+    {id:"mira",name:"The Firebrand",desc:"Family lines were drawn. You cross them anyway."}],
+    eps:["The Glance","Two Worlds","Family Lines","The Festival","Caught","The Promise","Distance","The Letter","Everything On The Line","Pehla Pyaar"]},
+  act:{title:"Hukum",kicker:"An action drama",cls:"act",roles:[
+    {id:"sher",name:"The Enforcer",desc:"You kept the city's peace. Now the city owes you answers."},
+    {id:"noor",name:"The Outsider",desc:"New badge, old debts. Nobody expects you to survive week one."}],
+    eps:["The Debt","Blood Ties","The Warehouse","Signal Lost","Old Friends","The Setup","Crossfire","No Backup","The Reckoning","Hukum"]}
+};
+const PKGS=[
+  {id:"cameo",name:"Cameo",eps:1,cr:60,desc:"One episode plus your poster"},
+  {id:"debut",name:"Lead Debut",eps:3,cr:150,desc:"Three episode arc, poster and trailer",best:true},
+  {id:"season",name:"Season Star",eps:5,cr:220,desc:"Five episodes, poster pack, trailer"},
+  {id:"super",name:"Superstar",eps:10,cr:380,desc:"Full season with priority rendering"}
+];
+const STEPS=8;
+const stepsEl=$("steps");
+for(let i=0;i<STEPS;i++){stepsEl.appendChild(document.createElement("i"));}
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2200);}
+function setCTA(label,enabled){const c=$("cta");c.textContent=label;c.disabled=!enabled;}
+function go(n){
+  state.step=n;
+  document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",+s.dataset.s===n));
+  [...stepsEl.children].forEach((b,i)=>b.classList.toggle("on",i<=n));
+  $("stage").scrollTo({top:0});
+  refreshCTA();
+}
+function refreshCTA(){
+  switch(state.step){
+    case 0: setCTA("Start your debut",true);break;
+    case 1: setCTA("Subscribe · ₹499 and claim 200 credits",true);break;
+    case 2: setCTA(state.verified&&state.name?"Continue to consent":"Add your photo and name",state.verified&&!!state.name);break;
+    case 3: setCTA(state.signed?"Continue · consent recorded":"Tick both boxes and sign",state.signed);break;
+    case 4: setCTA(state.role?"Continue":"Choose a story and role",!!state.role);break;
+    case 5: {
+      if(!state.pkg){setCTA("Choose your billing",false);break;}
+      const p=PKGS.find(x=>x.id===state.pkg);
+      if(p.cr>state.credits){setCTA("Add "+(p.cr-state.credits)+" credits · demo top-up",true);}
+      else setCTA("Confirm · "+p.cr+" credits",true);
+      break;}
+    case 6: setCTA("Skip ahead · demo",true);break;
+    case 7: setCTA("Make another drama",true);break;
+  }
+}
+function updWallet(){$("walletAmt").textContent=state.credits;$("wallet").classList.add("show");}
+
+/* ---- photo ---- */
+function handleFile(file){
+  if(!file)return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    state.photo=e.target.result;
+    const img=$("preview");img.src=state.photo;img.style.display="block";
+    $("frameHint").style.display="none";$("oval").style.opacity=.35;
+    runVerify();
+  };
+  rd.readAsDataURL(file);
+}
+$("camIn").addEventListener("change",e=>handleFile(e.target.files[0]));
+$("fileIn").addEventListener("change",e=>handleFile(e.target.files[0]));
+$("starName").addEventListener("input",e=>{state.name=e.target.value.trim();refreshCTA();});
+
+function runVerify(){
+  state.verified=false;refreshCTA();
+  const v=$("verify");v.style.display="block";
+  const rows=["v1","v2","v3","v4"].map($);
+  rows.forEach(r=>{r.className="vrow";r.querySelector(".st").textContent="Waiting";});
+  let i=0;
+  (function next(){
+    if(i>0){rows[i-1].classList.remove("run");rows[i-1].classList.add("ok");rows[i-1].querySelector(".dot").textContent="✓";rows[i-1].querySelector(".st").textContent="Passed";}
+    if(i>=rows.length){state.verified=true;refreshCTA();toast("Verified · this face is yours");return;}
+    rows[i].classList.add("run");rows[i].querySelector(".st").textContent="Checking";
+    i++;setTimeout(next,650);
+  })();
+}
+
+/* ---- signature ---- */
+const sig=$("sig");let sctx,drawing=false,hasInk=false;
+function sigSize(){
+  const r=sig.getBoundingClientRect(),d=window.devicePixelRatio||1;
+  sig.width=r.width*d;sig.height=r.height*d;
+  sctx=sig.getContext("2d");sctx.scale(d,d);
+  sctx.strokeStyle="#F2CD82";sctx.lineWidth=2.2;sctx.lineCap="round";sctx.lineJoin="round";
+}
+function pos(e){const r=sig.getBoundingClientRect();const p=e.touches?e.touches[0]:e;return[p.clientX-r.left,p.clientY-r.top];}
+function sStart(e){e.preventDefault();drawing=true;const[x,y]=pos(e);sctx.beginPath();sctx.moveTo(x,y);}
+function sMove(e){if(!drawing)return;e.preventDefault();const[x,y]=pos(e);sctx.lineTo(x,y);sctx.stroke();
+  if(!hasInk){hasInk=true;$("sigPh").style.display="none";}checkConsent();}
+function sEnd(){drawing=false;}
+["pointerdown"].forEach(ev=>sig.addEventListener(ev,sStart));
+["pointermove"].forEach(ev=>sig.addEventListener(ev,sMove));
+["pointerup","pointerleave"].forEach(ev=>sig.addEventListener(ev,sEnd));
+$("sigClear").addEventListener("click",()=>{sctx.clearRect(0,0,sig.width,sig.height);hasInk=false;$("sigPh").style.display="flex";state.signed=false;$("ledger").classList.remove("show");refreshCTA();});
+$("chk1").addEventListener("change",checkConsent);
+$("chk2").addEventListener("change",checkConsent);
+function checkConsent(){
+  const ok=$("chk1").checked&&$("chk2").checked&&hasInk;
+  if(ok&&!state.signed){
+    state.signed=true;
+    state.ref=BRAND.toUpperCase()+"-"+new Date().getFullYear()+"-"+Math.random().toString(36).slice(2,8).toUpperCase();
+    $("ledgerRef").textContent=state.ref;
+    $("ledger").classList.add("show");
+  }
+  if(!ok)state.signed=false;
+  refreshCTA();
+}
+
+/* ---- concepts & roles ---- */
+document.querySelectorAll(".shell:not(.lock)").forEach(el=>{
+  el.addEventListener("click",()=>{
+    document.querySelectorAll(".shell").forEach(s=>s.classList.remove("sel"));
+    el.classList.add("sel");
+    state.shell=el.dataset.shell;state.role=null;
+    const sh=SHELLS[state.shell];
+    const g=$("roleGrid");g.innerHTML="";
+    sh.roles.forEach(r=>{
+      const d=document.createElement("div");d.className="role";
+      d.innerHTML="<b>"+r.name+"</b><span>"+r.desc+"</span>";
+      d.addEventListener("click",()=>{
+        g.querySelectorAll(".role").forEach(x=>x.classList.remove("sel"));
+        d.classList.add("sel");state.role=r.id;refreshCTA();
+      });
+      g.appendChild(d);
+    });
+    $("roleBlock").style.display="block";refreshCTA();
+  });
+});
+
+/* ---- packages ---- */
+function renderPkgs(){
+  const list=$("pkgList");list.innerHTML="";
+  PKGS.forEach(p=>{
+    const d=document.createElement("div");d.className="pkg"+(p.best?" best":"");
+    d.innerHTML='<div class="eps">'+p.eps+'<small>EP'+(p.eps>1?"S":"")+'</small></div><div class="nm"><b>'+p.name+'</b><span>'+p.desc+'</span></div><div class="cr"><span class="coin"></span>'+p.cr+'</div>';
+    d.addEventListener("click",()=>{
+      list.querySelectorAll(".pkg").forEach(x=>x.classList.remove("sel"));
+      d.classList.add("sel");state.pkg=p.id;
+      $("pkgNote").textContent=p.cr<=state.credits?"Covered by your credit balance of "+state.credits+".":"You have "+state.credits+" credits. Top up the balance to confirm.";
+      refreshCTA();
+    });
+    list.appendChild(d);
+  });
+}
+
+/* ---- countdown & render ---- */
+function startCountdown(){
+  let s=12*3600-1;
+  const el=$("countdown");
+  clearInterval(state.countTimer);
+  state.countTimer=setInterval(()=>{
+    s=Math.max(0,s-1);
+    const h=String(Math.floor(s/3600)).padStart(2,"0"),m=String(Math.floor(s%3600/60)).padStart(2,"0"),x=String(s%60).padStart(2,"0");
+    el.firstChild.nodeValue=h+":"+m+":"+x;
+  },1000);
+}
+function runRender(done){
+  clearInterval(state.countTimer);
+  $("countdown").style.display="none";
+  $("renderer").classList.add("show");
+  $("prodTitle").textContent="Rolling.";
+  $("prodLead").textContent="Fast-forwarding twelve hours for the demo. This is the pipeline your subscribers never see.";
+  const steps=["Casting "+ (state.name||"you") +" into "+SHELLS[state.shell].title,"Transferring your performance, shot by shot","Directing scenes and continuity","Scoring, credits and final cut","Quality check · identity match passed"];
+  let i=0;
+  (function next(){
+    if(i>=steps.length){setTimeout(done,500);return;}
+    $("rstep").textContent=steps[i];
+    $("rfill").style.width=((i+1)/steps.length*100)+"%";
+    i++;setTimeout(next,1100);
+  })();
+}
+
+/* ---- poster ---- */
+function drawPoster(){
+  const c=$("poster"),x=c.getContext("2d"),W=c.width,H=c.height;
+  const sh=SHELLS[state.shell];
+  x.fillStyle="#0B0810";x.fillRect(0,0,W,H);
+  function finish(){
+    const g=x.createLinearGradient(0,H*.35,0,H);
+    g.addColorStop(0,"rgba(10,7,14,0)");g.addColorStop(.55,"rgba(10,7,14,.72)");g.addColorStop(1,"rgba(10,7,14,.97)");
+    x.fillStyle=g;x.fillRect(0,0,W,H);
+    const tint=x.createLinearGradient(0,0,W,0);
+    if(sh.cls==="love"){tint.addColorStop(0,"rgba(176,26,85,.20)");tint.addColorStop(1,"rgba(67,16,43,.24)");}
+    else{tint.addColorStop(0,"rgba(30,92,140,.20)");tint.addColorStop(1,"rgba(11,28,46,.26)");}
+    x.fillStyle=tint;x.fillRect(0,0,W,H);
+    x.textAlign="center";
+    x.fillStyle="#D8CFE2";x.font="600 26px Inter, sans-serif";
+    x.fillText("F A S T   T V   P R E S E N T S   A   S T A R M E   O R I G I N A L",W/2,H-395);
+    x.fillStyle="#F2CD82";x.font="70px Anton, sans-serif";
+    x.fillText((state.name||"You").toUpperCase(),W/2,H-310);
+    x.fillStyle="#CFC7DC";x.font="600 24px Inter, sans-serif";x.fillText("I N",W/2,H-262);
+    x.fillStyle="#FFFFFF";x.font="150px Anton, sans-serif";
+    x.fillText(sh.title.toUpperCase(),W/2,H-130);
+    x.fillStyle="#9C93AB";x.font="500 22px Inter, sans-serif";
+    const p=PKGS.find(q=>q.id===state.pkg);
+    x.fillText(sh.kicker.toUpperCase()+"  ·  "+p.eps+" EPISODE"+(p.eps>1?"S":"")+"  ·  AI PERSONALISED",W/2,H-58);
+    x.textAlign="left";x.fillStyle="rgba(255,255,255,.5)";x.font="500 18px Inter, sans-serif";
+    x.fillText("◈ Content credentials · "+state.ref,28,H-24);
+  }
+  if(state.photo){
+    const img=new Image();
+    img.onload=function(){
+      const r=Math.max(W/img.width,H/img.height);
+      const w=img.width*r,h=img.height*r;
+      x.drawImage(img,(W-w)/2,(H-h)/2*0.6,w,h);
+      finish();
+    };
+    img.src=state.photo;
+  } else finish();
+}
+function renderPremiere(){
+  const sh=SHELLS[state.shell],p=PKGS.find(q=>q.id===state.pkg);
+  $("premTitle").textContent=(state.name||"You")+", in "+sh.title;
+  drawPoster();
+  const list=$("epList");list.innerHTML="";
+  sh.eps.forEach((t,i)=>{
+    const d=document.createElement("div");
+    const open=i<p.eps;
+    d.className="ep"+(open?"":" locked");
+    d.innerHTML='<span class="n">'+String(i+1).padStart(2,"0")+'</span><span class="t">'+t+'</span><span class="lk">'+(open?"▶ Watch":"Locked")+'</span>';
+    list.appendChild(d);
+  });
+}
+$("dlPoster").addEventListener("click",()=>{
+  const a=document.createElement("a");
+  a.download=BRAND+"_"+(state.name||"poster").replace(/\s+/g,"_")+".png";
+  a.href=$("poster").toDataURL("image/png");
+  a.click();toast("Poster saved");
+});
+$("shareTrailer").addEventListener("click",()=>toast("Trailer share kit · wired at Gate 2"));
+
+/* ---- CTA state machine ---- */
+$("cta").addEventListener("click",()=>{
+  switch(state.step){
+    case 0: go(1);break;
+    case 1: state.credits=200;updWallet();toast("Welcome to Fast TV · 200 credits added");go(2);setTimeout(sigSize,80);break;
+    case 2: go(3);setTimeout(sigSize,80);break;
+    case 3: go(4);break;
+    case 4: renderPkgs();go(5);break;
+    case 5:{
+      const p=PKGS.find(x=>x.id===state.pkg);
+      if(p.cr>state.credits){state.credits+=250;updWallet();toast("250 credits added · demo");refreshCTA();return;}
+      state.credits-=p.cr;updWallet();
+      $("orderSummary").textContent=p.name+" · "+p.eps+" episode"+(p.eps>1?"s":"")+" of "+SHELLS[state.shell].title+" starring "+(state.name||"you");
+      $("orderRef").textContent=state.ref;
+      go(6);startCountdown();break;}
+    case 6: runRender(()=>{renderPremiere();go(7);toast("Now premiering · you");});break;
+    case 7:
+      state.shell=null;state.role=null;state.pkg=null;
+      document.querySelectorAll(".shell,.role,.pkg").forEach(x=>x.classList.remove("sel"));
+      $("roleBlock").style.display="none";
+      $("countdown").style.display="block";$("renderer").classList.remove("show");
+      $("rfill").style.width="0";$("prodTitle").textContent="Lights. Camera. You.";
+      go(4);break;
+  }
+});
+
+$("sigDate").textContent="Signed on "+new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+window.addEventListener("resize",()=>{if(state.step===3)sigSize();});
+go(0);
+})();
+</script>
+</body>
+</html>
