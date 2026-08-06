@@ -11,6 +11,9 @@ The ZIP contains a genuine Kotlin/Jetpack Compose Android v1 project rather than
 source is suitable for adaptation and avoids a clean-room rebuild. It implements the simulated
 eight-screen journey and establishes seams for billing and rendering.
 
+This outcome is about engineering reuse, not final product quality. The imported visual system and
+journey remain substantially v1 and require a deliberate cinematic UX redesign before acceptance.
+
 ## Verified intake facts
 
 - Archive: 223 MB, 3,802 entries; no unsafe traversal paths.
@@ -53,6 +56,11 @@ and authenticated API adaptation, `testDebugUnitTest`, `lintDebug` and `assemble
 successfully. Two Android API serialization/response contract tests run. AGP 8.5.2 emits a warning
 that it was tested through compile SDK 34 while the project compiles SDK 35; this should be resolved
 through a separately verified dependency upgrade rather than suppressing the warning.
+
+The HTTPS debug build was installed and cold-launched on a Realme RMX3782. A later user attempt to
+take a selfie failed/exited. No StarME fatal exception was retained, and the earlier check did not
+exercise camera capture. Selfie reliability and the complete device journey are therefore unverified
+and P0-blocked; see the handover's M1.5 milestone.
 
 ## Protected/local-only intake
 

@@ -1,6 +1,6 @@
 # StarME Project Handover
 
-**Handover status:** Ready for a new development chat
+**Handover status:** Ready for a new development chat; Android product experience is not acceptance-ready
 
 **Last updated:** 6 August 2026
 
@@ -33,6 +33,14 @@ It records:
 - decisions and protected inputs still required;
 - repository and security boundaries; and
 - the safest next actions.
+
+### Executive status at this checkpoint
+
+StarME currently has a functional synthetic backend/deployment foundation and an Android engineering
+prototype. It does **not** yet have a polished, acceptance-tested consumer experience. The installed
+Android build opens and connects to staging, but a user-reported failure while taking a selfie is an
+active P0 release blocker. Treat the next milestone as product-experience and device-reliability work,
+not as immediate expansion into the real CineIQ pipeline.
 
 Do not infer that VerSelf decisions, infrastructure, credentials, deployment configuration, or code apply to StarME. These are separate projects and repositories.
 
@@ -90,6 +98,19 @@ The Product Note recommends:
 - progressive gates from internal proof through closed beta and eventual launch.
 
 These are product-roadmap directions, not authorization to launch publicly or implement every production feature in the first prototype.
+
+### Intended experience standard
+
+This is a creative entertainment product, not an API demonstration. A tester should feel invited into
+a premium cinematic experience: playful, confident, visually distinctive, safe, and easy to
+understand. Capture and consent must feel reassuring rather than technical; render waiting should
+build anticipation; first look should feel like a reveal; and recovery from permission, camera,
+network, or processing failures must be graceful.
+
+The current Android visual shell does not yet prove this standard. Most screens, typography,
+components, navigation, and capture presentation came from v1. They are useful scaffolding, but no
+new end-to-end product-design exercise, usability study, accessibility pass, or motion/design-system
+implementation has been completed in this workstream.
 
 ---
 
@@ -190,7 +211,7 @@ Production controls such as liveness, automated age assurance, C2PA, invisible w
 
 ---
 
-## 9. Current repository status
+## 9. Current repository and delivery status
 
 As of this handover:
 
@@ -219,16 +240,47 @@ Foundation update, 6 August 2026:
 - `Docs/Architecture/ADR-001-provider-neutral-foundation.md` records the proposed decision; and
 - `Docs/Traceability/StarME_Traceability_Register.md` records implementation and blockers.
 
-The Director response is now recorded. Android-to-API integration is implemented and verified at
-build/contract-test level, but has not been exercised on a physical device against a remote server.
-This foundation is not yet a production deployment, approved Legal consent text, biometric pipeline,
-protected storage adapter, or CineIQ integration.
+The Director response is now recorded. Android-to-API integration is implemented and the HTTPS build
+was installed and cold-launched on a physical Realme RMX3782 against the staging API. That check did
+not exercise the complete user journey. A subsequent user attempt to take a selfie caused the app to
+exit/fail; retained device logs did not contain a StarME fatal exception, so the exact root cause is
+not yet established. This foundation is not yet an acceptance-tested app, production deployment,
+approved Legal consent implementation, biometric pipeline, protected storage adapter, or CineIQ
+integration.
 
 Important prior commit:
 
 - `db9eadf` - Add StarME director decision request.
 
 Do not describe the current HTML demo as a completed app or backend.
+
+### APK and Android-source lineage
+
+The installed build is **not** a copied copy of either prebuilt APK found inside `StarMe.zip`:
+
+- the ZIP was inspected as an Android source/build pack;
+- source was sanitized and imported under `android/` while generated builds, APKs, media, and local
+  configuration were excluded;
+- authentication, session persistence, remote API repositories, order/job polling, first-look,
+  revocation, and signed-delivery integration were added to that source; and
+- a new debug APK was compiled locally against `https://starme.hungama.com` and installed with a new
+  development signature after Amol authorized removal of the signature-incompatible old app.
+
+It nevertheless looks similar to the uploaded v1 app because the majority of its Compose UI and
+creative language remain inherited. Backend wiring changed substantially; the consumer-facing design
+has not yet been substantially redesigned.
+
+### What is inherited versus newly implemented
+
+| Area | Inherited from Android v1 pack | Added/adapted in this workstream |
+|---|---|---|
+| Experience | Compose screens, theme, simulated subscription, capture/gallery UI, signature, catalogue, poster/premiere presentation | Tester access gate, remote-state/error handling needed for API workflow |
+| Device features | CameraX selfie, ML Kit single-face check, Room, Media3, WorkManager | Staging endpoint build configuration and authenticated session storage |
+| Workflow | Local fake billing/render and bundled demo progression | Server consent/order contracts, polling, first-look approve/retake, revocation and delivery grants |
+| Platform | No remotely deployed StarME service | FastAPI, PostgreSQL, Redis/RQ, migrations, synthetic worker, Nginx/TLS staging deployment |
+
+No real selfie upload, real biometric/identity-asset storage, CineIQ render, protected media object
+storage, or payment integration exists yet.
 
 ---
 
@@ -291,6 +343,54 @@ These must be transferred through controlled storage rather than committed to th
 
 ## 12. Delivery plan
 
+### Immediate M1.5 - Product experience and device reliability
+
+Complete this milestone before treating the Android app as ready for internal acceptance or before
+making the real render pipeline the main workstream.
+
+1. Define the primary tester journey and a coherent cinematic visual direction: type, colour, imagery,
+   motion, sound policy, tone of voice, component states, and accessibility constraints.
+2. Reframe operator-issued access as a discreet internal-test entry rather than a consumer feature.
+3. Redesign concept discovery, capture, consent, production progress, first-look approval/retake, and
+   premiere as one continuous story rather than a collection of functional screens.
+4. Harden capture: permission rationale and denial recovery, automatic continuation after permission,
+   front-camera availability, lifecycle-safe bind/unbind, visible loading/readiness, guarded shutter,
+   actionable errors, preview confirmation, retake, and upload/retry states.
+5. Add structured, privacy-safe diagnostics for permission, camera binding, capture, file handling,
+   ML verification, API, and navigation failures. Do not log image contents, paths containing personal
+   data, bearer tokens, signatures, or consent artifacts.
+6. Add Compose UI/instrumentation coverage for critical states and manually test on the agreed device
+   matrix, including clean install, permission allow/deny, repeated capture/retake, background/resume,
+   offline/slow network, process restart, and revocation.
+7. Run a product/design review and a five-tester observed usability pass; record evidence and defects.
+
+Exit criteria: no P0/P1 crash in the agreed matrix; a new tester can complete the synthetic journey
+without engineering guidance; every wait/error/empty state is designed; capture works repeatedly;
+accessibility basics pass; and Product/Director accepts the look and emotional quality of the flow.
+
+### Selfie incident and required diagnosis
+
+On 6 August 2026, Amol reported that the installed app failed/exited when he tried to take a selfie.
+The retained Android crash buffer contained unrelated crashes from another package and no StarME
+`FATAL EXCEPTION`. Package logs showed the front camera opening and later detaching as the launcher
+resumed, but they are insufficient to distinguish an application crash, camera-dialog dismissal,
+activity termination, or another lifecycle failure. Therefore the symptom is accepted, but no root
+cause is claimed.
+
+The current implementation exposes credible reliability gaps: camera-provider acquisition is not
+guarded, camera-binding errors are swallowed, capture errors silently close the camera, lifecycle
+cleanup is implicit, the permission grant requires another tap rather than continuing automatically,
+and there is no instrumentation coverage or structured failure telemetry. The next engineer must:
+
+1. clear logcat and reproduce the exact steps on RMX3782, recording permission state and screen video;
+2. capture StarME process/activity, CameraX, and AndroidRuntime logs during the attempt;
+3. add visible error states and privacy-safe diagnostics before guessing at a fix;
+4. harden permission, provider/bind, shutter, capture/file, ML Kit, and lifecycle paths; and
+5. prove repeated capture, cancel, retake, background/resume, deny, and permanent-deny cases on-device.
+
+Until this passes, “APK builds/installs/launches” must never be reported as “selfie flow tested” or
+“Android acceptance complete.”
+
 ### M0 - Intake and reproducibility
 
 - inspect/build the existing Android client or record that a new client is required;
@@ -352,9 +452,11 @@ Do not fabricate content rights, consent text, production models, infrastructure
 1. Read this file completely.
 2. Read `Docs/Decisions/StarME_Director_Decision_Request_001.md` completely.
 3. Inspect the `staging` branch, working tree, README, Product Note, and HTML demo.
-4. Ask Amol whether any Director responses or protected handoff links have arrived since this document was updated.
-5. Record received responses in the decision request without overwriting the original questions.
-6. If no responses exist, propose and implement only the safe provider-neutral foundation from Section 13 after confirming the Android source situation.
+4. Inspect the M1.5 experience/reliability milestone and reproduce the selfie incident before claiming
+   further Android acceptance.
+5. Ask Amol whether Legal wording, protected content, CineIQ material, or other controlled inputs have
+   arrived since this document was updated.
+6. Record received inputs without overwriting their source decisions.
 7. Keep a traceability register connecting requirements, decisions, implementation, tests, deferrals, and blockers.
 8. Commit and push only explicitly authorized StarME paths. Use a `codex/` implementation branch
    based on `staging` unless Amol explicitly requests direct work on another branch.
@@ -378,7 +480,7 @@ Do not fabricate content rights, consent text, production models, infrastructure
 
 Paste the following into the new StarME chat:
 
-> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend/Android vertical slice is implemented; recover its exact verification and blocker state from this handover. Preserve the documented privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without the recorded approvals and controlled inputs.
+> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend and staging deployment are functional. The Android APK was rebuilt from adapted v1 source, but its UI is still largely inherited and is not product-acceptance-ready; a user-reported selfie failure is an active P0 blocker whose root cause is not yet captured. Begin with the documented M1.5 product-experience and device-reliability milestone. Never equate compile/install/cold-launch checks with end-to-end acceptance. Preserve privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without recorded approvals and controlled inputs.
 
 ---
 
@@ -511,3 +613,18 @@ completed a cold launch of `com.hungama.starme.MainActivity`. The StarME process
 activity was confirmed as the device's foreground activity. Functional tester-code and complete
 workflow acceptance on the device remain pending the approved consent version and a controlled
 tester session.
+
+### 6 August 2026 - product/QA correction after device use
+
+Amol attempted the selfie path on the installed RMX3782 build and reported that the app crashed or
+exited. Earlier verification had established only build, lint, unit-contract checks, install, process
+start, and cold launch; it had not tested capture or the complete device journey. The previous
+phrasing is corrected by the M1.5 section above. The retained log buffer did not contain a StarME
+fatal stack trace, so diagnosis remains open and no speculative root cause or completed fix is
+recorded.
+
+The APK was rebuilt from adapted source rather than copied from the ZIP's prebuilt artifacts, but its
+creative presentation remains substantially the inherited v1 UI. Product quality therefore requires
+a purposeful experience redesign plus camera/reliability work and device acceptance evidence. The
+current release classification is: **backend/deployment foundation functional; Android engineering
+prototype installed; consumer experience and end-to-end acceptance blocked.**

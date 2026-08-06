@@ -10,8 +10,15 @@ and signed delivery grants. Real identity upload, CineIQ rendering, protected ob
 media delivery remain disabled until their approved inputs and infrastructure are available.
 
 The recovered Kotlin/Jetpack Compose v1 application is sanitized under [`android/`](android/).
-It provides the existing experience plus authenticated remote API integration.
+It provides the inherited v1 experience plus authenticated remote API integration. The current APK
+was rebuilt from this adapted source rather than copied from the ZIP's prebuilt APK. Its UI remains
+largely inherited and is not a finished creative-product design.
 Generated builds, APKs, local machine configuration and episode MP4s are not stored in Git.
+
+Android acceptance is currently blocked by a user-reported failure/exit during selfie capture on a
+Realme RMX3782. Build, lint, contract tests, install and cold launch passed, but the capture and full
+journey were not tested successfully. See the handover for the required product-experience and
+device-reliability milestone; do not describe this build as release-ready.
 
 `StarME_Demo.html` remains a standalone visual demo; it is not connected to this API.
 
