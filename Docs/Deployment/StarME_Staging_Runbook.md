@@ -38,6 +38,13 @@ Create a server-local `.env` from `.env.example`. At minimum set:
 
 ```dotenv
 STARME_ENVIRONMENT=staging
+STARME_POSTGRES_PASSWORD=<url-safe-random-secret>
+STARME_POSTGRES_BIND=127.0.0.1
+STARME_POSTGRES_PORT=55433
+STARME_REDIS_BIND=127.0.0.1
+STARME_REDIS_PORT=56380
+STARME_API_BIND=127.0.0.1
+STARME_API_PORT=8200
 STARME_QUEUE_BACKEND=rq
 STARME_RENDER_PROVIDER=stub
 STARME_STORAGE_BACKEND=memory
@@ -52,20 +59,21 @@ STARME_APPROVED_CONSENT_VERSION=<legal-approved-version>
 Generate each secret independently using an approved secrets manager or a cryptographically secure
 generator. Do not reuse the PostgreSQL password or commit the resulting file.
 
-The current Compose file contains local-only PostgreSQL credentials. Replace them through a
-server-local Compose override or secret-backed deployment configuration before a remote deployment.
+The example values use local-only ports and credentials. A shared staging host must use a unique,
+URL-safe PostgreSQL password and non-conflicting loopback ports as shown above. Compose project name
+`starme` keeps container and volume names isolated from other deployments.
 
 ## Deploy and verify
 
 From an authorized checkout of the published feature branch:
 
 ```bash
-docker compose config
-docker compose build --pull
-docker compose up -d postgres redis
-docker compose run --rm api alembic upgrade head
-docker compose up -d api worker
-docker compose ps
+docker compose --project-name starme config
+docker compose --project-name starme build --pull
+docker compose --project-name starme up -d postgres redis
+docker compose --project-name starme run --rm api alembic upgrade head
+docker compose --project-name starme up -d api worker
+docker compose --project-name starme ps
 curl --fail --silent --show-error https://<approved-host>/health/live
 curl --fail --silent --show-error https://<approved-host>/health/ready
 ```

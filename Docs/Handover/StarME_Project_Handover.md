@@ -444,6 +444,14 @@ Redis, API, and RQ worker with `STARME_ENVIRONMENT=staging`, strong unique secre
 memory delivery, and `STARME_ALLOW_SENSITIVE_PROCESSING=false`. Do not upload selfies, protected
 shells, performer media, CineIQ weights, or other sensitive material during this stage.
 
+Read-only server inspection after password-based login confirmed Ubuntu 22.04, 8 CPU cores, 31 GiB
+RAM, 131 GiB free disk, Docker 29.1.3, legacy Compose 1.29.2, Nginx/Certbot, and no detected NVIDIA
+GPU tooling. The machine is shared and already uses ports 80, 443, 5432, 6379, 8000, and several
+application ports. StarME must use Compose project name `starme`, distinct loopback ports (currently
+planned as PostgreSQL 55433, Redis 56380, API 8200), and must not alter existing applications. No
+StarME DNS record or certificate is available yet, so the first verification should use an SSH
+tunnel; Android remote testing waits for approved DNS/TLS.
+
 After the server health check succeeds, build Android with
 `-PSTARME_API_BASE_URL=https://<approved-host>` and run the controlled physical-device flow: redeem a
 single-use code, create consent/order, poll first look, approve and finish, retake once, revoke, and
