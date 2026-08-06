@@ -1,0 +1,11 @@
+.DS_Store
+**/.DS_Store
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local tooling and generated output
+tmp/
+*.log
