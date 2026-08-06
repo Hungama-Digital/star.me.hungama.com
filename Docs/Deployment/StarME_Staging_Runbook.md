@@ -126,7 +126,13 @@ routine rollback action.
 - Providers: synthetic `stub` renderer and `memory` delivery
 - Sensitive processing: disabled
 - Consent version: unset pending Legal
+- Approved hostname: `starme.hungama.com` (Route 53 A record to `49.248.193.9`)
 
 Operational commands must run from the host path above and include
 `docker compose --project-name starme`. Do not use `down -v`, because that would delete persistent
 database and Redis volumes.
+
+The version-controlled Nginx source is `deploy/nginx/starme.hungama.com.conf`. Install it in
+`/etc/nginx/sites-available/`, enable it with the matching symlink, validate with `nginx -t`, and
+then use Certbot's Nginx integration to provision HTTPS and redirect HTTP. Never edit another
+project's virtual host to expose StarME.

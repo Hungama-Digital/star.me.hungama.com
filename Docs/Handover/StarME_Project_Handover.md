@@ -484,3 +484,8 @@ only, the approved Legal consent version remains unset, sensitive processing rem
 render/storage providers remain synthetic (`stub`/`memory`). The next deployment inputs are an
 approved StarME hostname/DNS record and TLS certificate plus Legal's consent version. Only then
 should an Android build target the server and physical-device acceptance begin.
+
+Amol subsequently approved `starme.hungama.com` and configured its Route 53 A record to
+`49.248.193.9`. Public Google and Cloudflare resolvers both returned that address. The repository
+contains an isolated Nginx virtual-host source at `deploy/nginx/starme.hungama.com.conf`; certificate
+provisioning and external HTTPS verification are the active next deployment action.
