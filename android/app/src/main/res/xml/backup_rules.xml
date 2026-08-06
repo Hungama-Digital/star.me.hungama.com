@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Consent records and biometric-derived files must never leave the device via
+  cloud backup. Exclude the Room DB and the media the app stores locally.
+-->
+<full-backup-content>
+    <exclude domain="database" path="starme.db" />
+    <exclude domain="file" path="posters/" />
+    <exclude domain="file" path="consent/" />
+    <exclude domain="file" path="episodes/" />
+    <exclude domain="file" path="datastore/starme_session.preferences_pb" />
+</full-backup-content>

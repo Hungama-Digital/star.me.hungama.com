@@ -1,0 +1,401 @@
+import hashlib
+import hmac
+import secrets
+from datetime import UTC, datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, selectinload
+
+from starme import __version__
+from starme.catalogue import SYNTHETIC_SHELLS
+from starme.config import Settings, get_settings
+from starme.database import get_session
+from starme.delivery import signed_url
+from starme.jobs import enqueue_first_look, enqueue_full_render
+from starme.models import ClientSession, ConsentRecord, Order, RenderJob
+from starme.schemas import (
+    CapabilityResponse,
+    ConsentCreateRequest,
+    ConsentResponse,
+    EpisodeResponse,
+    FirstLookDecision,
+    FirstLookDecisionRequest,
+    FirstLookResponse,
+    HealthResponse,
+    IssueAccessCodeRequest,
+    IssueAccessCodeResponse,
+    JobResponse,
+    JobState,
+    OrderCreateRequest,
+    OrderResponse,
+    OrderState,
+    RedeemAccessCodeRequest,
+    RevocationResponse,
+    ServiceState,
+    SessionResponse,
+    SyntheticShell,
+)
+from starme.security import authenticate_token, issue_code, redeem_code, utcnow
+from starme.services import audit, cancel_active_jobs
+
+router = APIRouter()
+bearer = HTTPBearer(auto_error=False)
+SettingsDependency = Annotated[Settings, Depends(get_settings)]
+SessionDependency = Annotated[Session, Depends(get_session)]
+CredentialsDependency = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
+
+
+def current_client(
+    credentials: CredentialsDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> ClientSession:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer token is required")
+    return authenticate_token(session, credentials.credentials, settings)
+
+
+ClientDependency = Annotated[ClientSession, Depends(current_client)]
+
+
+def require_operator_key(operator_key: str | None, settings: Settings) -> None:
+    expected = settings.operator_api_key.get_secret_value()
+    if operator_key is None or not hmac.compare_digest(operator_key, expected):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Operator key is invalid")
+
+
+def owned_order(session: Session, order_id: str, client: ClientSession) -> Order:
+    order = session.scalar(
+        select(Order)
+        .where(Order.id == order_id, Order.tester_reference == client.tester_reference)
+        .options(
+            selectinload(Order.jobs),
+            selectinload(Order.first_look),
+            selectinload(Order.episodes),
+        )
+    )
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    return order
+
+
+def order_response(order: Order, settings: Settings) -> OrderResponse:
+    first_look = None
+    if order.first_look is not None:
+        first_look = FirstLookResponse(
+            status=order.first_look.status,
+            preview_url=signed_url(
+                order.first_look.object_key,
+                "preview",
+                settings.signed_url_ttl_seconds,
+                settings,
+            ),
+        )
+    episodes = [
+        EpisodeResponse(
+            episode_number=episode.episode_number,
+            checksum_sha256=episode.checksum_sha256,
+            stream_url=signed_url(
+                episode.object_key,
+                "stream",
+                settings.signed_url_ttl_seconds,
+                settings,
+            ),
+            download_url=signed_url(
+                episode.object_key,
+                "download",
+                settings.download_url_ttl_seconds,
+                settings,
+            ),
+        )
+        for episode in sorted(order.episodes, key=lambda item: item.episode_number)
+    ]
+    return OrderResponse(
+        id=order.id,
+        status=OrderState(order.status),
+        shell_id=order.shell_id,
+        role_id=order.role_id,
+        package_id=order.package_id,
+        first_look=first_look,
+        jobs=[
+            JobResponse(
+                id=job.id,
+                kind=job.kind,
+                status=job.status,
+                attempt_count=job.attempt_count,
+                failure_reason=job.failure_reason,
+            )
+            for job in sorted(order.jobs, key=lambda item: item.created_at)
+        ],
+        episodes=episodes,
+    )
+
+
+@router.get("/health/live", response_model=HealthResponse)
+def liveness(settings: SettingsDependency) -> HealthResponse:
+    return HealthResponse(
+        status=ServiceState.OK,
+        environment=settings.environment,
+        version=__version__,
+    )
+
+
+@router.get("/health/ready", response_model=HealthResponse)
+def readiness(
+    response: Response,
+    settings: SettingsDependency,
+    session: SessionDependency,
+) -> HealthResponse:
+    state = ServiceState.OK
+    try:
+        session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        state = ServiceState.DEGRADED
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return HealthResponse(status=state, environment=settings.environment, version=__version__)
+
+
+@router.get("/v1/capabilities", response_model=CapabilityResponse)
+def capabilities(settings: SettingsDependency) -> CapabilityResponse:
+    enabled = settings.sensitive_features_enabled
+    return CapabilityResponse(
+        identity_capture=enabled,
+        consent_collection=True,
+        rendering=settings.render_provider in {"stub", "cineiq"},
+        media_delivery=settings.storage_backend in {"memory", "s3"},
+        reason=(
+            "Sensitive processing is explicitly enabled with configured providers"
+            if enabled
+            else "Workflow APIs are available; real sensitive processing remains disabled"
+        ),
+    )
+
+
+@router.post("/v1/operator/access-codes", response_model=IssueAccessCodeResponse)
+def create_access_code(
+    request: IssueAccessCodeRequest,
+    session: SessionDependency,
+    settings: SettingsDependency,
+    x_operator_key: Annotated[str | None, Header()] = None,
+) -> IssueAccessCodeResponse:
+    require_operator_key(x_operator_key, settings)
+    code, expires_at = issue_code(
+        session, request.tester_reference, request.expires_in_hours, settings
+    )
+    return IssueAccessCodeResponse(code=code, expires_at=expires_at)
+
+
+@router.post("/v1/access/redeem", response_model=SessionResponse)
+def redeem_access_code(
+    request: RedeemAccessCodeRequest,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> SessionResponse:
+    token, expires_at = redeem_code(session, request.code, request.device_id, settings)
+    return SessionResponse(access_token=token, expires_at=expires_at)
+
+
+@router.get("/v1/catalogue/shells", response_model=list[SyntheticShell])
+def list_synthetic_shells(client: ClientDependency) -> tuple[SyntheticShell, ...]:
+    del client
+    return SYNTHETIC_SHELLS
+
+
+@router.post("/v1/consents", response_model=ConsentResponse, status_code=201)
+def create_consent(
+    request: ConsentCreateRequest,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> ConsentResponse:
+    if not (request.checked_likeness and request.checked_revocation and request.signature_attested):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Complete all consent controls")
+    if settings.environment in {"staging", "production"} and (
+        settings.approved_consent_version is None
+        or request.consent_version != settings.approved_consent_version
+    ):
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Legal-approved consent version is not configured",
+        )
+    reference = f"STARME-{datetime.now(UTC).year}-{secrets.token_hex(3).upper()}"
+    consent = ConsentRecord(
+        reference=reference,
+        tester_reference=client.tester_reference,
+        typed_name=request.typed_name,
+        consent_version=request.consent_version,
+        signature_attested=True,
+    )
+    session.add(consent)
+    audit(session, "consent.accepted", client.tester_reference, "consent", reference)
+    session.commit()
+    session.refresh(consent)
+    return ConsentResponse(
+        reference=consent.reference,
+        consent_version=consent.consent_version,
+        accepted_at=consent.accepted_at,
+    )
+
+
+@router.delete("/v1/consents/{reference}", response_model=RevocationResponse)
+def revoke_consent(
+    reference: str,
+    client: ClientDependency,
+    session: SessionDependency,
+) -> RevocationResponse:
+    consent = session.scalar(
+        select(ConsentRecord).where(
+            ConsentRecord.reference == reference,
+            ConsentRecord.tester_reference == client.tester_reference,
+        )
+    )
+    if consent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Consent not found")
+    now = utcnow()
+    consent.revoked_at = now
+    consent.deletion_requested_at = now
+    orders = session.scalars(
+        select(Order).where(
+            Order.consent_id == consent.id,
+            Order.status.not_in([OrderState.READY, OrderState.CANCELED]),
+        )
+    ).all()
+    canceled_jobs = 0
+    for order in orders:
+        canceled_jobs += cancel_active_jobs(session, order)
+        order.status = OrderState.CANCELED
+    audit(session, "consent.revoked", client.tester_reference, "consent", reference)
+    session.commit()
+    return RevocationResponse(
+        consent_reference=reference,
+        canceled_orders=len(orders),
+        canceled_jobs=canceled_jobs,
+        deletion_requested_at=now,
+    )
+
+
+@router.post("/v1/orders", response_model=OrderResponse, status_code=201)
+def create_order(
+    request: OrderCreateRequest,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> OrderResponse:
+    shell = next((item for item in SYNTHETIC_SHELLS if item.id == request.shell_id), None)
+    if shell is None or shell.enabled_role != request.role_id:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Shell or role is not enabled")
+    if request.package_id != "lead-debut-3":
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Only Lead Debut is enabled")
+    if not settings.allow_sensitive_processing and not request.face_asset_id.startswith(
+        "synthetic-"
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Only synthetic face assets are accepted until sensitive processing is enabled",
+        )
+    consent = session.scalar(
+        select(ConsentRecord).where(
+            ConsentRecord.reference == request.consent_reference,
+            ConsentRecord.tester_reference == client.tester_reference,
+            ConsentRecord.revoked_at.is_(None),
+        )
+    )
+    if consent is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Active consent is required")
+    order = Order(
+        tester_reference=client.tester_reference,
+        consent_id=consent.id,
+        shell_id=request.shell_id,
+        role_id=request.role_id,
+        package_id=request.package_id,
+        face_asset_id=request.face_asset_id,
+        status=OrderState.QUEUED,
+    )
+    session.add(order)
+    session.flush()
+    job = RenderJob(
+        order_id=order.id,
+        kind="FIRST_LOOK",
+        status=JobState.QUEUED,
+        priority=100,
+    )
+    session.add(job)
+    audit(session, "order.created", client.tester_reference, "order", order.id)
+    session.commit()
+    job_id = job.id
+    order_id = order.id
+    enqueue_first_look(job_id)
+    session.expire_all()
+    return order_response(owned_order(session, order_id, client), settings)
+
+
+@router.get("/v1/orders/{order_id}", response_model=OrderResponse)
+def get_order(
+    order_id: str,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> OrderResponse:
+    return order_response(owned_order(session, order_id, client), settings)
+
+
+@router.post("/v1/orders/{order_id}/first-look", response_model=OrderResponse)
+def decide_first_look(
+    order_id: str,
+    request: FirstLookDecisionRequest,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> OrderResponse:
+    order = owned_order(session, order_id, client)
+    if order.status != OrderState.AWAITING_FIRST_LOOK or order.first_look is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "First look is not awaiting a decision")
+    now = utcnow()
+    order.first_look.decided_at = now
+    if request.decision == FirstLookDecision.RETAKE:
+        order.first_look.status = "RETAKE"
+        order.status = OrderState.RETAKE_REQUIRED
+        audit(session, "first_look.retake", client.tester_reference, "order", order.id)
+        session.commit()
+        return order_response(owned_order(session, order_id, client), settings)
+    order.first_look.status = "APPROVED"
+    job = RenderJob(
+        order_id=order.id,
+        kind="FULL_RENDER",
+        status=JobState.QUEUED,
+        priority=10,
+    )
+    session.add(job)
+    audit(session, "first_look.approved", client.tester_reference, "order", order.id)
+    session.commit()
+    job_id = job.id
+    enqueue_full_render(job_id)
+    session.expire_all()
+    return order_response(owned_order(session, order_id, client), settings)
+
+
+@router.get("/v1/media/{key:path}")
+def synthetic_media_contract(
+    key: str,
+    settings: SettingsDependency,
+    purpose: str,
+    expires: int,
+    signature: str,
+) -> Response:
+    if expires <= int(datetime.now(UTC).timestamp()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Delivery grant expired")
+    message = f"{purpose}:{key}:{expires}"
+    expected = hmac.new(
+        settings.delivery_signing_key.get_secret_value().encode(),
+        message.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if purpose not in {"preview", "stream", "download"} or not hmac.compare_digest(
+        signature, expected
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Delivery grant invalid")
+    return Response(status_code=204, headers={"X-StarME-Synthetic-Media": "true"})

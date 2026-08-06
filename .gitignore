@@ -9,3 +9,29 @@
 # Local tooling and generated output
 tmp/
 *.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+*.egg-info/
+htmlcov/
+.coverage
+
+# IDE and local runtime state
+.idea/
+.vscode/
+data/
+storage/
+
+# Android local/build state
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/**/build/
+android/*.apk
+android/*.aab
+android/app/src/main/assets/shells/*.mp4

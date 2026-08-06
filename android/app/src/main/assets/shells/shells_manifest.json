@@ -1,0 +1,63 @@
+{
+  "manifestVersion": 1,
+  "brand": "StarME",
+  "welcomeCredits": 200,
+  "packages": [
+    { "id": "cameo",  "name": "Cameo",      "episodes": 1,  "credits": 60,  "desc": "One episode plus your poster" },
+    { "id": "debut",  "name": "Lead Debut", "episodes": 3,  "credits": 150, "desc": "Three episode arc, poster and trailer", "highlight": true },
+    { "id": "season", "name": "Season Star","episodes": 5,  "credits": 220, "desc": "Five episodes, poster pack, trailer" },
+    { "id": "super",  "name": "Superstar",  "episodes": 10, "credits": 380, "desc": "Full season with priority rendering" }
+  ],
+  "shells": [
+    {
+      "id": "love",
+      "title": "Pehla Pyaar",
+      "kicker": "A love story",
+      "palette": { "c1": "#43102B", "c2": "#B01A55", "accent": "#E9BF6B" },
+      "status": "live",
+      "roles": [
+        { "id": "aarav", "name": "The Dreamer",   "desc": "Small town heart, big city love. The lead everyone roots for." },
+        { "id": "mira",  "name": "The Firebrand", "desc": "Family lines were drawn. You cross them anyway." }
+      ],
+      "episodes": [
+        { "n": 1,  "title": "The Glance",            "file": "shell_love_ep01.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 2,  "title": "Two Worlds",            "file": "shell_love_ep02.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 3,  "title": "Family Lines",          "file": "shell_love_ep03.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 4,  "title": "The Festival",          "file": null, "placeholder": true },
+        { "n": 5,  "title": "Caught",                "file": null, "placeholder": true },
+        { "n": 6,  "title": "The Promise",           "file": null, "placeholder": true },
+        { "n": 7,  "title": "Distance",              "file": null, "placeholder": true },
+        { "n": 8,  "title": "The Letter",            "file": null, "placeholder": true },
+        { "n": 9,  "title": "Everything On The Line","file": null, "placeholder": true },
+        { "n": 10, "title": "Pehla Pyaar",           "file": null, "placeholder": true }
+      ]
+    },
+    {
+      "id": "act",
+      "title": "Hukum",
+      "kicker": "An action drama",
+      "palette": { "c1": "#0B1C2E", "c2": "#1E5C8C", "accent": "#E9BF6B" },
+      "status": "live",
+      "roles": [
+        { "id": "sher", "name": "The Enforcer", "desc": "You kept the city's peace. Now the city owes you answers." },
+        { "id": "noor", "name": "The Outsider", "desc": "New badge, old debts. Nobody expects you to survive week one." }
+      ],
+      "episodes": [
+        { "n": 1,  "title": "The Debt",      "file": "shell_act_ep01.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 2,  "title": "Blood Ties",    "file": "shell_act_ep02.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 3,  "title": "The Warehouse", "file": "shell_act_ep03.mp4", "durationSec": 8, "placeholder": true },
+        { "n": 4,  "title": "Signal Lost",   "file": null, "placeholder": true },
+        { "n": 5,  "title": "Old Friends",   "file": null, "placeholder": true },
+        { "n": 6,  "title": "The Setup",     "file": null, "placeholder": true },
+        { "n": 7,  "title": "Crossfire",     "file": null, "placeholder": true },
+        { "n": 8,  "title": "No Backup",     "file": null, "placeholder": true },
+        { "n": 9,  "title": "The Reckoning", "file": null, "placeholder": true },
+        { "n": 10, "title": "Hukum",         "file": null, "placeholder": true }
+      ]
+    },
+    { "id": "family",  "title": "Gharana", "kicker": "A family saga",     "status": "soon" },
+    { "id": "revenge", "title": "Badla",   "kicker": "A revenge thriller","status": "soon" },
+    { "id": "campus",  "title": "Campus",  "kicker": "A campus romance",  "status": "soon" },
+    { "id": "comedy",  "title": "Jugaad",  "kicker": "A comedy",          "status": "soon" }
+  ]
+}

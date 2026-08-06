@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Poster PNG staged for the share sheet. -->
+    <cache-path name="shared" path="shared/" />
+    <files-path name="posters" path="posters/" />
+</paths>

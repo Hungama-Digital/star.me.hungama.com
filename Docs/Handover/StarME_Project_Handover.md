@@ -10,9 +10,11 @@
 
 **Repository:** `https://github.com/Hungama-Digital/star.me.hungama.com.git`
 
-**Working branch:** `staging`
+**Base branch:** `staging`
 
-**Local checkout:** `/Users/amoldewase/Documents/StarME`
+**Implementation branch:** `codex/authenticated-prototype-foundation` (created for the 6 August foundation publication)
+
+**Local checkout:** `/Users/amoldewase/Documents/StarMe 2`
 
 **Confidentiality:** Strictly confidential - internal use only
 
@@ -150,18 +152,17 @@ Seedance or another external partner route is a separate validation path. At mos
 
 ## 7. Proposed data domains
 
-The detailed schema is not yet implemented, but the first backend should anticipate:
+The current synthetic backend implements the following canonical records; sensitive-media fields
+and production governance metadata must be added when their approved inputs arrive:
 
-- named internal testers and single-use access codes;
-- devices and sessions;
-- consent versions, signatures/references, revocation, and deletion state;
-- shells, roles, episodes, asset checksums, and rights/dignity references;
-- simulated packages, wallet entries, and orders;
-- identity captures and protected derived artifacts;
-- first-look and full-render jobs;
-- episode outputs and signed-delivery grants;
-- render metrics, failure reasons, and rerender attempts; and
-- immutable or append-only audit events for sensitive actions.
+- single-use access codes and device-bound sessions;
+- consent references, versions, revocation, and deletion scheduling;
+- synthetic catalogue shells, roles, episodes, and packages;
+- orders, first-look/full-render jobs, first looks, and episode outputs; and
+- append-only audit events for security- and workflow-relevant actions.
+
+Not yet implemented are identity-asset storage, protected asset manifests/checksums,
+rights/dignity records, payment/wallet ledgers, render telemetry, and production deletion workers.
 
 PostgreSQL should be the canonical metadata and audit store. Object storage contains protected media; Git contains neither personal nor production media.
 
@@ -185,7 +186,7 @@ These boundaries apply unless a new written decision changes them:
 - no secrets in Git; and
 - no selfies, signatures, embeddings, performer references, episode masters, rights documents, model/checkpoint files, or rendered personal media in Git.
 
-Production controls such as liveness, automated age assurance, C2PA, invisible watermarking, QA tooling, takedown automation, and production retention remain required before external use unless the Director and relevant owners formally decide otherwise. The narrower prototype exception itself is still pending approval in `ST-P0-04`.
+Production controls such as liveness, automated age assurance, C2PA, invisible watermarking, QA tooling, takedown automation, and production retention remain required before external use. The Director approved the narrower named-adult internal-prototype exception in `ST-P0-04` on 6 August 2026.
 
 ---
 
@@ -193,15 +194,35 @@ Production controls such as liveness, automated age assurance, C2PA, invisible w
 
 As of this handover:
 
-- the repository is checked out locally on `staging`;
+- the repository base is `staging`; the implementation is being preserved on
+  `codex/authenticated-prototype-foundation`;
 - the existing repository contains a README, HTML demo, and Product Note;
 - the Director decision request has been created and pushed;
-- no Android application architecture has been adopted or implemented by this handover work;
-- no FastAPI/PostgreSQL/Redis/object-storage backend has been implemented;
-- no render worker or CineIQ integration has been implemented;
+- the recovered Kotlin/Jetpack Compose v1 app is sanitized under `android/` for API adaptation;
+- a FastAPI/PostgreSQL/Redis provider-neutral foundation is implemented locally;
+- synthetic first-look and full-render RQ jobs are implemented; no CineIQ integration exists;
 - no StarME infrastructure has been provisioned or deployed;
 - no confidential content/model package has been added; and
 - no production or tester personal data has been processed.
+
+Foundation update, 6 August 2026:
+
+- a provider-neutral FastAPI backend foundation is present on the local `staging` worktree;
+- health/readiness, capability discovery, and synthetic catalogue contracts are implemented;
+- PostgreSQL/Alembic configuration and an initial append-only audit-event migration are present;
+- Redis/RQ queues and synthetic first-look/full-render jobs are implemented; real CineIQ jobs are
+  not enabled;
+- object-storage and render-provider protocols fail closed through disabled adapters;
+- sensitive capabilities remain disabled by default and require an explicit processing switch plus
+  configured providers;
+- automated lint, strict typing, and unit/API tests are present;
+- `Docs/Architecture/ADR-001-provider-neutral-foundation.md` records the proposed decision; and
+- `Docs/Traceability/StarME_Traceability_Register.md` records implementation and blockers.
+
+The Director response is now recorded. Android-to-API integration is implemented and verified at
+build/contract-test level, but has not been exercised on a physical device against a remote server.
+This foundation is not yet a production deployment, approved Legal consent text, biometric pipeline,
+protected storage adapter, or CineIQ integration.
 
 Important prior commit:
 
@@ -211,11 +232,16 @@ Do not describe the current HTML demo as a completed app or backend.
 
 ---
 
-## 10. Pending Director decisions
+## 10. Director decisions and remaining delivery inputs
 
-The canonical response document is:
+The canonical request and response documents are:
 
 `Docs/Decisions/StarME_Director_Decision_Request_001.md`
+
+`Docs/Decisions/StarME_Director_Decision_Response_001.md`
+
+All P0 decisions and P1 defaults were approved on 6 August 2026. The following are now delivery
+inputs rather than open product decisions:
 
 Its P0 items cover:
 
@@ -330,14 +356,15 @@ Do not fabricate content rights, consent text, production models, infrastructure
 5. Record received responses in the decision request without overwriting the original questions.
 6. If no responses exist, propose and implement only the safe provider-neutral foundation from Section 13 after confirming the Android source situation.
 7. Keep a traceability register connecting requirements, decisions, implementation, tests, deferrals, and blockers.
-8. Commit and push only explicitly authorized StarME paths to the StarME `staging` branch.
+8. Commit and push only explicitly authorized StarME paths. Use a `codex/` implementation branch
+   based on `staging` unless Amol explicitly requests direct work on another branch.
 
 ---
 
 ## 15. Git working rules
 
 - Confirm the repository is `Hungama-Digital/star.me.hungama.com.git` before every push.
-- Work on `staging` unless explicitly instructed otherwise.
+- Treat `staging` as the integration base; use a `codex/` feature branch for implementation work.
 - Inspect `git status` and diffs before staging.
 - Stage exact intended paths; never stage unrelated files or use broad adds in a mixed worktree.
 - Do not commit `.env`, credentials, keys, personal data, confidential media, model weights, generated outputs, or local system files.
@@ -351,7 +378,7 @@ Do not fabricate content rights, consent text, production models, infrastructure
 
 Paste the following into the new StarME chat:
 
-> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarME`. StarME and VerSelf are separate projects; never place StarME work in the VerSelf repository. First read `Docs/Handover/StarME_Project_Handover.md` and `Docs/Decisions/StarME_Director_Decision_Request_001.md` completely, then inspect the repository and current Git status. Treat the Product Note as the broader production vision and the internal prototype handoff as proposed immediate implementation scope, subject to the pending P0 reconciliation decisions. Preserve the documented privacy, rights, consent, and repository boundaries. Tell me the recovered current state, ask whether new Director responses or protected handoffs have arrived, and recommend the safest next milestone. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without the documented approvals.
+> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend/Android vertical slice is implemented; recover its exact verification and blocker state from this handover. Preserve the documented privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without the recorded approvals and controlled inputs.
 
 ---
 
@@ -369,3 +396,50 @@ Update this file whenever any of the following materially changes:
 - active blockers and next milestone.
 
 Use dated entries or a traceability register so later chats can distinguish confirmed decisions from historical proposals.
+
+### 6 August 2026 - provider-neutral foundation started
+
+Amol authorized independent foundation work while Director responses remain pending. Engineering
+added the backend, migration, disabled-provider, synthetic-fixture, test, local-service, and
+traceability foundations described in Section 9. No protected input was used and no sensitive path
+was enabled. The next independent slice can expand the canonical domain model and API contracts
+using synthetic data while the Android-source and deployment-host details remain explicit blockers.
+
+### 6 August 2026 - authenticated synthetic vertical slice
+
+The recovered Android v1 source was sanitized into `android/` without APKs, generated output,
+local configuration or episode MP4s. The backend and Android client now implement single-use
+tester/device access, hashed bearer sessions, authenticated catalogue and consent/order contracts,
+synthetic first-look and full-render jobs, first-look approval/retake, revocation with active-job
+cancellation, and purpose-bound signed delivery grants. Backend migrations, lint, strict typing and
+13 tests pass at 96% coverage. Android Kotlin compilation, two API contract tests, lint and debug APK
+assembly pass. Real uploads, protected object storage, shell media and CineIQ remain disabled.
+
+### 6 August 2026 - deployment publication checkpoint
+
+Amol authorized preservation, GitHub publication, and deployment preparation. The intended branch is
+`codex/authenticated-prototype-foundation`, based on `staging`. Backend verification passes Ruff,
+format checking, strict mypy, 13 pytest tests at 96% coverage, and a clean Alembic upgrade through
+`20260806_0002`. Android verification passes two contract tests, `lintDebug`, and `assembleDebug`;
+the generated APK remains ignored and is not committed. The repository scan found no tracked APK,
+archive, media, keystore, local environment file, or known credential pattern.
+
+Remote deployment is ready at the code/configuration level but cannot start until Amol supplies the
+SSH username and a usable private-key authentication route, application domain or test URL, and
+inbound-network/TLS arrangement. Server particulars supplied on 6 August 2026 are private IP
+`10.0.0.63` and public IP `49.248.193.9`; SSH port 22 is reachable on both from the current Mac. The
+supplied RSA public key has fingerprint `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM`, but
+no matching private key is installed/loaded locally and no SSH username or host alias is configured.
+The public key itself is deliberately not copied into this repository.
+
+The initial deployment remains synthetic: use PostgreSQL,
+Redis, API, and RQ worker with `STARME_ENVIRONMENT=staging`, strong unique secrets, stub rendering,
+memory delivery, and `STARME_ALLOW_SENSITIVE_PROCESSING=false`. Do not upload selfies, protected
+shells, performer media, CineIQ weights, or other sensitive material during this stage.
+
+After the server health check succeeds, build Android with
+`-PSTARME_API_BASE_URL=https://<approved-host>` and run the controlled physical-device flow: redeem a
+single-use code, create consent/order, poll first look, approve and finish, retake once, revoke, and
+confirm queued-job cancellation and subsequent access denial. Legal's approved consent version is
+still required for a staging consent/order flow; the backend deliberately fails closed when it is
+unset.

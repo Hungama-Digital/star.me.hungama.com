@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: starme
+      POSTGRES_USER: starme
+      POSTGRES_PASSWORD: starme_local_only
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starme -d starme"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - starme_postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - starme_redis:/data
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      STARME_DATABASE_URL: postgresql+psycopg://starme:starme_local_only@postgres:5432/starme
+      STARME_REDIS_URL: redis://redis:6379/0
+      STARME_QUEUE_BACKEND: rq
+      STARME_RENDER_PROVIDER: stub
+      STARME_STORAGE_BACKEND: memory
+    command: ["sh", "-c", "alembic upgrade head && uvicorn starme.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      STARME_DATABASE_URL: postgresql+psycopg://starme:starme_local_only@postgres:5432/starme
+      STARME_REDIS_URL: redis://redis:6379/0
+      STARME_QUEUE_BACKEND: rq
+      STARME_RENDER_PROVIDER: stub
+      STARME_STORAGE_BACKEND: memory
+    command: ["rq", "worker", "starme-first-look", "starme-full-render", "--url", "redis://redis:6379/0"]
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  starme_postgres:
+  starme_redis:

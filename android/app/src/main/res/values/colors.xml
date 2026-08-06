@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors the demo tokens. Compose does the real theming; these back the
+         window background and system bars before Compose draws. -->
+    <color name="bg">#0C0A10</color>
+    <color name="surface">#171320</color>
+    <color name="orange">#FF5A1F</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+</resources>

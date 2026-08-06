@@ -1,6 +1,6 @@
 # StarME Director Decision and Input Request 001
 
-**Status:** Awaiting director responses
+**Status:** Closed by `StarME_Director_Decision_Response_001.md` on 6 August 2026
 
 **Prepared for:** Director review
 
