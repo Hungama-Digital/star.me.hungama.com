@@ -488,4 +488,18 @@ should an Android build target the server and physical-device acceptance begin.
 Amol subsequently approved `starme.hungama.com` and configured its Route 53 A record to
 `49.248.193.9`. Public Google and Cloudflare resolvers both returned that address. The repository
 contains an isolated Nginx virtual-host source at `deploy/nginx/starme.hungama.com.conf`; certificate
-provisioning and external HTTPS verification are the active next deployment action.
+provisioning and external HTTPS verification were the active next deployment action.
+
+Nginx now proxies `starme.hungama.com` to the loopback StarME API and redirects HTTP to HTTPS.
+Let's Encrypt issued a certificate valid from 6 August through 4 November 2026, and the existing
+Certbot renewal timer is active. External TLS verification, live/readiness endpoints, and an
+authenticated HTTPS catalogue smoke test all pass. The server-local public API base URL is
+`https://starme.hungama.com`; no secret values are recorded in Git.
+
+The Android debug application was rebuilt against `https://starme.hungama.com`. Unit tests,
+`lintDebug`, and `assembleDebug` passed using the locally cached Gradle 8.14.3 runtime after the
+pinned Gradle 8.9 CDN download repeatedly reset. Generated `BuildConfig` confirms the HTTPS URL.
+The ignored APK is 62,919,005 bytes with SHA-256
+`46f2b27bb327ccfd17137cc4d954a50651d21699f3f85a426c1fcd8658da661e`. The existing AGP 8.5.2
+warning for compileSdk 35 remains non-blocking. No physical-device test or APK distribution has
+been performed.

@@ -1,6 +1,6 @@
 # StarME Synthetic Staging Deployment Runbook
 
-**Status:** Synthetic loopback deployment active; DNS/TLS and Legal consent version pending
+**Status:** Synthetic HTTPS deployment active; Legal consent version and device acceptance pending
 
 **Scope:** Internal synthetic workflow only. This runbook does not authorize personal data,
 protected content, CineIQ assets, external processing, or public access.
@@ -122,11 +122,12 @@ routine rollback action.
 - Redis: `127.0.0.1:56380`
 - Migration: `20260806_0002 (head)`
 - Worker queues: `starme-first-look`, `starme-full-render`
-- Exposure: loopback only; verified through SSH tunnel
+- Exposure: containers remain loopback-only; Nginx exposes `https://starme.hungama.com`
 - Providers: synthetic `stub` renderer and `memory` delivery
 - Sensitive processing: disabled
 - Consent version: unset pending Legal
 - Approved hostname: `starme.hungama.com` (Route 53 A record to `49.248.193.9`)
+- TLS: Let's Encrypt certificate expires 4 November 2026; Certbot renewal timer active
 
 Operational commands must run from the host path above and include
 `docker compose --project-name starme`. Do not use `down -v`, because that would delete persistent
@@ -135,4 +136,8 @@ database and Redis volumes.
 The version-controlled Nginx source is `deploy/nginx/starme.hungama.com.conf`. Install it in
 `/etc/nginx/sites-available/`, enable it with the matching symlink, validate with `nginx -t`, and
 then use Certbot's Nginx integration to provision HTTPS and redirect HTTP. Never edit another
-project's virtual host to expose StarME.
+project’s virtual host to expose StarME.
+
+The HTTPS deployment was verified with HTTP 301 redirection, trusted-certificate validation,
+external live/readiness checks, and authenticated catalogue access through Nginx. The API's
+server-local `STARME_PUBLIC_API_BASE_URL` is `https://starme.hungama.com`.
