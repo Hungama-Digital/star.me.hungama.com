@@ -43,6 +43,30 @@ camera redesign is installed and two consecutive captures now pass on RMX3782. A
 visual pass is also installed. Continue M1.5 device-matrix, usability, and full-journey acceptance
 before making the real CineIQ pipeline the main workstream.
 
+### Current checkpoint in one view
+
+| Area | Where it stands now |
+|---|---|
+| Git | Latest implementation commit before this handover update: `cbc94be`; branch `codex/authenticated-prototype-foundation`, based on `staging` |
+| Staging API | Live at `https://starme.hungama.com`; health/readiness and authenticated catalogue checks passed |
+| Backend | FastAPI/PostgreSQL/Redis/RQ synthetic workflow supports access, sessions, catalogue, consent/order contracts, jobs, first look, retake, revocation/cancellation and signed grants |
+| Android | Adapted v1 source plus authenticated backend workflow and first cinematic redesign pass; HTTPS debug APK installed on Realme RMX3782 |
+| Camera | Apparent crash reproduced as OEM navigation overlap, fixed, and verified with two consecutive captures on RMX3782 |
+| Step 3 | Intentionally blocked because the staging server has no Legal-approved consent version configured; details in Section 12 |
+| Rendering | Synthetic stub only; no CineIQ, protected shell media, real identity upload, protected object storage or real delivered video |
+| Product readiness | Engineering prototype, not release-ready; complete journey, device matrix, accessibility and observed usability acceptance remain |
+
+### What is safe to demonstrate today
+
+- install and launch the internal debug application;
+- use an unexpired operator-issued single-use code and device-bound session;
+- browse the redesigned opening and the synthetic catalogue;
+- complete simulated subscription and guided selfie/ML Kit single-face capture; and
+- exercise backend health, authentication and catalogue contracts.
+
+The normal device journey currently stops at server-side consent creation in Step 3. Do not bypass
+that boundary silently or present synthetic rendering/delivery as the real product pipeline.
+
 Do not infer that VerSelf decisions, infrastructure, credentials, deployment configuration, or code apply to StarME. These are separate projects and repositories.
 
 ---
@@ -108,10 +132,10 @@ understand. Capture and consent must feel reassuring rather than technical; rend
 build anticipation; first look should feel like a reveal; and recovery from permission, camera,
 network, or processing failures must be graceful.
 
-The current Android visual shell does not yet prove this standard. Most screens, typography,
-components, navigation, and capture presentation came from v1. They are useful scaffolding, but no
-new end-to-end product-design exercise, usability study, accessibility pass, or motion/design-system
-implementation has been completed in this workstream.
+The first redesign pass now provides a new palette, ambient background, StarME brand chrome, refined
+cards/CTAs, a premiere-led opening and a guided close-up camera. Other screens still substantially
+use v1 information architecture and components. No formal end-to-end product-design acceptance,
+usability study, accessibility pass, or complete motion/design-system exercise has been completed.
 
 ---
 
@@ -396,6 +420,40 @@ Remaining acceptance work:
 Until this passes, “APK builds/installs/launches” must never be reported as “selfie flow tested” or
 “Android acceptance complete.”
 
+### Step 3 consent gate - current blocking behaviour
+
+Observed Android message: `Consent could not be recorded on the private server.` This wording is a
+generic client error; the connection is not failing and “private server” is not itself the problem.
+
+The actual request/response path is:
+
+1. after both boxes are selected and a signature has ink, Android sends `POST /v1/consents`;
+2. the current Android request identifies its text as `development-placeholder-v1`;
+3. staging/production requires the request version to exactly equal
+   `STARME_APPROVED_CONSENT_VERSION`;
+4. that server value is intentionally unset while final Nitin/Trilegal-approved wording/version is
+   outstanding; and
+5. the backend fails closed with HTTP 503 and `Legal-approved consent version is not configured`.
+
+This is an intentional legal/safety control, not a camera, signature-pad, TLS, DNS, authentication or
+database defect. It prevents a placeholder screen from being stored as a legally approved consent
+record and then attached to rendering orders.
+
+Two explicit ways forward exist:
+
+- **Preferred:** receive final approved consent wording and a stable version identifier, make Android
+  display/send that exact version, configure the same identifier in the server-local environment,
+  restart only the StarME API/worker if required, and verify the audit record/order linkage.
+- **Temporary internal test exception:** an authorized owner may explicitly approve
+  `development-placeholder-v1` for named-adult internal testing only. Configure only staging, mark
+  resulting records non-production, prohibit real sensitive processing, and replace/invalidate the
+  placeholder before any wider test or launch.
+
+Do not set a value merely to make the screen pass, do not commit the server `.env`, and do not imply
+that Amol's request to test the app constitutes Legal approval. Also improve the Android error mapping
+in the next client iteration so testers see an actionable “Consent setup is awaiting approval” state
+rather than the misleading generic private-server message.
+
 ### M0 - Intake and reproducibility
 
 - inspect/build the existing Android client or record that a new client is required;
@@ -459,11 +517,12 @@ Do not fabricate content rights, consent text, production models, infrastructure
 3. Inspect the `staging` branch, working tree, README, Product Note, and HTML demo.
 4. Continue the remaining M1.5 device-matrix and usability acceptance; do not regress the documented
    shutter/navigation-bar fix.
-5. Ask Amol whether Legal wording, protected content, CineIQ material, or other controlled inputs have
-   arrived since this document was updated.
-6. Record received inputs without overwriting their source decisions.
-7. Keep a traceability register connecting requirements, decisions, implementation, tests, deferrals, and blockers.
-8. Commit and push only explicitly authorized StarME paths. Use a `codex/` implementation branch
+5. Confirm whether final Legal wording/version or an explicit internal-only placeholder exception has
+   arrived before changing the Step 3 server gate.
+6. Ask Amol whether protected content, CineIQ material or other controlled inputs have arrived.
+7. Record received inputs without overwriting their source decisions.
+8. Keep a traceability register connecting requirements, decisions, implementation, tests, deferrals, and blockers.
+9. Commit and push only explicitly authorized StarME paths. Use a `codex/` implementation branch
    based on `staging` unless Amol explicitly requests direct work on another branch.
 
 ---
@@ -485,7 +544,7 @@ Do not fabricate content rights, consent text, production models, infrastructure
 
 Paste the following into the new StarME chat:
 
-> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend and staging deployment are functional. The Android APK was rebuilt from adapted v1 source. The RMX3782 selfie exit was traced to the shutter overlapping system navigation, fixed, rebuilt, installed, and verified with two consecutive captures. A first cinematic redesign pass covers shared styling, chrome, CTA, opening and guided camera; broader device/usability/full-journey acceptance remains open under M1.5. Never equate compile/install/cold-launch checks with end-to-end acceptance. Preserve privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without recorded approvals and controlled inputs.
+> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend and `https://starme.hungama.com` deployment are functional. The Android APK was rebuilt from adapted v1 source and installed on RMX3782. The selfie exit was traced to the shutter overlapping system navigation, fixed and verified with two consecutive captures. A first cinematic redesign covers shared styling, chrome, CTA, opening and guided camera. Step 3 currently fails closed because Android sends `development-placeholder-v1` while staging has no Legal-approved consent version; do not bypass this without final Legal wording/version or an explicitly recorded internal-test exception. Rendering/storage remain synthetic. Continue M1.5 device/usability/full-journey acceptance, preserve privacy/rights/repository boundaries, and never equate compile/install/cold-launch checks with end-to-end acceptance.
 
 ---
 
@@ -657,3 +716,23 @@ matrix, and five-tester usability review still require product-led iteration und
 Verification: `testDebugUnitTest`, `lintDebug`, and `assembleDebug` passed. Installed APK size is
 62,990,071 bytes and SHA-256 is
 `51160acaf4438f1f9dfa646394588d160a1d0c4de90d595aaea74d8e0d3f89f2`.
+
+### 6 August 2026 - Step 3 consent gate explained
+
+Device testing reached Step 3 and displayed `Consent could not be recorded on the private server.`
+Code/configuration tracing confirmed this is the expected fail-closed Legal gate. Android currently
+sends consent version `development-placeholder-v1`; the staging server's
+`STARME_APPROVED_CONSENT_VERSION` remains unset, so `POST /v1/consents` returns HTTP 503 with
+`Legal-approved consent version is not configured`. Connectivity, authentication, signature capture,
+TLS and PostgreSQL are not the cause.
+
+Section 12 records the exact behaviour and both controlled resolutions. Preferred resolution is to
+use final Nitin/Trilegal-approved wording and one matching version identifier in the displayed Android
+content, API request and server-local configuration. A temporary placeholder may be enabled only
+after an explicit internal-test exception; it must remain staging-only and must not authorize real
+sensitive processing. No server configuration was changed during this diagnosis.
+
+Current immediate sequence: obtain and record the consent decision; improve the Android error copy;
+configure and verify Step 3 only when authorized; complete the synthetic on-device workflow; continue
+M1.5 product/device acceptance; and integrate protected content/CineIQ only after their controlled
+inputs arrive.
