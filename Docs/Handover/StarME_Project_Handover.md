@@ -450,9 +450,10 @@ Two explicit ways forward exist:
   placeholder before any wider test or launch.
 
 Do not set a value merely to make the screen pass, do not commit the server `.env`, and do not imply
-that Amol's request to test the app constitutes Legal approval. Also improve the Android error mapping
-in the next client iteration so testers see an actionable “Consent setup is awaiting approval” state
-rather than the misleading generic private-server message.
+that Amol's request to test the app constitutes Legal approval. The Android error mapping was
+corrected on 6 August 2026: the client now maps the HTTP 503 consent gate to an honest
+"Consent setup is awaiting Legal approval" message, maps 401 to a session-expired prompt, and no
+longer shows the misleading generic private-server message for consent or order failures.
 
 ### M0 - Intake and reproducibility
 
@@ -736,3 +737,23 @@ Current immediate sequence: obtain and record the consent decision; improve the 
 configure and verify Step 3 only when authorized; complete the synthetic on-device workflow; continue
 M1.5 product/device acceptance; and integrate protected content/CineIQ only after their controlled
 inputs arrive.
+
+### 6 August 2026 - honest Step 3 and order error copy
+
+The misleading `Consent could not be recorded on the private server.` client message was replaced.
+Failure mapping now lives in `android/.../state/UserFacingErrors.kt` and is used by the ViewModel for
+both consent and order submission:
+
+- consent HTTP 503 (the intentional Legal gate) now reads "Consent setup is awaiting Legal approval,
+  so this step is paused for everyone. Your photo and details stay safely on this device. No retake
+  is needed once it opens.";
+- HTTP 401 on either path prompts for a new access code;
+- order HTTP 409 explains that the consent is no longer active; and
+- network failures ask the tester to check the connection and retry.
+
+No server configuration changed; the Legal gate itself still fails closed exactly as before. Seven
+new unit tests cover the mapping (including asserting the "private server" wording is gone).
+`testDebugUnitTest` (9 tests total), `lintDebug` and `assembleDebug` pass. The rebuilt APK has not
+yet been installed because no device was connected at build time; install and re-verify Step 3
+messaging on RMX3782 when the phone is next attached. Remaining M1.5 work is unchanged: camera
+instrumentation coverage, device-matrix acceptance, and the observed usability pass.

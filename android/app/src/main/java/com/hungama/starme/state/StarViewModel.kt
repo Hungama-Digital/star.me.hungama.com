@@ -234,8 +234,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         photoPath = record.photoUri ?: it.photoPath,
                     )
                 }
-            }.onFailure {
-                _events.send(StarEvent.Error("Consent could not be recorded on the private server."))
+            }.onFailure { error ->
+                _events.send(StarEvent.Error(UserFacingErrors.consent(error)))
             }
         }
     }
@@ -318,8 +318,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         )
                     }
                     _events.send(StarEvent.OrderCreated)
-                }.onFailure {
-                    _events.send(StarEvent.Error("Order could not be created on the private server."))
+                }.onFailure { error ->
+                    _events.send(StarEvent.Error(UserFacingErrors.order(error)))
                 }
             }.onFailure { e ->
                 _events.send(StarEvent.Error(e.message ?: "Order could not be created."))
