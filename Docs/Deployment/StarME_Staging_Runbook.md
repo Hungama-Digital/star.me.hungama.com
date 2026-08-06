@@ -1,6 +1,6 @@
 # StarME Synthetic Staging Deployment Runbook
 
-**Status:** Prepared; server reachable, SSH authentication and TLS particulars pending
+**Status:** Synthetic loopback deployment active; DNS/TLS and Legal consent version pending
 
 **Scope:** Internal synthetic workflow only. This runbook does not authorize personal data,
 protected content, CineIQ assets, external processing, or public access.
@@ -111,3 +111,22 @@ Distribute the debug APK only through the approved internal channel. Do not comm
 Stop application traffic first, then stop API and worker containers. Preserve PostgreSQL and audit
 data unless the approved retention/deletion owner authorizes removal. Never delete volumes as a
 routine rollback action.
+
+## Active deployment checkpoint - 6 August 2026
+
+- Host path: `/home/hungama/apps/starme`
+- Deployed source commit: `8b85832`
+- Compose project: `starme`
+- API: `127.0.0.1:8200`
+- PostgreSQL: `127.0.0.1:55433`
+- Redis: `127.0.0.1:56380`
+- Migration: `20260806_0002 (head)`
+- Worker queues: `starme-first-look`, `starme-full-render`
+- Exposure: loopback only; verified through SSH tunnel
+- Providers: synthetic `stub` renderer and `memory` delivery
+- Sensitive processing: disabled
+- Consent version: unset pending Legal
+
+Operational commands must run from the host path above and include
+`docker compose --project-name starme`. Do not use `down -v`, because that would delete persistent
+database and Redis volumes.

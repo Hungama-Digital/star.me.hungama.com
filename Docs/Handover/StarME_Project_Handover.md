@@ -201,7 +201,7 @@ As of this handover:
 - the recovered Kotlin/Jetpack Compose v1 app is sanitized under `android/` for API adaptation;
 - a FastAPI/PostgreSQL/Redis provider-neutral foundation is implemented locally;
 - synthetic first-look and full-render RQ jobs are implemented; no CineIQ integration exists;
-- no StarME infrastructure has been provisioned or deployed;
+- an isolated synthetic staging stack is deployed on the shared AIStaging server;
 - no confidential content/model package has been added; and
 - no production or tester personal data has been processed.
 
@@ -458,3 +458,29 @@ single-use code, create consent/order, poll first look, approve and finish, reta
 confirm queued-job cancellation and subsequent access denial. Legal's approved consent version is
 still required for a staging consent/order flow; the backend deliberately fails closed when it is
 unset.
+
+### 6 August 2026 - synthetic staging backend deployed
+
+Password-based SSH access as `hungama` was confirmed. The credential was used interactively and was
+not written to Git, documentation, shell command arguments, or application configuration. Docker
+Compose v2.40.3 was installed alongside the existing legacy Compose installation. No existing
+container or Nginx route was changed.
+
+Commit `8b85832` was archived from the verified local branch, transferred to the host, checksum
+verified, and extracted to `/home/hungama/apps/starme`. A server-local `.env` (mode `0600`) contains
+independently generated staging secrets; its values are not recorded here. The Compose project name
+is `starme`, with PostgreSQL at `127.0.0.1:55433`, Redis at `127.0.0.1:56380`, and the API at
+`127.0.0.1:8200`. Persistent volumes are `starme_starme_postgres` and `starme_starme_redis`.
+
+The four services `starme-postgres-1`, `starme-redis-1`, `starme-api-1`, and `starme-worker-1` are
+running. PostgreSQL and Redis report healthy, Alembic is at `20260806_0002 (head)`, and the RQ worker
+listens on `starme-first-look` and `starme-full-render`. Live and ready checks passed locally on the
+host and independently through an SSH tunnel from the development Mac. A synthetic operator/access
+smoke test returned two authenticated catalogue shells and correctly rejected access-code reuse
+with HTTP 401.
+
+This is not a public deployment. There is no StarME DNS/TLS route, all service ports are loopback
+only, the approved Legal consent version remains unset, sensitive processing remains false, and
+render/storage providers remain synthetic (`stub`/`memory`). The next deployment inputs are an
+approved StarME hostname/DNS record and TLS certificate plus Legal's consent version. Only then
+should an Android build target the server and physical-device acceptance begin.
