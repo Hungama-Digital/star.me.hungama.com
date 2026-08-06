@@ -432,9 +432,10 @@ Remote deployment is ready at the code/configuration level but cannot start unti
 SSH username and a usable private-key authentication route, application domain or test URL, and
 inbound-network/TLS arrangement. Server particulars supplied on 6 August 2026 are private IP
 `10.0.0.63` and public IP `49.248.193.9`; SSH port 22 is reachable on both from the current Mac. The
-supplied RSA public key has fingerprint `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM`, but
-no matching private key is installed/loaded locally and no SSH username or host alias is configured.
-The public key itself is deliberately not copied into this repository.
+supplied RSA public key has fingerprint `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM` and the
+SSH username is `hungama`. Non-interactive SSH authentication was tested against both addresses and
+failed with `Permission denied (publickey,password)` because no matching private key is
+installed/loaded locally. The public key itself is deliberately not copied into this repository.
 
 The initial deployment remains synthetic: use PostgreSQL,
 Redis, API, and RQ worker with `STARME_ENVIRONMENT=staging`, strong unique secrets, stub rendering,

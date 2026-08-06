@@ -16,9 +16,11 @@ Never place SSH keys, passwords, tokens, `.env`, certificates, or protected medi
 
 Received infrastructure checkpoint (6 August 2026): private IP `10.0.0.63`, public IP
 `49.248.193.9`, and SSH port 22 reachable on both from the development Mac. The supplied RSA public
-key fingerprint is `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM`; its matching private key
-is not present or loaded locally. The SSH username, DNS/TLS endpoint, and approved consent version
-remain required. The public key body is not stored in Git.
+key fingerprint is `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM` and the SSH username is
+`hungama`. Authentication using the private keys currently available on the development Mac fails
+against both addresses with `Permission denied (publickey,password)`; the matching private key is
+not present or loaded locally. The DNS/TLS endpoint and approved consent version also remain
+required. The public key body is not stored in Git.
 
 ## Server prerequisites
 
