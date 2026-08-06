@@ -503,3 +503,11 @@ The ignored APK is 62,919,005 bytes with SHA-256
 `46f2b27bb327ccfd17137cc4d954a50651d21699f3f85a426c1fcd8658da661e`. The existing AGP 8.5.2
 warning for compileSdk 35 remains non-blocking. No physical-device test or APK distribution has
 been performed.
+
+Amol explicitly authorized removal of an older `com.hungama.starme.debug` installation whose
+development signature did not match the new build. The old app and its local data were removed from
+the connected Realme RMX3782, the HTTPS-configured APK was installed successfully, and Android
+completed a cold launch of `com.hungama.starme.MainActivity`. The StarME process was live and the
+activity was confirmed as the device's foreground activity. Functional tester-code and complete
+workflow acceptance on the device remain pending the approved consent version and a controlled
+tester session.
