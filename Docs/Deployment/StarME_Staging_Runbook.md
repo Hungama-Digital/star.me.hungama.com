@@ -19,8 +19,9 @@ Received infrastructure checkpoint (6 August 2026): private IP `10.0.0.63`, publ
 key fingerprint is `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM` and the SSH username is
 `hungama`. Authentication using the private keys currently available on the development Mac fails
 against both addresses with `Permission denied (publickey,password)`; the matching private key is
-not present or loaded locally. The DNS/TLS endpoint and approved consent version also remain
-required. The public key body is not stored in Git.
+not present or loaded locally. The file `/Users/amoldewase/Downloads/staging-ai.rsa` is the same
+RFC4716 public key, despite its filename, and cannot be used for authentication. The DNS/TLS endpoint
+and approved consent version also remain required. The public key body is not stored in Git.
 
 ## Server prerequisites
 

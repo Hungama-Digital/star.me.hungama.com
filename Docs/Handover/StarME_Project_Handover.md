@@ -435,7 +435,9 @@ inbound-network/TLS arrangement. Server particulars supplied on 6 August 2026 ar
 supplied RSA public key has fingerprint `SHA256:vcCiN0r9F+Uo02mMC11eZfT8q2SIoJFnWQUZijDSNbM` and the
 SSH username is `hungama`. Non-interactive SSH authentication was tested against both addresses and
 failed with `Permission denied (publickey,password)` because no matching private key is
-installed/loaded locally. The public key itself is deliberately not copied into this repository.
+installed/loaded locally. `/Users/amoldewase/Downloads/staging-ai.rsa` was inspected and is an
+RFC4716 `SSH2 PUBLIC KEY` export with the same fingerprint, not a private key, so it cannot
+authenticate. The public key itself is deliberately not copied into this repository.
 
 The initial deployment remains synthetic: use PostgreSQL,
 Redis, API, and RQ worker with `STARME_ENVIRONMENT=staging`, strong unique secrets, stub rendering,
