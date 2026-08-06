@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -103,8 +104,18 @@ private fun StarApp(container: AppContainer) {
         }
     }
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFF291329), StarPalette.Bg),
+                    radius = 1500f,
+                ),
+            ),
+    ) {
     Scaffold(
-        containerColor = StarPalette.Bg,
+        containerColor = Color.Transparent,
         topBar = {
             Column(modifier = Modifier.statusBarsPadding()) {
                 StarTopBar(credits = state.credits, walletVisible = state.subscribed || state.credits > 0)
@@ -206,6 +217,7 @@ private fun StarApp(container: AppContainer) {
             }
         }
     }
+    }
 }
 
 /** The persistent bottom CTA dock with the demo's fade-up gradient. */
@@ -215,7 +227,7 @@ private fun CtaDock(content: @Composable () -> Unit) {
         modifier = Modifier
             .background(Brush.verticalGradient(listOf(Color.Transparent, StarPalette.Bg.copy(alpha = 0.94f))))
             .navigationBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 18.dp),
     ) {
         content()
     }

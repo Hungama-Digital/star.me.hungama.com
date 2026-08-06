@@ -8,24 +8,24 @@ import androidx.compose.ui.graphics.Color
  * [StarColors] and is reached through [LocalStarColors].
  */
 object StarPalette {
-    val Bg = Color(0xFF0C0A10)
-    val Surface = Color(0xFF171320)
-    val Surface2 = Color(0xFF1F1A2B)
-    val Line = Color(0xFF2B2438)
+    val Bg = Color(0xFF09070D)
+    val Surface = Color(0xFF17121E)
+    val Surface2 = Color(0xFF21182A)
+    val Line = Color(0xFF3B2D45)
 
-    val Orange = Color(0xFFFF5A1F)
-    val OrangeDeep = Color(0xFFD8430E)
-    val Gold = Color(0xFFE9BF6B)
-    val Good = Color(0xFF59C98A)
+    val Orange = Color(0xFFFF4F6D)
+    val OrangeDeep = Color(0xFFB71949)
+    val Gold = Color(0xFFFFC56E)
+    val Good = Color(0xFF63D7AE)
 
-    val Text = Color(0xFFF5F0EA)
-    val Dim = Color(0xFF9C93AB)
+    val Text = Color(0xFFFFF7F2)
+    val Dim = Color(0xFFB8AABD)
 
     // Shell gradients
-    val Love1 = Color(0xFF43102B)
-    val Love2 = Color(0xFFB01A55)
-    val Act1 = Color(0xFF0B1C2E)
-    val Act2 = Color(0xFF1E5C8C)
+    val Love1 = Color(0xFF3C0B2B)
+    val Love2 = Color(0xFFD51E62)
+    val Act1 = Color(0xFF071C2A)
+    val Act2 = Color(0xFF087F93)
 
     // Poster / signature accents
     val GoldInk = Color(0xFFF2CD82)

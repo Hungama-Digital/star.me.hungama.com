@@ -1,6 +1,6 @@
 # StarME Project Handover
 
-**Handover status:** Ready for a new development chat; Android product experience is not acceptance-ready
+**Handover status:** Ready for a new development chat; camera defect fixed, broader Android acceptance remains open
 
 **Last updated:** 6 August 2026
 
@@ -37,10 +37,11 @@ It records:
 ### Executive status at this checkpoint
 
 StarME currently has a functional synthetic backend/deployment foundation and an Android engineering
-prototype. It does **not** yet have a polished, acceptance-tested consumer experience. The installed
-Android build opens and connects to staging, but a user-reported failure while taking a selfie is an
-active P0 release blocker. Treat the next milestone as product-experience and device-reliability work,
-not as immediate expansion into the real CineIQ pipeline.
+prototype. It does **not** yet have a fully acceptance-tested consumer experience. The reproduced
+selfie exit was caused by the shutter overlapping the Realme system navigation area; the inset-safe
+camera redesign is installed and two consecutive captures now pass on RMX3782. A first cinematic
+visual pass is also installed. Continue M1.5 device-matrix, usability, and full-journey acceptance
+before making the real CineIQ pipeline the main workstream.
 
 Do not infer that VerSelf decisions, infrastructure, credentials, deployment configuration, or code apply to StarME. These are separate projects and repositories.
 
@@ -242,9 +243,10 @@ Foundation update, 6 August 2026:
 
 The Director response is now recorded. Android-to-API integration is implemented and the HTTPS build
 was installed and cold-launched on a physical Realme RMX3782 against the staging API. That check did
-not exercise the complete user journey. A subsequent user attempt to take a selfie caused the app to
-exit/fail; retained device logs did not contain a StarME fatal exception, so the exact root cause is
-not yet established. This foundation is not yet an acceptance-tested app, production deployment,
+not exercise the complete user journey. A subsequent user attempt to take a selfie appeared to exit;
+targeted reproduction established that the camera shutter overlapped the system navigation target and
+sent the app to the background. The corrected build passed two consecutive captures on that device.
+This foundation is not yet a fully acceptance-tested app, production deployment,
 approved Legal consent implementation, biometric pipeline, protected storage adapter, or CineIQ
 integration.
 
@@ -345,8 +347,9 @@ These must be transferred through controlled storage rather than committed to th
 
 ### Immediate M1.5 - Product experience and device reliability
 
-Complete this milestone before treating the Android app as ready for internal acceptance or before
-making the real render pipeline the main workstream.
+This milestone is in progress. The first camera/reliability fix and shared cinematic visual pass are
+complete; full device-matrix and observed usability acceptance remain required before making the real
+render pipeline the main workstream.
 
 1. Define the primary tester journey and a coherent cinematic visual direction: type, colour, imagery,
    motion, sound policy, tone of voice, component states, and accessibility constraints.
@@ -372,21 +375,23 @@ accessibility basics pass; and Product/Director accepts the look and emotional q
 
 On 6 August 2026, Amol reported that the installed app failed/exited when he tried to take a selfie.
 The retained Android crash buffer contained unrelated crashes from another package and no StarME
-`FATAL EXCEPTION`. Package logs showed the front camera opening and later detaching as the launcher
-resumed, but they are insufficient to distinguish an application crash, camera-dialog dismissal,
-activity termination, or another lifecycle failure. Therefore the symptom is accepted, but no root
-cause is claimed.
+`FATAL EXCEPTION`. A controlled reproduction then exposed the cause: on the RMX3782 full-screen
+Compose dialog, the visible shutter bounds extended into the three-button navigation bar. A tap at
+the shutter centre invoked Home, paused StarME, and detached the camera while leaving the process
+alive. This exactly matched the apparent crash.
 
-The current implementation exposes credible reliability gaps: camera-provider acquisition is not
-guarded, camera-binding errors are swallowed, capture errors silently close the camera, lifecycle
-cleanup is implicit, the permission grant requires another tap rather than continuing automatically,
-and there is no instrumentation coverage or structured failure telemetry. The next engineer must:
+The corrected implementation keeps the shutter above OEM navigation controls, guards provider and
+front-camera availability, performs lifecycle cleanup, disables capture until ready, minimizes
+capture latency, continues after permission approval, and surfaces bind/capture errors with
+privacy-safe diagnostic logs. Verification on the connected RMX3782 demonstrated two consecutive
+captures, the StarME activity remaining foreground, and no fatal exception.
 
-1. clear logcat and reproduce the exact steps on RMX3782, recording permission state and screen video;
-2. capture StarME process/activity, CameraX, and AndroidRuntime logs during the attempt;
-3. add visible error states and privacy-safe diagnostics before guessing at a fix;
-4. harden permission, provider/bind, shutter, capture/file, ML Kit, and lifecycle paths; and
-5. prove repeated capture, cancel, retake, background/resume, deny, and permanent-deny cases on-device.
+Remaining acceptance work:
+
+1. add automated Compose/instrumentation coverage for camera states and safe touch bounds;
+2. prove cancel, retake, background/resume, deny, and permanent-deny cases;
+3. repeat on the agreed multi-device/Android-version matrix; and
+4. complete the synthetic journey after Legal consent configuration is available.
 
 Until this passes, “APK builds/installs/launches” must never be reported as “selfie flow tested” or
 “Android acceptance complete.”
@@ -452,8 +457,8 @@ Do not fabricate content rights, consent text, production models, infrastructure
 1. Read this file completely.
 2. Read `Docs/Decisions/StarME_Director_Decision_Request_001.md` completely.
 3. Inspect the `staging` branch, working tree, README, Product Note, and HTML demo.
-4. Inspect the M1.5 experience/reliability milestone and reproduce the selfie incident before claiming
-   further Android acceptance.
+4. Continue the remaining M1.5 device-matrix and usability acceptance; do not regress the documented
+   shutter/navigation-bar fix.
 5. Ask Amol whether Legal wording, protected content, CineIQ material, or other controlled inputs have
    arrived since this document was updated.
 6. Record received inputs without overwriting their source decisions.
@@ -480,7 +485,7 @@ Do not fabricate content rights, consent text, production models, infrastructure
 
 Paste the following into the new StarME chat:
 
-> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend and staging deployment are functional. The Android APK was rebuilt from adapted v1 source, but its UI is still largely inherited and is not product-acceptance-ready; a user-reported selfie failure is an active P0 blocker whose root cause is not yet captured. Begin with the documented M1.5 product-experience and device-reliability milestone. Never equate compile/install/cold-launch checks with end-to-end acceptance. Preserve privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without recorded approvals and controlled inputs.
+> We are continuing the StarME project in the repository `https://github.com/Hungama-Digital/star.me.hungama.com.git`, based on branch `staging`, with the local checkout at `/Users/amoldewase/Documents/StarMe 2`. First read `Docs/Handover/StarME_Project_Handover.md`, both documents in `Docs/Decisions/`, `Docs/API/StarME_API_v1.md`, and `Docs/Traceability/StarME_Traceability_Register.md` completely; then inspect the current branch and Git status. StarME and VerSelf are separate projects, so never copy code, data, secrets, or deployment assumptions between them. The authenticated synthetic backend and staging deployment are functional. The Android APK was rebuilt from adapted v1 source. The RMX3782 selfie exit was traced to the shutter overlapping system navigation, fixed, rebuilt, installed, and verified with two consecutive captures. A first cinematic redesign pass covers shared styling, chrome, CTA, opening and guided camera; broader device/usability/full-journey acceptance remains open under M1.5. Never equate compile/install/cold-launch checks with end-to-end acceptance. Preserve privacy, rights, consent, and repository boundaries. Do not begin public deployment, real biometric processing, external partner transfer, or confidential media ingestion without recorded approvals and controlled inputs.
 
 ---
 
@@ -628,3 +633,27 @@ creative presentation remains substantially the inherited v1 UI. Product quality
 a purposeful experience redesign plus camera/reliability work and device acceptance evidence. The
 current release classification is: **backend/deployment foundation functional; Android engineering
 prototype installed; consumer experience and end-to-end acceptance blocked.**
+
+### 6 August 2026 - selfie root cause fixed and first cinematic redesign installed
+
+Controlled reproduction on RMX3782 established that the apparent crash was an interaction defect:
+the full-screen camera dialog placed the shutter over the OEM three-button navigation region. The
+shutter centre invoked Home, so StarME paused and the camera detached while its process remained
+alive. There was no application fatal exception.
+
+The camera was rebuilt with an OEM-safe bottom touch target, guarded provider/front-camera setup,
+lifecycle unbinding, capture-readiness and busy states, low-latency capture, automatic continuation
+after permission approval, accessible shutter semantics, explicit recovery UI, and privacy-safe
+diagnostic events. The new HTTPS APK was installed over the existing debug build. Its shutter bounds
+were verified above the navigation bar, and two consecutive real captures returned to StarME with the
+activity foreground and no fatal exception.
+
+The same build introduces the first deliberate product-experience pass: a richer cinematic palette
+and ambient background, StarME-first brand chrome, refined cards and CTA geometry, a new premiere-led
+opening narrative, and a guided close-up experience. This is a meaningful visual foundation rather
+than final design acceptance. Concept, consent, production, premiere, accessibility, motion, device
+matrix, and five-tester usability review still require product-led iteration under M1.5.
+
+Verification: `testDebugUnitTest`, `lintDebug`, and `assembleDebug` passed. Installed APK size is
+62,990,071 bytes and SHA-256 is
+`51160acaf4438f1f9dfa646394588d160a1d0c4de90d595aaea74d8e0d3f89f2`.

@@ -32,7 +32,7 @@ fun Stage(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 118.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 128.dp),
         content = content,
     )
 }
@@ -46,7 +46,7 @@ fun Eyebrow(text: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         fontSize = 11.sp,
         letterSpacing = 0.24.em,
-        modifier = modifier.padding(bottom = 10.dp),
+        modifier = modifier.padding(bottom = 12.dp),
     )
 }
 
@@ -82,9 +82,14 @@ fun StarCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surface, RoundedCornerShape(16.dp))
-            .border(1.dp, colors.line, RoundedCornerShape(16.dp))
-            .padding(18.dp),
+            .background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(colors.surface2, colors.surface),
+                ),
+                RoundedCornerShape(24.dp),
+            )
+            .border(1.dp, colors.line, RoundedCornerShape(24.dp))
+            .padding(20.dp),
         content = content,
     )
 }

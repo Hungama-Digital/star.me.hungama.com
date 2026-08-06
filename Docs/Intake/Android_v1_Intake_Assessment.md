@@ -58,9 +58,9 @@ that it was tested through compile SDK 34 while the project compiles SDK 35; thi
 through a separately verified dependency upgrade rather than suppressing the warning.
 
 The HTTPS debug build was installed and cold-launched on a Realme RMX3782. A later user attempt to
-take a selfie failed/exited. No StarME fatal exception was retained, and the earlier check did not
-exercise camera capture. Selfie reliability and the complete device journey are therefore unverified
-and P0-blocked; see the handover's M1.5 milestone.
+take a selfie appeared to exit. Controlled reproduction found that the visible shutter overlapped the
+OEM navigation bar and invoked Home. The inset-safe, hardened camera build subsequently passed two
+consecutive captures on RMX3782. Wider device and complete-journey acceptance remain under M1.5.
 
 ## Protected/local-only intake
 

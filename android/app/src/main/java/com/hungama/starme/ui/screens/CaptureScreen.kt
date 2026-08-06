@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,7 +71,17 @@ fun CaptureScreen(
 ) {
     val colors = StarTheme.colors
     var showCamera by remember { mutableStateOf(false) }
+    var openAfterPermission by remember { mutableStateOf(false) }
+    var cameraMessage by remember { mutableStateOf<String?>(null) }
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
+
+    LaunchedEffect(cameraPermission.status.isGranted, openAfterPermission) {
+        if (openAfterPermission && cameraPermission.status.isGranted) {
+            openAfterPermission = false
+            cameraMessage = null
+            showCamera = true
+        }
+    }
 
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -90,7 +101,11 @@ fun CaptureScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     if (cameraPermission.status.isGranted) showCamera = true
-                    else cameraPermission.launchPermissionRequest()
+                    else {
+                        openAfterPermission = true
+                        cameraMessage = "Allow camera access to take your private close-up. You can also upload a photo."
+                        cameraPermission.launchPermissionRequest()
+                    }
                 },
             )
             Pill(
@@ -100,6 +115,11 @@ fun CaptureScreen(
                     photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
             )
+        }
+
+        cameraMessage?.let { message ->
+            Spacer(Modifier.height(10.dp))
+            Text(message, style = MaterialTheme.typography.bodySmall, color = colors.gold)
         }
 
         // Name field
@@ -169,6 +189,10 @@ fun CaptureScreen(
                         onPhotoSelected(uri)
                     },
                     onCancel = { showCamera = false },
+                    onError = { message ->
+                        showCamera = false
+                        cameraMessage = message
+                    },
                 )
             }
         }

@@ -15,10 +15,11 @@ was rebuilt from this adapted source rather than copied from the ZIP's prebuilt 
 largely inherited and is not a finished creative-product design.
 Generated builds, APKs, local machine configuration and episode MP4s are not stored in Git.
 
-Android acceptance is currently blocked by a user-reported failure/exit during selfie capture on a
-Realme RMX3782. Build, lint, contract tests, install and cold launch passed, but the capture and full
-journey were not tested successfully. See the handover for the required product-experience and
-device-reliability milestone; do not describe this build as release-ready.
+The reported RMX3782 selfie exit was reproduced as a shutter/system-navigation overlap, not a process
+crash. The camera is now inset-safe, lifecycle-cleaned and visibly reports readiness/errors; the
+installed correction passed two consecutive captures. A first cinematic redesign pass updates the
+shared palette, backdrop, StarME chrome, cards, CTA system, opening and camera. Wider device,
+accessibility, usability and full-journey acceptance remain; do not describe this build as release-ready.
 
 `StarME_Demo.html` remains a standalone visual demo; it is not connected to this API.
 

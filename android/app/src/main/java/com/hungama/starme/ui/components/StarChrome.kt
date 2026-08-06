@@ -43,22 +43,22 @@ fun StarTopBar(credits: Int, walletVisible: Boolean, modifier: Modifier = Modifi
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "FAST",
+                text = "STAR",
                 fontFamily = DisplayFontFamily,
                 fontWeight = FontWeight.Black,
-                fontSize = 19.sp,
-                letterSpacing = 0.06.em,
+                fontSize = 22.sp,
+                letterSpacing = 0.04.em,
                 color = colors.text,
             )
             Text(
-                text = "TV",
-                color = colors.orange,
+                text = "ME",
+                color = colors.gold,
                 fontWeight = FontWeight.Bold,
-                fontSize = 10.sp,
-                letterSpacing = 0.28.em,
-                modifier = Modifier.padding(start = 7.dp, bottom = 2.dp),
+                fontSize = 12.sp,
+                letterSpacing = 0.18.em,
+                modifier = Modifier.padding(start = 5.dp, top = 2.dp),
             )
         }
         AnimatedVisibility(visible = walletVisible) {
@@ -123,7 +123,7 @@ fun StarStepper(current: Int?, total: Int, modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(3.dp)
+                    .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(barColor)
             )

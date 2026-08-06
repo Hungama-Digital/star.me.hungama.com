@@ -44,7 +44,7 @@ fun StarButton(
     style: StarButtonStyle = StarButtonStyle.PRIMARY,
 ) {
     val colors = StarTheme.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(18.dp)
     val background: Brush = when (style) {
         StarButtonStyle.PRIMARY -> Brush.verticalGradient(listOf(colors.orange, colors.orangeDeep))
         StarButtonStyle.GOLD -> Brush.verticalGradient(listOf(StarPalette.GoldInk, Color(0xFFC99B3F)))
@@ -66,7 +66,7 @@ fun StarButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 52.dp)
+            .heightIn(min = 58.dp)
             .scale(pressScale)
             .clip(shape)
             .alpha(if (enabled) 1f else 0.35f)

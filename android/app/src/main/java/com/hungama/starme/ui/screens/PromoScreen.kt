@@ -40,9 +40,9 @@ fun PromoScreen() {
     Stage {
         HeroCard()
         Spacer(Modifier.height(14.dp))
-        CheckLine("Crafted by the studio behind Fast TV, live in 90 countries")
-        CheckLine("Your face only, verified. Your data, always deletable")
-        CheckLine("Premieres with your name in the opening credits")
+        CheckLine("Choose a world designed for you to lead")
+        CheckLine("Your face stays protected and always revocable")
+        CheckLine("Approve your first look before the premiere")
     }
 }
 
@@ -52,20 +52,20 @@ private fun HeroCard() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 330.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.dp, colors.line, RoundedCornerShape(20.dp))
+            .heightIn(min = 430.dp)
+            .clip(RoundedCornerShape(30.dp))
+            .border(1.dp, colors.gold.copy(alpha = 0.28f), RoundedCornerShape(30.dp))
             .background(
                 Brush.radialGradient(
-                    colors = listOf(StarPalette.Love2, StarPalette.Love1, Color(0xFF12080F)),
+                    colors = listOf(Color(0xFFFF4F6D), StarPalette.Love1, Color(0xFF09070D)),
                     center = Offset(Float.POSITIVE_INFINITY, 0f),
                     radius = 1400f,
                 )
             )
             .background(
                 Brush.verticalGradient(
-                    0.30f to Color(0x1A0C0A10),
-                    0.78f to Color(0xEB0C0A10),
+                    0.20f to Color(0x050C0A10),
+                    0.76f to Color(0xF209070D),
                 )
             )
             .padding(start = 20.dp, end = 20.dp, top = 26.dp, bottom = 22.dp),
@@ -86,7 +86,7 @@ private fun HeroCard() {
         }
         Column(modifier = Modifier.align(Alignment.BottomStart)) {
             Text(
-                text = "A STARME ORIGINAL · ONLY ON FAST TV",
+                text = "YOUR NAME. ABOVE THE TITLE.",
                 color = StarPalette.Gold,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
@@ -94,17 +94,17 @@ private fun HeroCard() {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Star in your\nown Micro\nDrama",
+                text = "Your face.\nYour story.\nYour premiere.",
                 fontFamily = DisplayFontFamily,
                 fontWeight = FontWeight.Black,
-                fontSize = 44.sp,
-                lineHeight = 43.sp,
+                fontSize = 46.sp,
+                lineHeight = 44.sp,
                 letterSpacing = 0.02.em,
                 color = colors.text,
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "Upload one photo. Choose your story. In 12 hours, you are the lead.",
+                text = "Step into an original Micro Drama and see yourself as the lead—from first look to final frame.",
                 color = Color(0xFFE8D9DF),
                 style = MaterialTheme.typography.bodySmall,
             )
