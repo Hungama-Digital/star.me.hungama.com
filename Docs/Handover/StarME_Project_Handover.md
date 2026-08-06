@@ -424,6 +424,10 @@ format checking, strict mypy, 13 pytest tests at 96% coverage, and a clean Alemb
 the generated APK remains ignored and is not committed. The repository scan found no tracked APK,
 archive, media, keystore, local environment file, or known credential pattern.
 
+The foundation was committed as `39cdf2f` (`Build authenticated StarME prototype foundation`) and
+pushed to `origin/codex/authenticated-prototype-foundation`. It has not been merged into `staging`;
+future work must inspect the remote branch/PR state before creating another publication branch.
+
 Remote deployment is ready at the code/configuration level but cannot start until Amol supplies the
 SSH username and a usable private-key authentication route, application domain or test URL, and
 inbound-network/TLS arrangement. Server particulars supplied on 6 August 2026 are private IP
