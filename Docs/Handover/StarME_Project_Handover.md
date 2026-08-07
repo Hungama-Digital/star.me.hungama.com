@@ -818,3 +818,26 @@ Verification: backend Ruff, format check, strict mypy and 13 pytest tests at 96%
 catalogue. Deploy the updated backend to `/home/hungama/apps/starme` before installing the new APK,
 or on-device orders will fail with `Shell or role is not enabled`. If Dipti designates a role other
 than Arjun, update `enabled_role`, the manifest role entry and the ViewModel fallback together.
+
+### 7 August 2026 - on-device verification of the real-show build and copy cleanup
+
+The catalogue/error-copy build was installed on RMX3782 and driven through the journey via adb.
+Verified on device: redesigned cinematic opening; Step 1 Membership (₹499/year, ₹ locale); Step 2
+guided close-up with photo upload and the ML Kit single-face check passing on a synthetic character
+face (no real biometric used); Step 3 consent rendering the full plain-language note, both
+checkboxes, and a working finger-signature pad ("Signed on 7 August 2026"). The signature pad sits
+at the end of the scrollable Stage and rises above the floating CTA dock once the outer page is
+scrolled (the 128dp bottom reserve works); reaching it requires that scroll, which is a minor
+usability note for the M1.5 pass rather than a blocker.
+
+The transient HTTP 503 consent snackbar with the new honest wording was not captured as a screenshot
+(snackbar timing plus an OEM installer popup interrupted the automated attempts); that specific
+503-to-copy mapping remains covered by the 7 `UserFacingErrors` unit tests. Recommend an
+instrumentation test for the on-screen message as part of M1.5 rather than relying on manual capture.
+
+Separately, user-facing copy was scanned for em-dashes (an organisation style rule) and cleaned:
+`PromoScreen` hero paragraph, both `StarViewModel` face-guidance strings, and the placeholder dashes
+in `ProductionScreen`, `SettingsScreen` and `PremiereScreen` (now "pending"/"Not set"). Inherited
+KDoc comments still contain em-dashes and were intentionally left untouched to avoid churn.
+Android `testDebugUnitTest` (9 tests), `lintDebug` and `assembleDebug` pass; the rebuilt APK was
+reinstalled on RMX3782.

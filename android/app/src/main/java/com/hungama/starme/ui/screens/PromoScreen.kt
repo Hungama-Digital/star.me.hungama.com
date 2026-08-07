@@ -104,7 +104,7 @@ private fun HeroCard() {
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "Step into an original Micro Drama and see yourself as the lead—from first look to final frame.",
+                text = "Step into an original Micro Drama and see yourself as the lead, from first look to final frame.",
                 color = Color(0xFFE8D9DF),
                 style = MaterialTheme.typography.bodySmall,
             )

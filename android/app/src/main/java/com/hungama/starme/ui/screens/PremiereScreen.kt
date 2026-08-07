@@ -87,7 +87,7 @@ fun PremiereScreen(
             name = state.name,
             shell = shell,
             episodeCount = pkg.episodes,
-            consentRef = state.consentRef ?: "—",
+            consentRef = state.consentRef ?: "pending",
         )
     }
 

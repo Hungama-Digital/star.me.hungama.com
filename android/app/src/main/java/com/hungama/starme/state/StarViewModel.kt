@@ -188,8 +188,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun faceGuidance(faceCount: Int): String = when (faceCount) {
-        0 -> "We couldn't find a face. Retake in even, front-facing light — no sunglasses, no filters."
-        else -> "More than one face detected. StarME casts you and only you — retake solo."
+        0 -> "We couldn't find a face. Retake in even, front-facing light, no sunglasses, no filters."
+        else -> "More than one face detected. StarME casts you and only you. Retake solo."
     }
 
     // ---- Consent (Step 3) ----

@@ -54,7 +54,7 @@ fun SettingsScreen(
 
         if (state.consentRef != null) {
             StarCard {
-                CardRow("Star name", state.name.ifBlank { "—" })
+                CardRow("Star name", state.name.ifBlank { "Not set" })
                 Spacer(Modifier.height(10.dp))
                 CardRow("Consent ref", state.consentRef)
                 Spacer(Modifier.height(10.dp))

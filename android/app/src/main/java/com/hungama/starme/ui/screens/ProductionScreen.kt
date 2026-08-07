@@ -189,7 +189,7 @@ fun ProductionScreen(
             append(state.name.ifBlank { "you" })
         }
         CheckLine(summary)
-        CheckLine("Consent ref ${state.consentRef ?: "—"} attached to this render")
+        CheckLine("Consent ref ${state.consentRef ?: "pending"} attached to this render")
         CheckLine("Human quality check before delivery · one free re-render if we miss")
     }
 }
