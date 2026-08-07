@@ -141,3 +141,20 @@ project’s virtual host to expose StarME.
 The HTTPS deployment was verified with HTTP 301 redirection, trusted-certificate validation,
 external live/readiness checks, and authenticated catalogue access through Nginx. The API's
 server-local `STARME_PUBLIC_API_BASE_URL` is `https://starme.hungama.com`.
+
+## Redeploy checkpoint - 7 August 2026 (real-show catalogue)
+
+Key-based SSH from the development Mac to `hungama@49.248.193.9` is now configured (ed25519), so
+deploys run non-interactively. The only backend delta since commit `8b85832` was
+`backend/starme/catalogue.py`; a checksum comparison confirmed no other server source file differed.
+
+Steps performed: backed up the server file to `catalogue.py.bak-20260807`, copied the updated
+`catalogue.py`, then `docker compose --project-name starme build api worker` and `up -d api worker`.
+The `.env` and all other projects were untouched. Migration stayed at `20260806_0002 (head)`.
+
+Verification: all four containers up; local and external `https://starme.hungama.com` live/ready both
+`ok`; and an authenticated catalogue smoke test (operator key sourced from server `.env`, never
+exposed) returned exactly one shell:
+`{"id":"ek-love-story-001","title":"Ek Love Story Aisi Bhi","enabled_role":"arjun","episode_count":3,"synthetic_fixture":true}`.
+Sensitive processing remains disabled and the Legal consent version remains unset, so the on-device
+journey still stops at Step 3 consent by design.
