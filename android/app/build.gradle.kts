@@ -17,8 +17,11 @@ android {
         versionCode = 2
         versionName = "1.2"
 
+        // Default to the staging host so tester/debug builds reach the real server even
+        // when -PSTARME_API_BASE_URL is not passed. Override for local/emulator work with
+        // -PSTARME_API_BASE_URL=http://10.0.2.2:8000 (also flip usesCleartextTraffic below).
         val apiBaseUrl = providers.gradleProperty("STARME_API_BASE_URL")
-            .orElse("http://10.0.2.2:8000")
+            .orElse("https://starme.hungama.com")
             .get()
         buildConfigField("String", "STARME_API_BASE_URL", "\"$apiBaseUrl\"")
         manifestPlaceholders["usesCleartextTraffic"] = "false"

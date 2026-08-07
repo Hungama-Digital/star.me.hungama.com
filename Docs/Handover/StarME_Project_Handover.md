@@ -859,3 +859,21 @@ StarME code, auth, or consent-gate issue. Server-side the full order flow was in
 to READY with real first-look and episode bytes served over signed URLs. Recommend completing the
 on-device consent/first-look reveal on a stable network (or mobile data) and adding a Compose
 instrumentation test for the consent success path so it does not depend on manual capture.
+
+### 7 August 2026 - root cause of the on-device Step 3 block: wrong API URL in rebuilds
+
+The on-device "code expired" / "We couldn't reach StarME" failures were NOT a network, consent, or
+server problem. `android/app/build.gradle.kts` defaulted `STARME_API_BASE_URL` to
+`http://10.0.2.2:8000` (the emulator's host alias, unreachable on a physical device, and cleartext
+which the app also blocks). The catalogue and em-dash rebuilds ran `assembleDebug` without
+`-PSTARME_API_BASE_URL=https://starme.hungama.com`, so those APKs silently pointed at the emulator
+address and every server call failed, while Chrome and the server itself were fine.
+
+Fix: the default is now `https://starme.hungama.com`, so any tester/debug build reaches staging even
+without the flag (override with `-PSTARME_API_BASE_URL` plus the cleartext placeholder for local
+emulator work). Rebuilt with the correct URL baked in (verified in generated BuildConfig) and
+installed on RMX3782. The complete synthetic journey then succeeded on device: redeem, consent
+(placeholder bypass), order, first look, approve, and full render to READY for
+`ek-love-story-001`/`arjun`/`lead-debut-3`, confirmed in the server audit log. Real first-look and
+episode media serve over signed URLs. Lesson for future builds: always confirm the baked-in API URL,
+or rely on the new staging default.
