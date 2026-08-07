@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     delivery_signing_key: SecretStr = SecretStr("local-delivery-key-change-me")
     public_api_base_url: str = "http://127.0.0.1:8000"
     approved_consent_version: str | None = None
+    # Optional local media root. When set, /v1/media serves real shell files from here
+    # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
+    # This is NOT the real render pipeline and does not enable sensitive processing.
+    media_dir: str | None = None
 
     @model_validator(mode="after")
     def reject_local_secrets_outside_development(self) -> "Settings":

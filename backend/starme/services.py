@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from starme.config import get_settings
 from starme.models import AuditEvent, EpisodeOutput, FirstLook, Order, RenderJob
 from starme.schemas import JobState, OrderState
 
@@ -31,6 +32,20 @@ def audit(
     )
 
 
+def first_look_key(order: Order) -> str:
+    """Passthrough demo delivery maps first look to a fixed shell frame when a media
+    dir is configured; otherwise it stays a per-order synthetic key."""
+    if get_settings().media_dir:
+        return f"shells/{order.shell_id}/first_look.jpg"
+    return f"synthetic/first-looks/{order.id}.jpg"
+
+
+def episode_key(order: Order, number: int) -> str:
+    if get_settings().media_dir:
+        return f"shells/{order.shell_id}/episode-{number}.mp4"
+    return f"synthetic/orders/{order.id}/episode-{number}.mp4"
+
+
 def complete_first_look(session: Session, job_id: str) -> None:
     job = session.get(RenderJob, job_id)
     if job is None or job.status == JobState.CANCELED:
@@ -45,7 +60,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
     session.add(
         FirstLook(
             order_id=order.id,
-            object_key=f"synthetic/first-looks/{order.id}.jpg",
+            object_key=first_look_key(order),
             status="PENDING",
         )
     )
@@ -68,7 +83,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
     order.status = OrderState.FULL_RENDERING
     session.flush()
     for number in range(1, 4):
-        key = f"synthetic/orders/{order.id}/episode-{number}.mp4"
+        key = episode_key(order, number)
         session.add(
             EpisodeOutput(
                 order_id=order.id,

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,7 +15,7 @@ from starme import __version__
 from starme.catalogue import SYNTHETIC_SHELLS
 from starme.config import Settings, get_settings
 from starme.database import get_session
-from starme.delivery import signed_url
+from starme.delivery import resolve_media_file, signed_url
 from starme.jobs import enqueue_first_look, enqueue_full_render
 from starme.models import ClientSession, ConsentRecord, Order, RenderJob
 from starme.schemas import (
@@ -398,4 +399,11 @@ def synthetic_media_contract(
         signature, expected
     ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Delivery grant invalid")
+    media_file = resolve_media_file(settings.media_dir, key)
+    if media_file is not None:
+        disposition = "attachment" if purpose == "download" else "inline"
+        return FileResponse(
+            media_file,
+            headers={"Content-Disposition": f'{disposition}; filename="{media_file.name}"'},
+        )
     return Response(status_code=204, headers={"X-StarME-Synthetic-Media": "true"})
