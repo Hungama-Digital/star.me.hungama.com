@@ -1,18 +1,14 @@
 from starme.schemas import SyntheticShell
 
+# The catalogue metadata describes the real first show per Neeraj Sir's 7 August
+# one-show override. Rendering, storage and delivery remain synthetic fixtures,
+# so synthetic_fixture stays True until the real pipeline is enabled.
 SYNTHETIC_SHELLS = (
     SyntheticShell(
-        id="synthetic-love-001",
-        title="Synthetic Love Story Fixture",
+        id="ek-love-story-001",
+        title="Ek Love Story Aisi Bhi",
         concept="love_story",
-        enabled_role="synthetic_lead",
-        episode_count=3,
-    ),
-    SyntheticShell(
-        id="synthetic-action-001",
-        title="Synthetic Action Fixture",
-        concept="action_drama",
-        enabled_role="synthetic_lead",
+        enabled_role="arjun",
         episode_count=3,
     ),
 )

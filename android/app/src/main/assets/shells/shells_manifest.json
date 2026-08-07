@@ -11,50 +11,28 @@
   "shells": [
     {
       "id": "love",
-      "title": "Pehla Pyaar",
-      "kicker": "A love story",
-      "palette": { "c1": "#43102B", "c2": "#B01A55", "accent": "#E9BF6B" },
+      "title": "Ek Love Story Aisi Bhi",
+      "kicker": "A runaway romance that lands on Mars",
+      "palette": { "c1": "#26060B", "c2": "#B0432F", "accent": "#E9BF6B" },
       "status": "live",
       "roles": [
-        { "id": "aarav", "name": "The Dreamer",   "desc": "Small town heart, big city love. The lead everyone roots for." },
-        { "id": "mira",  "name": "The Firebrand", "desc": "Family lines were drawn. You cross them anyway." }
+        { "id": "arjun", "name": "Arjun", "desc": "He followed her without a second thought. Now he's a world away from home." }
       ],
       "episodes": [
-        { "n": 1,  "title": "The Glance",            "file": "shell_love_ep01.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 2,  "title": "Two Worlds",            "file": "shell_love_ep02.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 3,  "title": "Family Lines",          "file": "shell_love_ep03.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 4,  "title": "The Festival",          "file": null, "placeholder": true },
-        { "n": 5,  "title": "Caught",                "file": null, "placeholder": true },
-        { "n": 6,  "title": "The Promise",           "file": null, "placeholder": true },
-        { "n": 7,  "title": "Distance",              "file": null, "placeholder": true },
-        { "n": 8,  "title": "The Letter",            "file": null, "placeholder": true },
-        { "n": 9,  "title": "Everything On The Line","file": null, "placeholder": true },
-        { "n": 10, "title": "Pehla Pyaar",           "file": null, "placeholder": true }
+        { "n": 1,  "title": "Wrong Ride",                     "file": "shell_love_ep01.mp4", "durationSec": 74,  "placeholder": true },
+        { "n": 2,  "title": "Asmaan Se Gire Khajoor Pe Atke", "file": "shell_love_ep02.mp4", "durationSec": 79,  "placeholder": true },
+        { "n": 3,  "title": "Saath Milkar",                   "file": "shell_love_ep03.mp4", "durationSec": 107, "placeholder": true },
+        { "n": 4,  "title": "Toofan Se Pehle",   "file": null, "placeholder": true },
+        { "n": 5,  "title": "3 Months Back",     "file": null, "placeholder": true },
+        { "n": 6,  "title": "Sailaab",           "file": null, "placeholder": true },
+        { "n": 7,  "title": "Will God Listen?",  "file": null, "placeholder": true },
+        { "n": 8,  "title": "Commander Speaking","file": null, "placeholder": true },
+        { "n": 9,  "title": "Ore Piya",          "file": null, "placeholder": true },
+        { "n": 10, "title": "The Last Pad",      "file": null, "placeholder": true },
+        { "n": 11, "title": "Alone on Mars",     "file": null, "placeholder": true }
       ]
     },
-    {
-      "id": "act",
-      "title": "Hukum",
-      "kicker": "An action drama",
-      "palette": { "c1": "#0B1C2E", "c2": "#1E5C8C", "accent": "#E9BF6B" },
-      "status": "live",
-      "roles": [
-        { "id": "sher", "name": "The Enforcer", "desc": "You kept the city's peace. Now the city owes you answers." },
-        { "id": "noor", "name": "The Outsider", "desc": "New badge, old debts. Nobody expects you to survive week one." }
-      ],
-      "episodes": [
-        { "n": 1,  "title": "The Debt",      "file": "shell_act_ep01.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 2,  "title": "Blood Ties",    "file": "shell_act_ep02.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 3,  "title": "The Warehouse", "file": "shell_act_ep03.mp4", "durationSec": 8, "placeholder": true },
-        { "n": 4,  "title": "Signal Lost",   "file": null, "placeholder": true },
-        { "n": 5,  "title": "Old Friends",   "file": null, "placeholder": true },
-        { "n": 6,  "title": "The Setup",     "file": null, "placeholder": true },
-        { "n": 7,  "title": "Crossfire",     "file": null, "placeholder": true },
-        { "n": 8,  "title": "No Backup",     "file": null, "placeholder": true },
-        { "n": 9,  "title": "The Reckoning", "file": null, "placeholder": true },
-        { "n": 10, "title": "Hukum",         "file": null, "placeholder": true }
-      ]
-    },
+    { "id": "act", "title": "Hukum", "kicker": "An action drama", "status": "soon" },
     { "id": "family",  "title": "Gharana", "kicker": "A family saga",     "status": "soon" },
     { "id": "revenge", "title": "Badla",   "kicker": "A revenge thriller","status": "soon" },
     { "id": "campus",  "title": "Campus",  "kicker": "A campus romance",  "status": "soon" },

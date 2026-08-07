@@ -299,8 +299,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         token,
                         OrderRequest(
                             consentReference = ref,
-                            shellId = if (s.shellId == "love") "synthetic-love-001" else "synthetic-action-001",
-                            roleId = "synthetic_lead",
+                            shellId = "ek-love-story-001",
+                            roleId = s.roleId ?: "arjun",
                             packageId = "lead-debut-3",
                             faceAssetId = "synthetic-device-capture",
                         ),

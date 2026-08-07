@@ -42,7 +42,9 @@ def test_catalogue_contains_only_marked_synthetic_fixtures() -> None:
     response = client.get("/v1/catalogue/shells", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     shells = response.json()
-    assert len(shells) == 2
+    assert len(shells) == 1
+    assert shells[0]["id"] == "ek-love-story-001"
+    assert shells[0]["enabled_role"] == "arjun"
     assert all(shell["synthetic_fixture"] is True for shell in shells)
 
 

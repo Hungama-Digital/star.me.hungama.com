@@ -54,8 +54,8 @@ def create_order(headers: dict[str, str], consent_reference: str):  # type: igno
         headers=headers,
         json={
             "consent_reference": consent_reference,
-            "shell_id": "synthetic-love-001",
-            "role_id": "synthetic_lead",
+            "shell_id": "ek-love-story-001",
+            "role_id": "arjun",
             "package_id": "lead-debut-3",
             "face_asset_id": "synthetic-face-fixture",
         },
@@ -124,8 +124,8 @@ def test_real_face_asset_is_rejected_while_sensitive_processing_is_disabled() ->
         headers=headers,
         json={
             "consent_reference": consent_reference,
-            "shell_id": "synthetic-love-001",
-            "role_id": "synthetic_lead",
+            "shell_id": "ek-love-story-001",
+            "role_id": "arjun",
             "package_id": "lead-debut-3",
             "face_asset_id": "real-upload-reference",
         },

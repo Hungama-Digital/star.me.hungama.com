@@ -792,3 +792,29 @@ M2's remaining input blockers are now the CineIQ CLI/checkpoints and GPU host, t
 designation and expanded reference set, the rights-or-synthetic confirmation, and Legal's consent
 version for Step 3. The consolidated gap list lives in
 `Docs/Intake/Creative_Content_Intake_20260807.md`.
+
+### 7 August 2026 - real show wired into the catalogue
+
+Following Neeraj Sir's one-show override, the catalogue now describes the real first show while all
+media, rendering and delivery remain synthetic:
+
+- backend `catalogue.py` exposes a single shell `ek-love-story-001` ("Ek Love Story Aisi Bhi",
+  concept `love_story`, enabled role `arjun`, 3 orderable episodes); the second fixture shell was
+  removed and `synthetic_fixture` deliberately remains true until the real pipeline is enabled;
+- the Android manifest presents "Ek Love Story Aisi Bhi" with the Mars-toned palette, Arjun as the
+  single selectable role (provisional pending Dipti's written designation), and the real 11-episode
+  slate with true durations for Episodes 1 to 3 (74 s / 79 s / 107 s); "Hukum" and the other
+  concepts are marked coming-soon and are not orderable;
+- order creation now sends `ek-love-story-001` and the selected role instead of the old
+  `synthetic-love-001`/`synthetic_lead` fixtures; and
+- no protected media entered Git; episode files remain placeholder references pending signed
+  remote delivery.
+
+Verification: backend Ruff, format check, strict mypy and 13 pytest tests at 96% coverage pass
+(run on a Python 3.12 environment provisioned via uv because the Mac has no system 3.11+); Android
+`testDebugUnitTest` (9 tests), `lintDebug` and `assembleDebug` pass.
+
+**Deployment sequencing:** the staging server still runs commit `8b85832` with the old fixture
+catalogue. Deploy the updated backend to `/home/hungama/apps/starme` before installing the new APK,
+or on-device orders will fail with `Shell or role is not enabled`. If Dipti designates a role other
+than Arjun, update `enabled_role`, the manifest role entry and the ViewModel fallback together.
