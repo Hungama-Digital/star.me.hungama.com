@@ -757,3 +757,19 @@ new unit tests cover the mapping (including asserting the "private server" wordi
 yet been installed because no device was connected at build time; install and re-verify Step 3
 messaging on RMX3782 when the phone is next attached. Remaining M1.5 work is unchanged: camera
 instrumentation coverage, device-matrix acceptance, and the observed usability pass.
+
+### 7 August 2026 - first creative content handoff received
+
+Dipti's team delivered the first partial shell package to local controlled storage
+(`~/Downloads/Dipti`): 7 synthetic-looking character turnaround sheets (Arjun, Riya, Commander,
+Riya's Father, Arjun's Mother, Goon, Astronaut), 242 vertical screengrabs across 11 documented
+episodes, a per-episode timecoded character-appearance spreadsheet, and two before/after face-swap
+demo clips proving swap capability on a metro-station scene and an astronaut scene. The second demo's
+output is lower resolution, truncated and missing audio, which usefully illustrates the exact M2
+requirements still to be met (full resolution, complete duration, original-audio remux, watermark).
+
+This is not yet the complete Section 11 protected handoff. Still required: episode masters, the
+designated replaceable role, 5 to 10 reference stills for that role, poster base and first-look
+frame, `shell.json`, the rights-or-synthetic confirmation per ST-P0-07, the second shell, and
+confirmation of which pipeline produced the demos. Full inventory and gap analysis:
+`Docs/Intake/Creative_Content_Intake_20260807.md`. No media was committed to Git.
