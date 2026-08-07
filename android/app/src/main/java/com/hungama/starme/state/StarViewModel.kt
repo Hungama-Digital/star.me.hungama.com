@@ -341,15 +341,30 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             val token = container.session.accessTokenOnce() ?: return@launch
             runCatching { container.api.order(token, remoteOrderId) }
                 .onSuccess { order ->
+                    val ready = order.status == "READY"
+                    val awaiting = order.status == "AWAITING_FIRST_LOOK"
                     _state.update {
                         it.copy(
                             rendering = false,
-                            awaitingFirstLook = order.status == "AWAITING_FIRST_LOOK",
+                            awaitingFirstLook = awaiting,
+                            renderComplete = ready,
                             firstLookUrl = order.firstLook?.previewUrl,
-                            renderStageLabel = if (order.status == "AWAITING_FIRST_LOOK") "First look ready for your approval" else order.status,
-                            renderProgress = if (order.status == "AWAITING_FIRST_LOOK") 0.5f else it.renderProgress,
+                            renderStageLabel = when {
+                                awaiting -> "First look ready for your approval"
+                                ready -> "Ready to premiere"
+                                else -> order.status
+                            },
+                            renderProgress = when {
+                                ready -> 1f
+                                awaiting -> 0.5f
+                                else -> it.renderProgress
+                            },
                             remoteEpisodes = order.episodes,
                         )
+                    }
+                    if (ready) {
+                        _events.send(StarEvent.Toast("Now premiering · you"))
+                        _events.send(StarEvent.RenderComplete)
                     }
                 }
                 .onFailure {
