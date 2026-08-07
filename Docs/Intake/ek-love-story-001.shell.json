@@ -1,0 +1,26 @@
+{
+  "shell_id": "ek-love-story-001",
+  "title": "Ek Love Story Aisi Bhi",
+  "concept": "love-story",
+  "synopsis": "Two small-town lovers fleeing caste violence accidentally board a shuttle to Mars, only to face an extinction-level meteoroid where survival means choosing who gets the last single-person escape pod.",
+  "fully_synthetic": true,
+  "designated_role": {
+    "role_id": "arjun",
+    "display_name": "Arjun",
+    "reference_stills": "Arjun_01..Arjun_06 (6 clean frontal close-ups, Dipti_3/Arjun (1).zip)"
+  },
+  "characters": [
+    { "role_id": "arjun", "display_name": "Arjun", "replaceable": true },
+    { "role_id": "riya", "display_name": "Riya", "replaceable": false }
+  ],
+  "episodes": [
+    { "episode_number": 1, "title": "Wrong Ride", "master_file": "EP 1 - Wrong Ride.mp4", "duration_seconds": 74, "resolution": "1080x1920", "appearance_log_sheet": "Episode 1" },
+    { "episode_number": 2, "title": "Asmaan Se Gire Khajoor Pe Atke", "master_file": "EP 2 - Asmaan Se Gire.mp4", "duration_seconds": 79, "resolution": "1080x1920", "appearance_log_sheet": "Episode 2" },
+    { "episode_number": 3, "title": "Saath Milkar", "master_file": "EP 3 - Saath Milkar .mp4", "duration_seconds": 107, "resolution": "1080x1920", "appearance_log_sheet": "Episode 3" }
+  ],
+  "poster_base_file": "Ek Love Stroy_1080x1920-1.jpg",
+  "first_look_frame_file": "engineering-may-choose",
+  "rights_record": "Fully synthetic; confirmed by Dipti (AI Studio) in chat on 07/08/2026",
+  "supplied_by": "Dipti / AI Studio",
+  "supplied_on": "07/08/2026"
+}

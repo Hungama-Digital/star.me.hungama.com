@@ -94,3 +94,42 @@ demo with this one show only, with more shows added over time.
 5. Rights-or-fully-synthetic confirmation email per ST-P0-07.
 6. CineIQ CLI/checkpoints and GPU host (Dheeraj/Madhav) - now the primary M2 blocker.
 7. Legal consent wording/version (Nitin) - still blocks Step 3 on device.
+
+---
+
+# Third drop - 7 August 2026 (Dipti_3) and answers to open questions
+
+**Source:** `/Users/amoldewase/Downloads/Dipti_3/` (local, controlled; not committed to Git)
+
+## Inventory
+
+| Item | Contents | Assessment |
+|---|---|---|
+| `Arjun (1).zip` | `Arjun_01`..`Arjun_06` (six clean single-face frontal close-ups with varied expressions: neutral, smiling, sad, laughing) plus earlier Arjun sheets and a source image | Satisfies the 5 to 10 reference-still requirement for the designated role |
+| `Riya.zip` | `Riya_01`..`Riya_08` plus profile/close-up stills | Full reference set for Riya (not the designated role, but useful) |
+| `shell.docx` | The filled `shell_template.json` | Title "Ek Love Story. Aisi Bhi", synopsis, `fully_synthetic: "true"`, characters (arjun replaceable, riya not), EP1 duration 1:14, poster base named, first-look = screenshots. A few TO-FILL fields remain (shell_id, concept enum, role_id/display, master filenames, resolution) but all are known to Engineering |
+
+## Dipti's answers to the four open questions
+
+1. **First-look frame:** use screengrabs (Engineering may choose).
+2. **Reference stills:** two folders shared (Arjun 6, Riya 8), clearing the 5 to 10 requirement.
+3. **Fully synthetic confirmation:** "yes these characters are fully synthetic" - this is the
+   ST-P0-07 legal tick for a fully synthetic shell (no performer, no rights record required). Also
+   stated as `fully_synthetic: "true"` in `shell.docx`.
+4. **Designated replaceable role:** **Arjun**, AI generated, confirmed in writing.
+
+## Content blocker status after three drops
+
+All creative inputs for the one approved show are now in hand:
+
+- episode masters EP1 to EP3 (1080x1920, audio) - from Dipti_2;
+- designated role Arjun, confirmed in writing;
+- six clean Arjun reference close-ups;
+- first-look frame source (screengrabs) and poster base;
+- fully-synthetic confirmation (ST-P0-07 satisfied); and
+- shell metadata (mostly complete).
+
+**Content is no longer the blocker.** The remaining hard blocker for a real personalised demo is the
+render engine itself: CineIQ CLI/container plus checkpoints and a CUDA-capable GPU host. Per Neeraj
+Sir, CineIQ team access is still pending (Madhav to action) and the current AIStaging server has no
+GPU. Those are ST-P0-08/09, owned by Dheeraj and Madhav.
