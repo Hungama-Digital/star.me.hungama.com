@@ -841,3 +841,21 @@ in `ProductionScreen`, `SettingsScreen` and `PremiereScreen` (now "pending"/"Not
 KDoc comments still contain em-dashes and were intentionally left untouched to avoid churn.
 Android `testDebugUnitTest` (9 tests), `lintDebug` and `assembleDebug` pass; the rebuilt APK was
 reinstalled on RMX3782.
+
+### 7 August 2026 - A2 on-device validation (RMX3782)
+
+Drove the installed build through the journey on RMX3782. Verified on device: redesigned cinematic
+opening; the em-dash-free promo copy ("see yourself as the lead, from first look to final frame.");
+Step 1 Membership (₹499/year); Step 2 close-up with photo upload and the ML Kit single-face check
+passing on a synthetic character face; Step 3 consent rendering fully with both checkboxes and a
+working signature pad; and, notably, the new honest error copy shown live
+("We couldn't reach StarME. Check your connection and try again.").
+
+The consent POST did not complete on device during this session: it repeatedly hit a connection-level
+failure (the network branch of `UserFacingErrors`, not a 401 and not the 503 gate). The phone showed
+100% ICMP loss to the host yet Chrome loaded `/health/ready`, and the earlier access-code redemption
+had succeeded, so this reads as intermittent device Wi-Fi/routing flakiness to the public host, not a
+StarME code, auth, or consent-gate issue. Server-side the full order flow was independently verified
+to READY with real first-look and episode bytes served over signed URLs. Recommend completing the
+on-device consent/first-look reveal on a stable network (or mobile data) and adding a Compose
+instrumentation test for the consent success path so it does not depend on manual capture.
