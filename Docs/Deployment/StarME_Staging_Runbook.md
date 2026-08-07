@@ -158,3 +158,22 @@ exposed) returned exactly one shell:
 `{"id":"ek-love-story-001","title":"Ek Love Story Aisi Bhi","enabled_role":"arjun","episode_count":3,"synthetic_fixture":true}`.
 Sensitive processing remains disabled and the Legal consent version remains unset, so the on-device
 journey still stops at Step 3 consent by design.
+
+## Passthrough media delivery deployed - 7 August 2026
+
+Deployed the local passthrough delivery build (commit `5a1ce75`) plus the `compose.yaml` media mount.
+Steps: copied `config.py`, `delivery.py`, `api.py`, `services.py` and `compose.yaml` to the server;
+set `STARME_MEDIA_DIR=/media` in `.env`; created `/home/hungama/apps/starme/media/shells/ek-love-story-001/`
+and uploaded `first_look.jpg`, `poster.jpg`, `episode-1.mp4`, `episode-2.mp4`, `episode-3.mp4` (real
+show assets, ~619 MB, not in Git); added `./media:/media:ro` to the api service; rebuilt and restarted
+api + worker.
+
+Verification (external client, the path the app uses): a full order flow reached READY, and the signed
+URLs served real bytes: first-look `HTTP 200 image/jpeg 324,896 B`; episode-1 `HTTP 206 video/mp4`
+with range requests honored (ExoPlayer-friendly). Server-to-own-public-IP loopback is not available
+(no NAT hairpin), so media checks must run from an external client, not the server.
+
+Still synthetic where it matters: episodes are the ORIGINAL unmodified masters (no face swap yet);
+`STARME_ALLOW_SENSITIVE_PROCESSING` stays false. Real personalised episodes await CineIQ
+(`Docs/Intake/CineIQ_Integration_Requirements.md`). Rollback: blank `STARME_MEDIA_DIR` in `.env` and
+recreate api + worker to return to the synthetic 204 contract.

@@ -40,6 +40,9 @@ services:
     command: ["sh", "-c", "alembic upgrade head && uvicorn starme.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
     ports:
       - "${STARME_API_BIND:-127.0.0.1}:${STARME_API_PORT:-8000}:8000"
+    volumes:
+      # Read-only passthrough media (real show assets). Populated out of band, not in Git.
+      - ./media:/media:ro
     depends_on:
       postgres:
         condition: service_healthy
