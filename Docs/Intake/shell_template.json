@@ -1,0 +1,31 @@
+{
+  "shell_id": "TO-FILL e.g. action-drama-001",
+  "title": "TO-FILL drama title as shown to testers",
+  "concept": "TO-FILL one of: love-story | action-drama",
+  "synopsis": "TO-FILL one or two sentences shown on the catalogue card",
+  "fully_synthetic": "TO-FILL true if no real performer underlies any character, else false",
+  "designated_role": {
+    "role_id": "TO-FILL e.g. arjun",
+    "display_name": "TO-FILL e.g. Arjun",
+    "reference_stills": "TO-FILL count and folder name of the 5-10 approved stills"
+  },
+  "characters": [
+    { "role_id": "arjun", "display_name": "Arjun", "replaceable": true },
+    { "role_id": "riya", "display_name": "Riya", "replaceable": false }
+  ],
+  "episodes": [
+    {
+      "episode_number": 1,
+      "title": "TO-FILL optional episode title",
+      "master_file": "TO-FILL e.g. ep01.mp4",
+      "duration_seconds": "TO-FILL",
+      "resolution": "TO-FILL e.g. 1080x1920",
+      "appearance_log_sheet": "Episode 1"
+    }
+  ],
+  "poster_base_file": "TO-FILL text-free vertical image filename",
+  "first_look_frame_file": "TO-FILL designated hero frame filename, or 'engineering-may-choose'",
+  "rights_record": "TO-FILL email subject/date of the synthetic-or-rights confirmation",
+  "supplied_by": "Dipti / AI Studio",
+  "supplied_on": "DD/MM/YYYY"
+}
