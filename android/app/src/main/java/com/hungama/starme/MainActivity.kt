@@ -134,7 +134,10 @@ private fun StarApp(container: AppContainer) {
             startDestination = if (state.authenticated) Step.PROMO.route else Routes.ACCESS,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = padding.calculateTopPadding()),
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding(),
+                ),
             enterTransition = {
                 slideInHorizontally(tween(320)) { it / 4 } + fadeIn(tween(320))
             },

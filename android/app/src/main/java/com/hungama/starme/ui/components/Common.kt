@@ -32,7 +32,7 @@ fun Stage(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 128.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 24.dp),
         content = content,
     )
 }

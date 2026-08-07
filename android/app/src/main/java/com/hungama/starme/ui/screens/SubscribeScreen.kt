@@ -72,12 +72,18 @@ private fun PlanRow(label: String, value: String, gold: Boolean = false, last: B
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = colors.text)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.text,
+            modifier = Modifier.weight(1f).padding(end = 12.dp),
+        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = if (gold) colors.gold else colors.text,
+            maxLines = 1,
         )
     }
     if (!last) {
