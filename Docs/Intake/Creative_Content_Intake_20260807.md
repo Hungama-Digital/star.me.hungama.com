@@ -59,3 +59,38 @@ Still required before M2 can run one real episode end to end:
 - The material should move from `~/Downloads/Dipti` to the approved protected storage location
   once one is designated.
 - No selfie, tester, or personal data is present in the received material.
+
+---
+
+# Second drop - 7 August 2026 (Dipti_2)
+
+**Source:** `/Users/amoldewase/Downloads/Dipti_2/` (extracted locally to `Dipti_2/extracted/`;
+nothing committed to Git)
+
+## Inventory
+
+| Item | Contents | Assessment |
+|---|---|---|
+| `episodes-...zip` (617 MB) | **Episode masters:** `EP 1 - Wrong Ride.mp4` (74.4 s), `EP 2 - Asmaan Se Gire.mp4` (78.6 s), `EP 3 - Saath Milkar.mp4` (107.0 s) | All 1080x1920 vertical H.264 with AAC audio; EP1/EP2 at 24 fps, EP3 at 23.976 fps. This satisfies the minimum three-master requirement for the first shell |
+| `characters-...zip` (23 MB) | Show character sheet stills: Arjun (3), riya (3), Commander (3), plus 6 unlabelled `kling`/`ELEMENTS` images that appear to be the demo-swap subject | 3 stills per role is progress but below the 5 to 10 required for the designated role |
+| `posters-...zip` (4 MB) | Two finished 1080x1920 posters with the title baked in, plus a separate show logo PNG | Usable catalogue/premiere art; a text-free base was requested, but the separate logo makes compositing workable |
+| `Script-...zip` | `Short Synopsis.docx` and full episode scripts for all 11 episodes | Confirms the show: **"Ek Love Story Aisi Bhi"**, an 11-episode Hinglish sci-fi rom-com (runaway couple accidentally shuttled to Mars). Episode slate matches the 11-episode appearance log and screengrabs from the first drop |
+
+Both drops describe the same single show. Concept assignment: Love Story (with a sci-fi premise).
+
+## Neeraj Sir's email decisions (recorded separately)
+
+`Docs/Decisions/StarME_Neeraj_Sir_Email_Decisions_20260807.md` records: (1) the show and demos were
+not produced on CineIQ, CineIQ access is pending via Madhav, and outward branding may call it a
+CineIQ production while technical records stay accurate; and (2) an explicit override to run the
+demo with this one show only, with more shows added over time.
+
+## Remaining gaps after both drops
+
+1. Designated replaceable role in writing (Arjun remains the evident candidate).
+2. 5 to 10 reference stills for that designated role (currently 3 per character).
+3. Designated first-look frame, or confirmation Engineering may choose from screengrabs.
+4. Completed `shell_template.json` metadata.
+5. Rights-or-fully-synthetic confirmation email per ST-P0-07.
+6. CineIQ CLI/checkpoints and GPU host (Dheeraj/Madhav) - now the primary M2 blocker.
+7. Legal consent wording/version (Nitin) - still blocks Step 3 on device.

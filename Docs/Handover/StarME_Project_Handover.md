@@ -773,3 +773,22 @@ designated replaceable role, 5 to 10 reference stills for that role, poster base
 frame, `shell.json`, the rights-or-synthetic confirmation per ST-P0-07, the second shell, and
 confirmation of which pipeline produced the demos. Full inventory and gap analysis:
 `Docs/Intake/Creative_Content_Intake_20260807.md`. No media was committed to Git.
+
+### 7 August 2026 - episode masters received and one-show override recorded
+
+Dipti's second drop (`~/Downloads/Dipti_2`, kept out of Git) delivers the core of the first shell:
+three full episode masters of **"Ek Love Story Aisi Bhi"** (EP1 74 s, EP2 79 s, EP3 107 s, all
+1080x1920 H.264 with AAC audio), per-role reference stills (Arjun, Riya, Commander, 3 each), two
+finished posters plus a separate logo, and the complete 11-episode script with synopsis. Both drops
+describe the same single show; its slate matches the earlier screengrab and appearance-log delivery.
+
+Neeraj Sir's email decisions are recorded in
+`Docs/Decisions/StarME_Neeraj_Sir_Email_Decisions_20260807.md`: the material was not produced on
+CineIQ (access pending via Madhav; branding may describe it as a CineIQ production while technical
+records stay accurate), and the demo proceeds with this one show only under an explicit override,
+with more shows to be added over time.
+
+M2's remaining input blockers are now the CineIQ CLI/checkpoints and GPU host, the written role
+designation and expanded reference set, the rights-or-synthetic confirmation, and Legal's consent
+version for Step 3. The consolidated gap list lives in
+`Docs/Intake/Creative_Content_Intake_20260807.md`.
