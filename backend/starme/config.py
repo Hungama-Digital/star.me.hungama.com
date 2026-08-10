@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="STARME_",
+        env_ignore_empty=True,
         extra="ignore",
     )
 
@@ -29,6 +30,17 @@ class Settings(BaseSettings):
     delivery_signing_key: SecretStr = SecretStr("local-delivery-key-change-me")
     public_api_base_url: str = "http://127.0.0.1:8000"
     approved_consent_version: str | None = None
+    # Seedance generation uses the ModelArk API key. The private real-human asset
+    # library is a separate API surface authenticated with an Access Key pair.
+    byteplus_api_key: SecretStr | None = None
+    byteplus_model: str = "dreamina-seedance-2-0-260128"
+    byteplus_api_base_url: str = "https://ark.ap-southeast.bytepluses.com/api/v3"
+    byteplus_project_name: str = "default"
+    byteplus_access_key: SecretStr | None = None
+    byteplus_secret_key: SecretStr | None = None
+    byteplus_poll_interval_seconds: float = Field(default=5, ge=1, le=60)
+    byteplus_task_timeout_seconds: int = Field(default=900, ge=60, le=3600)
+    render_work_dir: str = "tmp/renders"
     # Optional local media root. When set, /v1/media serves real shell files from here
     # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
     # This is NOT the real render pipeline and does not enable sensitive processing.

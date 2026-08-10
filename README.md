@@ -45,6 +45,11 @@ The synthetic vertical slice includes single-use tester access, authenticated co
 first-look approval/retake, Redis/RQ job contracts, revocation cancellation and signed delivery
 grants. See [API v1](Docs/API/StarME_API_v1.md).
 
+The guarded Seedance operator path supports authentication checks, controlled 2-to-15-second shot
+extraction, explicit billable rendering, original-audio remuxing and structural quality gates. See
+the [Seedance proof runbook](Docs/Runbooks/StarME_Seedance_Proof_Runbook.md). A real-human proof still
+requires a BytePlus `Active` authorized/trusted asset; the ModelArk API key alone does not create it.
+
 For an Android emulator build against the local API:
 
 ```bash
@@ -69,3 +74,4 @@ pytest --cov=starme --cov-report=term-missing
 - [Provider-neutral foundation ADR](Docs/Architecture/ADR-001-provider-neutral-foundation.md)
 - [Traceability register](Docs/Traceability/StarME_Traceability_Register.md)
 - [Synthetic staging deployment runbook](Docs/Deployment/StarME_Staging_Runbook.md)
+- [Seedance proof runbook](Docs/Runbooks/StarME_Seedance_Proof_Runbook.md)

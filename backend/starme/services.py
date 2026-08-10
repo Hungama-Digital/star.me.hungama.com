@@ -106,7 +106,30 @@ def cancel_active_jobs(session: Session, order: Order) -> int:
             RenderJob.status.in_([JobState.QUEUED, JobState.RUNNING]),
         )
     ).all()
+    settings = get_settings()
     for job in jobs:
+        cancellation_errors: list[str] = []
+        if settings.queue_backend == "rq" and job.status == JobState.QUEUED:
+            try:
+                from redis import Redis
+                from rq import cancel_job
+
+                cancel_job(job.id, connection=Redis.from_url(settings.redis_url))
+            except Exception:  # noqa: BLE001 - revocation must still complete and fail closed
+                cancellation_errors.append("RQ cancellation could not be confirmed")
+        if (
+            settings.render_provider == "cineiq"
+            and job.provider_reference
+            and job.status == JobState.RUNNING
+        ):
+            try:
+                from starme.render_pipeline import cancel_seedance_task
+
+                cancel_seedance_task(job.provider_reference, settings)
+            except Exception:  # noqa: BLE001 - record failure without blocking consent revocation
+                cancellation_errors.append("Provider cancellation could not be confirmed")
         job.status = JobState.CANCELED
         job.completed_at = datetime.now(UTC)
+        if cancellation_errors:
+            job.failure_reason = "; ".join(cancellation_errors)
     return len(jobs)

@@ -6,6 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN groupadd --system starme && useradd --system --gid starme --home-dir /app starme
 
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /renders && chown starme:starme /renders
+
 WORKDIR /app
 COPY pyproject.toml README.md alembic.ini ./
 COPY backend ./backend

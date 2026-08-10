@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.14,<2",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
   "psycopg[binary]>=3.2,<4",
   "pydantic-settings>=2.7,<3",
   "redis>=5.2,<6",
@@ -26,6 +27,9 @@ dev = [
   "pytest-cov>=6,<7",
   "ruff>=0.9,<1",
 ]
+
+[project.scripts]
+starme-seedance = "starme.seedance_cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend/starme"]

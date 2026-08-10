@@ -877,3 +877,89 @@ installed on RMX3782. The complete synthetic journey then succeeded on device: r
 `ek-love-story-001`/`arjun`/`lead-debut-3`, confirmed in the server audit log. Real first-look and
 episode media serve over signed URLs. Lesson for future builds: always confirm the baked-in API URL,
 or rely on the new staging default.
+
+### 10 August 2026 - BytePlus Seedance 2.0 integration configuration started
+
+Amol supplied a sample ModelArk video-generation request and confirmed that its three `asset://`
+IDs were copied placeholders; they are not StarME assets and must not be used. The target generation
+model is `dreamina-seedance-2-0-260128`. Local secret configuration is now prepared in the Git-ignored
+repository-root `.env`; Amol must place the ModelArk generation credential in
+`STARME_BYTEPLUS_API_KEY`. Safe non-secret defaults and empty credential slots are documented in
+`.env.example` and represented as typed backend settings. No credential has been committed.
+
+The integration has two distinct BytePlus credential surfaces. `STARME_BYTEPLUS_API_KEY` authorizes
+the `/api/v3/contents/generations/tasks` generation and task-polling APIs. Private real-human asset
+library operations require the separate `STARME_BYTEPLUS_ACCESS_KEY` and
+`STARME_BYTEPLUS_SECRET_KEY`, Advanced Creation Rights on the BytePlus account, and completion of
+BytePlus's real-person liveness-verification flow. Successful verification creates one asset group
+per person; StarME can then call `CreateAsset`, poll `GetAsset` until `Active`, and use the returned
+`asset://` URI for Seedance inference. An arbitrary asset group cannot be created for a subscriber
+without that verification step.
+
+Planned first technical proof remains deliberately narrow: extract a 5 to 10 second single-person
+vertical shot from the supplied synthetic episode, retain original audio outside generation, submit
+the source video plus authorized subscriber reference assets with `generate_audio=false` and an
+adaptive/vertical ratio, poll asynchronously, download the result immediately, remux the original
+audio, and run identity/continuity/non-target-change quality checks. Whole episodes must be split by
+shot because Seedance reference-video input is limited to short clips; this proof must pass before
+the real RQ provider replaces the current passthrough/stub workflow.
+
+Still required from Amol/BytePlus before a real-human end-to-end test: the ModelArk API key in local
+`.env`; confirmation that Seedance 2.0 and Advanced Creation Rights are active; the BytePlus AK/SK
+pair for asset-library APIs; and an approved callback URL for the liveness-verification H5 flow.
+Legal wording remains pending, and the staging-only consent exception must not be treated as
+production authorization for biometric or face-derived processing.
+
+Later on 10 August, Amol populated the ignored `STARME_BYTEPLUS_API_KEY`. A read-only request for a
+deliberately nonexistent generation task returned authenticated HTTP 404 `ResourceNotFound`, rather
+than an authentication failure, confirming that the key and regional `/api/v3` base URL are usable.
+No billable generation task was launched. The absent BytePlus AK/SK pair does not block provider,
+prompt, polling, shot-processing, or synthetic/trusted-asset work; it blocks only automation of the
+private real-human verification/asset-library path and therefore the final subscriber-face test.
+
+### 10 August 2026 - Seedance execution vertical slice implemented and verified
+
+The non-blocked CineIQ/BytePlus work is now implemented as a production-shaped but guarded execution
+layer. `seedance.py` implements ModelArk task submission, retrieval/polling, terminal-state handling,
+timeouts, cancellation and atomic output download. Provider error messages exclude credentials, and
+downloads use a separate unauthenticated HTTP client so the ModelArk bearer token is never forwarded
+to the provider's object-storage host. Requests use a reference video plus one or more positional
+reference-image `asset://` URIs, `generate_audio=false`, watermarking and adaptive ratio.
+
+`prompts.py` provides three controlled replacement prompts: `identity_lock`, `performance_lock` and
+`continuity_lock`. Each instructs Seedance to modify only the designated lead while preserving the
+performance, shot timing, body/costume, camera, lighting, background, props and all non-target faces.
+These remain hypotheses to A/B test, not a claim of deterministic classical face swapping.
+
+`media_pipeline.py` uses FFmpeg/FFprobe to extract a 2-to-15-second silent shot and its original audio,
+remux original audio onto the downloaded result, and gate duration, dimensions, portrait orientation,
+codec and audio presence. The automated report deliberately does not claim identity/creative quality;
+manual review must still cover identity consistency, flicker/morphing, non-target leakage, expression
+and lip timing, body/hands, costume/props/background/camera/lighting and unexpected text/logos.
+
+`render_pipeline.py` composes prompt, submit, poll, download, remux and quality reporting. Compose's RQ
+worker now listens on `starme-seedance` in addition to the existing queues. Existing first-look/full
+render RQ jobs use deterministic database job IDs, so revocation can cancel queued work; if a running
+job has a provider reference under `cineiq`, revocation also attempts ModelArk cancellation and records
+an unconfirmed cancellation without blocking consent revocation. The safe existing passthrough customer
+journey remains the default; it was not silently switched to paid/sensitive processing.
+The runtime image now installs FFmpeg; the worker mounts protected source media read-only at `/media`
+and uses the persistent, non-root-writable `starme_renders` volume at `/renders` for generated output.
+
+Operator tooling is exposed as `starme-seedance` with `auth-check`, `extract-shot`, `quality` and
+`render`. `render` refuses to create a paid task unless `--confirm-billable` is supplied. The complete
+procedure and acceptance checklist are in `Docs/Runbooks/StarME_Seedance_Proof_Runbook.md`.
+
+Verification on Python 3.12: Ruff, Ruff formatting, strict mypy and 32 pytest tests passed at 86%
+overall coverage. Tests include mocked submit/poll/success/failure/timeout/download/cancel contracts,
+token non-forwarding, prompt variants, inline and dedicated RQ orchestration, and real FFmpeg media
+fixtures. The live API-key authentication check passed without task creation. A supplied vertical
+1080x1920 clip then passed a real non-billable five-second extraction, separate-audio, remux and all
+five structural gates. Generated proof artifacts remain under ignored `tmp/seedance-proof/`.
+
+No paid Seedance generation was launched because the delivered Arjun/astronaut portraits came from
+another generation system and are not automatically BytePlus trusted assets. Spending credits on
+them would likely produce an eligibility rejection and would not validate the subscriber workflow.
+The one remaining input for the first paid provider proof is an `Active` eligible `asset://` URI.
+For a real subscriber, obtaining that URI still requires the BytePlus AK/SK pair, Advanced Creation
+Rights, liveness verification, `CreateAsset`, and polling `GetAsset` to `Active`.

@@ -37,6 +37,7 @@ services:
       STARME_QUEUE_BACKEND: rq
       STARME_RENDER_PROVIDER: stub
       STARME_STORAGE_BACKEND: memory
+      STARME_RENDER_WORK_DIR: /renders
     command: ["sh", "-c", "alembic upgrade head && uvicorn starme.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
     ports:
       - "${STARME_API_BIND:-127.0.0.1}:${STARME_API_PORT:-8000}:8000"
@@ -58,7 +59,11 @@ services:
       STARME_QUEUE_BACKEND: rq
       STARME_RENDER_PROVIDER: stub
       STARME_STORAGE_BACKEND: memory
-    command: ["rq", "worker", "starme-first-look", "starme-full-render", "--url", "redis://redis:6379/0"]
+      STARME_RENDER_WORK_DIR: /renders
+    command: ["rq", "worker", "starme-first-look", "starme-full-render", "starme-seedance", "--url", "redis://redis:6379/0"]
+    volumes:
+      - ./media:/media:ro
+      - starme_renders:/renders
     depends_on:
       api:
         condition: service_started
@@ -66,3 +71,4 @@ services:
 volumes:
   starme_postgres:
   starme_redis:
+  starme_renders:

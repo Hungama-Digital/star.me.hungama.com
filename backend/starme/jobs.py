@@ -22,7 +22,7 @@ def enqueue_first_look(job_id: str) -> None:
         run_first_look(job_id)
         return
     queue = Queue("starme-first-look", connection=Redis.from_url(settings.redis_url))
-    queue.enqueue(run_first_look, job_id, job_timeout="10m")
+    queue.enqueue(run_first_look, job_id, job_id=job_id, job_timeout="10m")
 
 
 def enqueue_full_render(job_id: str) -> None:
@@ -31,4 +31,4 @@ def enqueue_full_render(job_id: str) -> None:
         run_full_render(job_id)
         return
     queue = Queue("starme-full-render", connection=Redis.from_url(settings.redis_url))
-    queue.enqueue(run_full_render, job_id, job_timeout="2h")
+    queue.enqueue(run_full_render, job_id, job_id=job_id, job_timeout="2h")
