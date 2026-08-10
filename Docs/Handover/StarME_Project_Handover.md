@@ -1313,3 +1313,33 @@ launch completed successfully in 1.394 seconds, left `MainActivity` as the top r
 activity with a live process, and produced no `FATAL EXCEPTION`/`AndroidRuntime` entry. This verifies
 install and cold launch only; the newly added process-death order recovery still requires an active test
 order to exercise end to end.
+
+### 10 August 2026 - first paid Higgsfield Recast proof completed; target isolation failed
+
+Amol switched to a Higgsfield account with Recast entitlement and credits. The prepared six-second
+Episode 1 shot `ep01_arjun_02.mp4` and Amol's selected front-facing male portrait were submitted once
+through Recast for 18 credits. The job completed as Higgsfield asset
+`13cfd00d-e04c-4f14-a92f-ee2addc04602` at 720x1280. The private output is retained only under ignored
+`tmp/higgsfield-proof/episode-1/` as `ep01_arjun_02_recast.mp4`; it must not be committed or publicly
+shared.
+
+Structural checks passed: H.264/AAC, 720x1280, 24 fps and exactly 6.000 seconds, matching the source.
+Higgsfield supplied an AAC track, but decoded-audio hashes did not match the original. Engineering
+therefore produced `ep01_arjun_02_recast_original_audio.mp4` by stream-copying the generated video and
+the exact original AAC track; its decoded audio SHA-256 matches the source
+(`569b905b7cd27dde4b16dc74fb42439e9bc2f51c12dc6b526259f82745816268`).
+
+The product acceptance result is **FAIL**. Recast replaced Riya, the nearer female character, with the
+supplied male identity and left the designated Arjun character unchanged. It also changed the replaced
+person's body/clothing, confirming that Recast performs persona/character replacement rather than a
+localized face patch. This is consistent with Higgsfield's documented multi-face behavior of selecting
+the face closest to camera. No target-person selector was exposed in the Recast UI. Consequently, the
+current Episode 1 multi-person shots cannot be batch-submitted safely: doing so risks replacing Riya or
+another non-target character and violates StarME's one-designated-role requirement.
+
+Do not spend more credits on another unchanged multi-person submission. The next controlled experiment,
+if Amol authorizes another 18-credit generation, is a two-to-three-second Arjun-only/Arjun-dominant crop
+or extracted close-up (the start of `ep01_arjun_03.mp4` is the strongest current candidate). That would
+test identity quality only. It would not solve full-scene target isolation; production use still requires
+a provider/API with explicit face/track selection, or a masking/tracking/compositing pipeline that can
+patch the approved target back into the untouched master.
