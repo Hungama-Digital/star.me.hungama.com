@@ -9,6 +9,13 @@ catalogue, consent, orders, synthetic render jobs, first-look decisions, revocat
 and signed delivery grants. Real identity upload, CineIQ rendering, protected object storage, and
 media delivery remain disabled until their approved inputs and infrastructure are available.
 
+A paid Higgsfield Recast/Video Face Swap bake-off was completed on 10 August 2026. Recast selected
+the wrong performer in multi-person footage and changed clothing/body; even a tracked, enlarged
+Arjun-only Video Face Swap input regenerated non-face content and produced inconsistent identities.
+Those outputs are private rejected QA artifacts, not deliverables. Higgsfield is therefore not an
+approved StarME render provider. Real personalized episodes still require CineIQ or another engine
+that passes explicit target-track, face-only, temporal-identity, original-audio and non-target gates.
+
 The recovered Kotlin/Jetpack Compose v1 application is sanitized under [`android/`](android/).
 It provides the inherited v1 experience plus authenticated remote API integration. The current APK
 was rebuilt from this adapted source rather than copied from the ZIP's prebuilt APK. Its UI remains

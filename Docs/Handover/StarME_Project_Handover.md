@@ -1369,7 +1369,9 @@ output is `tmp/higgsfield-proof/episode-1/hardened/ep02_arjun_04_video_face_swap
 that the intended male face changed while the denim shirt, body, foreground woman, background and camera
 framing remained intact. This establishes Video Face Swap—not Recast—as the appropriate provider feature.
 The test input had been slowed to meet provider upload acceptance, so this asset is a processor proof and
-not a production-timing deliverable.
+not a production-timing deliverable. This was only an initial controlled-shot indication; the subsequent
+exact-source and tracked-face tests below invalidated Higgsfield Video Face Swap as a StarME production
+provider.
 
 For the exact Episode 1 correction, engineering retained the untouched six-second
 `ep01_arjun_02.mp4` master and created an internal processing view that excludes Riya's face while retaining

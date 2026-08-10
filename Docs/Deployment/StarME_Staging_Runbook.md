@@ -178,6 +178,11 @@ Still synthetic where it matters: episodes are the ORIGINAL unmodified masters (
 (`Docs/Intake/CineIQ_Integration_Requirements.md`). Rollback: blank `STARME_MEDIA_DIR` in `.env` and
 recreate api + worker to return to the synthetic 204 contract.
 
+The 10 August paid Higgsfield evaluation does not change this deployment state. Its Recast and Video
+Face Swap outputs failed wrong-target, clothing/body preservation and temporal-identity QA and remain
+private local rejection artifacts. None was uploaded to staging, wired into catalogue delivery or
+used to replace an episode master. Do not enable sensitive processing or deploy those outputs.
+
 ## Capability/consent contract redeploy - 10 August 2026
 
 Backend files `api.py` and `schemas.py` from commit `1470447` were deployed with timestamped server

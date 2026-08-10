@@ -48,6 +48,9 @@ the episodes with our CineIQ engine, is the next integration."
   landing next. Today the episodes play the base cut; the poster and First Look already show the
   subscriber." Only volunteer this if asked, or use it when moving into episode playback.
 - Do **not** claim the subscriber's face is already in the episode video. It is not yet.
+- If asked about the Higgsfield evaluation: "We tested it and rejected the output because it changed
+  more than the designated face and did not maintain one identity. We have kept the base episodes
+  untouched while the approved face-patching engine is integrated."
 
 ## 5. Access codes
 
