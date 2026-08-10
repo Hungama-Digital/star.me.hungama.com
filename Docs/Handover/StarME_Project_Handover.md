@@ -1205,3 +1205,40 @@ ineligible as multi-face assets. Because synthetic Arjun has no real person who 
 the source masters require a BytePlus enterprise/support-approved synthetic asset route or a provider
 moderation exception. Do not complete an unrelated person's liveness merely to obtain a group ID; it
 will not solve source-video eligibility.
+
+### 10 August 2026 - Higgsfield Motion Control fitment assessment
+
+Higgsfield was researched as a temporary alternative to Seedance for the supplied external episode
+masters. Its official product surfaces state that Motion Control accepts a character image plus a
+reference video and transfers pace, gesture and expression; scene-control mode can derive the background
+from the motion video. Higgsfield separately markets video-to-video Face Swap, Character Swap/Recast and
+Soul identity locking. Those latter tools are conceptually closer to StarME than Motion Control alone:
+StarME must replace only Arjun while preserving Riya, all non-target faces, performance, cuts, wardrobe,
+background, lighting and original audio. Motion Control may regenerate the character/body or scene and
+must not be assumed to be a localized face-only edit.
+
+Fit is promising for a manual provider bake-off but unproven for backend production. Official Higgsfield
+surfaces conflict on maximum duration: Kling 3.0 Motion Control marketing describes up to 30 seconds,
+whereas the current Higgsfield CLI page says videos through agent tooling are up to 15 seconds. Neither
+supports a single 74-second episode under the confirmed programmatic surface, so StarME still needs
+shot segmentation and episode reconstruction. Motion transfer claims expression/pacing preservation,
+but exact original dialogue/lip timing, original-audio retention and multi-person target isolation are
+not documented strongly enough to accept without testing.
+
+Developer integration is also not yet evidenced. Current Terms cover API, MCP and CLI access, and the
+CLI uses account authentication/credits, but no public endpoint schema for Motion Control/Character Swap
+was found. A UI-only workflow is acceptable for a one-episode R&D proof but not for automated Android
+orders. Exact per-generation pricing is account/model/resolution dependent and must be measured from a
+test account. Higgsfield says users retain inputs/outputs and commercial-use rights, but its July 2026
+policy summary also says content may be used to improve models. Protected masters and future subscriber
+selfies therefore require Legal/security approval, enterprise retention/training terms, deletion SLA,
+regional processing details and a DPA before production use.
+
+Recommended pilot: use only six-second `ep01_arjun_02.mp4` and the fictional watermarked v2 cricket-star
+portrait. Test (A) Motion Control with scene mode Video and (B) Video Face Swap or Character Swap/Recast.
+Do not use a real tester selfie or celebrity claim. Retain original audio outside generation. Pass only
+if Arjun changes consistently, Riya is pixel/materially unchanged, timing/cuts/body/costume/background/
+camera/lighting are preserved, lip motion remains usable, no flicker/morphing appears, output duration
+matches and the result can be downloaded without public exposure. If B passes, obtain confirmed
+programmatic access and build a provider adapter; if only Motion Control passes by regenerating the whole
+scene, treat it as a synthetic-remake path rather than StarME personalization.
