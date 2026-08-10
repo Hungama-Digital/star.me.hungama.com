@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -171,7 +172,21 @@ class BytePlusAssetClient:
                 _request_timeout=(10, 30),
             )
         except Exception as exc:
-            raise BytePlusAssetError(f"BytePlus asset action {action} failed") from exc
+            code = self._provider_error_code(exc)
+            suffix = f": {code}" if code else ""
+            raise BytePlusAssetError(f"BytePlus asset action {action} failed{suffix}") from exc
         if not isinstance(result, dict):
             raise BytePlusAssetError(f"BytePlus asset action {action} returned invalid data")
         return result
+
+    @staticmethod
+    def _provider_error_code(exc: Exception) -> str | None:
+        body = getattr(exc, "body", None)
+        if not isinstance(body, str):
+            return None
+        try:
+            data = json.loads(body)
+            code = data["ResponseMetadata"]["Error"]["Code"]
+        except (KeyError, TypeError, ValueError):
+            return None
+        return str(code)

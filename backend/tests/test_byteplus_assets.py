@@ -93,3 +93,16 @@ def test_provider_errors_are_wrapped_without_credentials() -> None:
     with pytest.raises(BytePlusAssetError, match="ListAssetGroups") as caught:
         assets.list_groups()
     assert "ak" not in str(caught.value)
+
+
+def test_provider_error_code_is_surfaced_without_full_response() -> None:
+    error = RuntimeError("provider response")
+    error.body = (  # type: ignore[attr-defined]
+        '{"ResponseMetadata":{"Error":{"Code":"SubscriptionRequired","Message":"internal detail"}}}'
+    )
+    assets = client(FakeUniversalApi([error]))
+
+    with pytest.raises(BytePlusAssetError, match="SubscriptionRequired") as caught:
+        assets.create_liveness_session("https://callback.example")
+
+    assert "internal detail" not in str(caught.value)

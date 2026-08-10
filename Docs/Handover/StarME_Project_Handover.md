@@ -986,3 +986,17 @@ short-lived liveness session. Verification now passes Ruff, formatting, strict m
 the live group-list command returns an empty list as expected. Next: deploy callback, create/open the
 30-minute H5 session, let Amol complete liveness, retrieve the new group, then upload an authorized
 portrait URL and poll it to an `Active asset://` URI.
+
+The immediate live attempt clarified two configuration facts. Amol's local project name was `StarMe`,
+which BytePlus rejected as `NotFound.ProjectName`; local ignored configuration was corrected to the
+account's valid `default` project. A second signed `CreateVisualValidateSession` request then reached
+the correct account but returned HTTP 403 `SubscriptionRequired`: the account must subscribe to an
+Advanced or Premium plan (BytePlus Advanced Creation Rights) before this API is available. No H5
+session, asset group, asset or generation task was created, and no generation credit was consumed.
+
+The client now extracts and reports only the safe provider error code (for example,
+`SubscriptionRequired`) while suppressing full response details. Verification increased to 38 passing
+tests. Deployment of the callback is also pending because SSH to both `49.248.193.9:22` and
+`10.0.0.63:22` timed out from the current Mac, and live HTTPS still returns 404 for the callback path.
+These are two separate blockers: activate the BytePlus plan first; restore server SSH before the next
+30-minute liveness attempt so the committed callback can be deployed.
