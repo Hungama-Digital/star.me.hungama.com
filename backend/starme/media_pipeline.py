@@ -28,6 +28,39 @@ class QualityReport:
     output: MediaProbe
 
 
+@dataclass(frozen=True)
+class RecastPreflight:
+    target_role: str
+    detectable_face_roles: tuple[str, ...]
+    target_cast_category: str
+    replacement_cast_category: str
+    provider_supports_target_selection: bool = False
+
+
+def validate_recast_preflight(preflight: RecastPreflight) -> None:
+    """Fail closed before a provider that may auto-select the nearest face.
+
+    Role and cast-category values must come from content-owner/operator metadata;
+    this function deliberately does not infer gender or identity from pixels.
+    """
+    target = preflight.target_role.strip().casefold()
+    faces = tuple(
+        role.strip().casefold() for role in preflight.detectable_face_roles if role.strip()
+    )
+    if not target or target not in faces:
+        raise MediaPipelineError("The designated target face is not detectable throughout the shot")
+    if len(faces) != 1 and not preflight.provider_supports_target_selection:
+        raise MediaPipelineError(
+            "Multiple face tracks are detectable and the provider has no explicit target selector"
+        )
+    target_category = preflight.target_cast_category.strip().casefold()
+    replacement_category = preflight.replacement_cast_category.strip().casefold()
+    if not target_category or not replacement_category:
+        raise MediaPipelineError("Approved target and replacement cast categories are required")
+    if target_category != replacement_category:
+        raise MediaPipelineError("Replacement cast category does not match the designated role")
+
+
 def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603

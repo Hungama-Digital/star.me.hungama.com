@@ -1343,3 +1343,53 @@ or extracted close-up (the start of `ep01_arjun_03.mp4` is the strongest current
 test identity quality only. It would not solve full-scene target isolation; production use still requires
 a provider/API with explicit face/track selection, or a masking/tracking/compositing pipeline that can
 patch the approved target back into the untouched master.
+
+### 10 August 2026 - role-safe face-swap hardening and dedicated Video Face Swap proof
+
+Amol rejected the first Recast output because it replaced Riya with a male identity instead of replacing
+Arjun. He supplied a new tight, front-facing adult male face photograph and clarified the non-negotiable
+product contract: preserve the original video, timing, clothing, body, background, camera movement,
+dialogue and audio; change only the designated Arjun face. The private photograph remains outside Git.
+
+The backend now has a fail-closed `RecastPreflight` contract and validation. The operator/content owner
+must explicitly provide the target role, detectable face-track roles, and approved target/replacement
+cast categories. The application does not infer gender or identity from pixels. A provider without an
+explicit target selector is rejected when more than one face track is detectable; a missing target or
+cast-category mismatch is also rejected. Unit tests cover the valid single-target path, multi-face
+rejection and male/female category mismatch.
+
+A nine-credit Recast control using an Arjun-only/dominant three-second extraction completed as Higgsfield
+asset `c9ed72a8-382e-4c33-949a-763e50493ac2`. It selected Arjun correctly but changed his denim shirt to a
+green T-shirt derived from the reference photograph. This confirms Recast is whole-character replacement
+and is disqualified for StarME's face-only requirement.
+
+The dedicated Higgsfield **Video Face Swap** application was then tested for 25 credits using an isolated
+Arjun shot and the new face. It completed as asset `ab2ed50a-2212-4634-b804-be34f693a9d7`; the private
+output is `tmp/higgsfield-proof/episode-1/hardened/ep02_arjun_04_video_face_swap_v2.mp4`. Visual QA shows
+that the intended male face changed while the denim shirt, body, foreground woman, background and camera
+framing remained intact. This establishes Video Face Swap—not Recast—as the appropriate provider feature.
+The test input had been slowed to meet provider upload acceptance, so this asset is a processor proof and
+not a production-timing deliverable.
+
+For the exact Episode 1 correction, engineering retained the untouched six-second
+`ep01_arjun_02.mp4` master and created an internal processing view that excludes Riya's face while retaining
+Arjun. That view and the approved male face were submitted once to Video Face Swap for 25 credits. The job
+completed as asset `703e1d45-67b9-4c99-b46a-e3e0648e313d`. QA rejected it: Higgsfield altered Arjun's
+clothing/body in wide frames and did not consistently replace his face in the final close-up. The result
+must not be delivered or composited.
+
+A tighter dynamic processing view was therefore built from native frame-level face detections. It tracks
+and enlarges Arjun so that his face remains the only complete face visible; Riya's face is excluded. This
+view and the approved male face were submitted once more to Video Face Swap for 25 credits. It completed
+as asset `0a27e409-6b9d-4c0e-ae4c-ce9b55c094c7` with a six-second, 720x1280 output retained privately as
+`tmp/higgsfield-proof/episode-1/hardened/ep01_arjun_02_tracked_face_faceswap.mp4`.
+
+The decisive QA result is **FAIL**. Despite receiving a tracked, enlarged Arjun-only face view, Higgsfield
+regenerated scene content, clothing and body, and produced visibly different male identities across the
+six-second shot. A face-only composite would therefore introduce identity drift and cannot be accepted.
+No composite or final episode video was produced from this rejected output. Higgsfield Video Face Swap is
+now rejected for automated StarME production under the strict preserve-everything-except-the-designated-
+face contract. Do not spend more credits on equivalent Higgsfield retries. The remaining viable path is a
+true face-patching engine/API with explicit target-track selection and temporally consistent embeddings
+(for example the missing local CineIQ executable/API or another provider validated against the same
+non-target pixel, clothing, timing and original-audio gates).

@@ -5,10 +5,13 @@ from pathlib import Path
 import pytest
 
 from starme.media_pipeline import (
+    MediaPipelineError,
+    RecastPreflight,
     extract_shot,
     probe_media,
     remux_original_audio,
     structural_quality_report,
+    validate_recast_preflight,
 )
 
 
@@ -86,4 +89,39 @@ def test_extract_rejects_unsupported_shot_duration(tmp_path: Path, duration: flo
             duration_seconds=duration,
             video_destination=tmp_path / "shot.mp4",
             audio_destination=tmp_path / "audio.m4a",
+        )
+
+
+def test_recast_preflight_accepts_single_matching_target() -> None:
+    validate_recast_preflight(
+        RecastPreflight(
+            target_role="Arjun",
+            detectable_face_roles=("Arjun",),
+            target_cast_category="male",
+            replacement_cast_category="male",
+        )
+    )
+
+
+def test_recast_preflight_rejects_multiple_faces_without_target_selector() -> None:
+    with pytest.raises(MediaPipelineError, match="Multiple face tracks"):
+        validate_recast_preflight(
+            RecastPreflight(
+                target_role="Arjun",
+                detectable_face_roles=("Arjun", "Riya"),
+                target_cast_category="male",
+                replacement_cast_category="male",
+            )
+        )
+
+
+def test_recast_preflight_rejects_cast_category_mismatch() -> None:
+    with pytest.raises(MediaPipelineError, match="cast category does not match"):
+        validate_recast_preflight(
+            RecastPreflight(
+                target_role="Arjun",
+                detectable_face_roles=("Arjun",),
+                target_cast_category="male",
+                replacement_cast_category="female",
+            )
         )
