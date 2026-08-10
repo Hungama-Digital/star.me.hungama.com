@@ -1147,6 +1147,15 @@ Amol subsequently identified `characters` as the intended writable folder. Both 
 therefore not the cause: the supplied key/bucket policy still lacks object-write authorization. Grant
 `s3:PutObject` for `contentpublic/characters/*` before retrying. No test object was created.
 
+A known-successful upload transcript from another project revealed Linode signing region `default`,
+path-style addressing, CDN `https://images.hungama.com` and key prefix `cineiq-studio-test/`. This task
+then mirrored those settings exactly, but both `starme/...` and the known-working
+`cineiq-studio-test/starme/...` prefix still returned HTTP 403 on a plain `PutObject`. Read/list calls
+continue to succeed. The remaining likely difference is execution network/source-IP policy: the other
+project's upload ran from an environment whose egress is authorized, whereas this Codex task is local
+to the Mac. Run the upload from that same working backend/container, allow this Mac/VPN egress, or
+provide presigned PUT URLs. No object was created by these retries.
+
 Candidate digital-character ID `char-3c5a1f77` cannot be fetched or previewed through the generation
 API. BytePlus documents digital characters as inference-only assets passed as
 `asset://char-3c5a1f77`; a real video task is required to validate account access and the ID. It remains
