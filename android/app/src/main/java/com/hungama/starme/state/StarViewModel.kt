@@ -13,6 +13,7 @@ import com.hungama.starme.network.ConsentRequest
 import com.hungama.starme.network.OrderRequest
 import com.hungama.starme.util.Demo
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -200,43 +201,50 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             _state.update { it.copy(signed = true) }
             return
         }
+        _state.update { it.copy(consentSubmitFailed = false) }
         viewModelScope.launch {
             val token = container.session.accessTokenOnce()
             if (token == null) {
+                _state.update { it.copy(consentSubmitFailed = true) }
                 _events.send(StarEvent.Error("Tester session expired. Enter a new access code."))
                 return@launch
             }
-            runCatching {
-                container.api.createConsent(
-                    token,
-                    ConsentRequest(
-                        typedName = _state.value.name,
-                        consentVersion = "development-placeholder-v1",
-                        checkedLikeness = checkedA,
-                        checkedRevocation = checkedB,
-                        signatureAttested = true,
-                    ),
-                )
-            }.onSuccess { remote ->
-                val record = container.consent.recordConsent(
-                    reference = remote.reference,
-                    name = _state.value.name,
-                    photoSource = _state.value.photoFile,
-                    signature = signature,
-                    checkedA = checkedA,
-                    checkedB = checkedB,
-                )
-                container.session.setActiveConsent(record.ref, record.name)
-                _state.update {
-                    it.copy(
-                        consentRef = record.ref,
-                        signed = true,
-                        photoPath = record.photoUri ?: it.photoPath,
+            val request = ConsentRequest(
+                typedName = _state.value.name,
+                consentVersion = "development-placeholder-v1",
+                checkedLikeness = checkedA,
+                checkedRevocation = checkedB,
+                signatureAttested = true,
+            )
+            // Up to three attempts so a transient network blip cannot dead-end Step 3 in a demo.
+            var lastError: Throwable? = null
+            repeat(3) { attempt ->
+                val result = runCatching { container.api.createConsent(token, request) }
+                result.onSuccess { remote ->
+                    val record = container.consent.recordConsent(
+                        reference = remote.reference,
+                        name = _state.value.name,
+                        photoSource = _state.value.photoFile,
+                        signature = signature,
+                        checkedA = checkedA,
+                        checkedB = checkedB,
                     )
+                    container.session.setActiveConsent(record.ref, record.name)
+                    _state.update {
+                        it.copy(
+                            consentRef = record.ref,
+                            signed = true,
+                            consentSubmitFailed = false,
+                            photoPath = record.photoUri ?: it.photoPath,
+                        )
+                    }
+                    return@launch
                 }
-            }.onFailure { error ->
-                _events.send(StarEvent.Error(UserFacingErrors.consent(error)))
+                lastError = result.exceptionOrNull()
+                if (attempt < 2) delay(1200)
             }
+            _state.update { it.copy(consentSubmitFailed = true) }
+            _events.send(StarEvent.Error(UserFacingErrors.consent(lastError ?: IllegalStateException("consent failed"))))
         }
     }
 
@@ -330,6 +338,39 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     // ---- Production (Step 6) ----
     fun schedulePremiereNotification(scheduler: (name: String) -> Unit) {
         scheduler(_state.value.name)
+    }
+
+    /**
+     * Quiet background poll used by the production screen to auto-advance without the
+     * tester tapping "Refresh": surfaces the first look when ready and opens the premiere
+     * on READY. Transient failures are ignored so a blip does not interrupt the demo.
+     */
+    fun pollProductionStatus() {
+        val remoteOrderId = _state.value.remoteOrderId ?: return
+        viewModelScope.launch {
+            val token = container.session.accessTokenOnce() ?: return@launch
+            runCatching { container.api.order(token, remoteOrderId) }.onSuccess { order ->
+                val ready = order.status == "READY"
+                val awaiting = order.status == "AWAITING_FIRST_LOOK"
+                _state.update {
+                    it.copy(
+                        awaitingFirstLook = awaiting,
+                        renderComplete = ready,
+                        firstLookUrl = order.firstLook?.previewUrl ?: it.firstLookUrl,
+                        renderProgress = when {
+                            ready -> 1f
+                            awaiting -> 0.5f
+                            else -> it.renderProgress
+                        },
+                        remoteEpisodes = if (order.episodes.isNotEmpty()) order.episodes else it.remoteEpisodes,
+                    )
+                }
+                if (ready) {
+                    _events.send(StarEvent.Toast("Now premiering · you"))
+                    _events.send(StarEvent.RenderComplete)
+                }
+            }
+        }
     }
 
     fun onStartRender() {

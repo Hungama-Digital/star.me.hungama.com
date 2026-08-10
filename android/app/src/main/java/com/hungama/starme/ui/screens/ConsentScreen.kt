@@ -42,6 +42,7 @@ import com.hungama.starme.ui.components.Eyebrow
 import com.hungama.starme.ui.components.Lead
 import com.hungama.starme.ui.components.ScreenHeading
 import com.hungama.starme.ui.components.SignaturePad
+import com.hungama.starme.ui.components.StarButton
 import com.hungama.starme.ui.components.SmallDim
 import com.hungama.starme.ui.components.Stage
 import com.hungama.starme.ui.components.rememberSignatureController
@@ -187,6 +188,32 @@ fun ConsentScreen(
                     onSignatureCleared()
                 },
             )
+        }
+
+        // Network insurance: if a consent submit fails, offer an explicit retry so a flaky
+        // moment cannot dead-end Step 3 during a demo.
+        if (state.consentSubmitFailed && !state.signed) {
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.orange.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                    .border(1.dp, colors.orange.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(14.dp),
+            ) {
+                Column {
+                    Text(
+                        "We couldn't reach StarME to record your consent. Your photo and signature are safe on this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.text,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    StarButton(
+                        label = "Try again",
+                        onClick = { signature.toBitmap()?.let { onSigned(it, checkedA, checkedB) } },
+                    )
+                }
+            }
         }
 
         if (state.signed && state.consentRef != null) {

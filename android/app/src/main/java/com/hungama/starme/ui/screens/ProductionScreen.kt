@@ -48,6 +48,7 @@ import com.hungama.starme.ui.theme.DisplayFontFamily
 import com.hungama.starme.ui.theme.StarTheme
 import com.hungama.starme.util.Demo
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun ProductionScreen(
@@ -56,6 +57,7 @@ fun ProductionScreen(
     onScheduleNotification: () -> Unit,
     onApproveFirstLook: () -> Unit,
     onRetake: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     val colors = StarTheme.colors
     val shell = manifest.shell(state.shellId)
@@ -64,6 +66,18 @@ fun ProductionScreen(
     // Schedule the premiere notification once, in parallel with the countdown (spec §3.7).
     LaunchedEffect(state.orderId) {
         if (state.orderId != null) onScheduleNotification()
+    }
+
+    // Auto-advance: quietly poll status so the flow glides to the first look and then the
+    // premiere without the tester tapping "Refresh". Re-keys when the stage changes; the
+    // premiere navigation disposes this screen and cancels the loop.
+    LaunchedEffect(state.orderId, state.awaitingFirstLook, state.renderComplete) {
+        if (state.orderId != null && !state.awaitingFirstLook && !state.renderComplete) {
+            while (isActive) {
+                onRefresh()
+                delay(2500)
+            }
+        }
     }
 
     // Countdown ticks while not rendering.

@@ -200,6 +200,7 @@ private fun StarApp(container: AppContainer) {
                     },
                     onApproveFirstLook = vm::approveFirstLook,
                     onRetake = vm::requestRetake,
+                    onRefresh = vm::pollProductionStatus,
                 )
             }
             composable(Step.PREMIERE.route) {

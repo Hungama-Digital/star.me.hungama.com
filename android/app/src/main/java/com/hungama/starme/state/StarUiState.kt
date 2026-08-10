@@ -44,6 +44,7 @@ data class StarUiState(
     // Consent
     val consentRef: String? = null,
     val signed: Boolean = false,
+    val consentSubmitFailed: Boolean = false,
 
     // Story
     val shellId: String? = null,
