@@ -1167,3 +1167,27 @@ the recognizable eye/eyebrow shape, angular cheekbones and jaw, short quiff/fade
 beard. The trusted original URL and local image are retained only under ignored
 `tmp/seedance-cricket-star/` as `cricket_star_identity_v2.png`. This is the preferred identity for the
 first paid shot unless Amol selects the preset digital character instead.
+
+### 10 August 2026 - Episode 1 CDN sources verified; Seedance input-face policy blocked edit
+
+Amol uploaded the seven prepared Episode 1 clips through another working Linode path. All seven CDN
+URLs under `https://images.hungama.com/starme/episode-1/` returned HTTP 200, `video/mp4` and exact byte
+matches against the local files. The timeline manifest also returned HTTP 200 as JSON. The source
+delivery blocker is therefore resolved independently of this task's Linode `PutObject` restriction.
+
+A controlled paid-proof submission used six-second `ep01_arjun_02.mp4` plus the improved same-account
+trusted Seedream v2 identity. The prompt required replacement of Arjun only, locked Riya and all other
+people, and preserved performance, lips, body, costume, environment, camera, lighting, cuts and exact
+duration. Seedance rejected the request before task creation or billing with HTTP 400
+`InputVideoSensitiveContentDetected.PrivacyInformation`: it classified `content[1]`, the externally
+generated source episode clip, as potentially containing a real person. The trusted replacement image
+does not confer trust on the source video; preset character `asset://char-3c5a1f77` would encounter the
+same source-input gate. No task ID, generated video or charge resulted.
+
+To run these actual episode shots through Seedance 2.0, BytePlus must approve/register the source clips
+as private trusted video assets (the Advanced/Premium asset service previously returned
+`SubscriptionRequired`) or explicitly allow the fully synthetic masters through an enterprise support
+route. Prompt changes and public URLs cannot bypass input moderation. Until that provider entitlement
+exists, the successful same-account Seedream -> Seedance synthetic proof remains valid, but Seedance
+cannot be claimed as the engine for the supplied external episode masters. The local CineIQ face-transfer
+route remains the required alternative for these clips.
