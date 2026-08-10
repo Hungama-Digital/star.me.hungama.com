@@ -1128,3 +1128,27 @@ shots. The production design is therefore: edit only Arjun-containing shots, ret
 frames, restore original audio, and assemble each complete episode locally. Do not submit all 26 paid
 tasks immediately: upload and approve the prepared Episode 2 single-face proof first, then scale after
 identity/non-target/performance QA passes.
+
+### 10 August 2026 - Linode source delivery tested; improved cricket-star identity generated
+
+Amol supplied a Linode Object Storage configuration for bucket `contentpublic`, folder `starme`, Mumbai
+endpoint and CDN base `https://contentai.hungama.com`. Credentials are stored only in ignored `.env` and
+are not reproduced here. Authentication, `HeadBucket`, prefix listing and bucket-location requests all
+succeeded using both virtual-hosted and path-style addressing. `PutObject` to
+`starme/seedance/episode-1/source/ep01_arjun_01.mp4` failed first because the bucket does not implement
+per-object ACL headers; retrying without an ACL returned `AccessDenied`. This isolates the blocker to
+write permission for the supplied key/bucket policy. No Episode 1 object or public CDN URL was created.
+Grant this key `s3:PutObject` for `contentpublic/starme/*` (and optionally `s3:DeleteObject` for cleanup),
+then rerun the seven-file upload and exact CDN byte/content-type checks.
+
+Candidate digital-character ID `char-3c5a1f77` cannot be fetched or previewed through the generation
+API. BytePlus documents digital characters as inference-only assets passed as
+`asset://char-3c5a1f77`; a real video task is required to validate account access and the ID. It remains
+an alternative after source URLs are available.
+
+Because the first generated cricket-star portrait was not visually close enough, a second watermarked
+2048x2048 Seedream 5.0 Lite portrait was generated with a stronger explicit likeness prompt emphasizing
+the recognizable eye/eyebrow shape, angular cheekbones and jaw, short quiff/fade and dense groomed
+beard. The trusted original URL and local image are retained only under ignored
+`tmp/seedance-cricket-star/` as `cricket_star_identity_v2.png`. This is the preferred identity for the
+first paid shot unless Amol selects the preset digital character instead.
