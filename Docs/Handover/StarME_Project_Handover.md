@@ -1069,3 +1069,34 @@ a deterministic classical face-swap engine. The next product proof should use on
 5-to-10-second catalogue shot, retain original audio, and test profile angles, partial occlusion and
 non-target-face protection. A real subscriber proof still requires BytePlus Advanced/Premium liveness
 and an `Active` verified portrait asset, or a provider-approved equivalent consent/identity path.
+
+### 10 August 2026 - protected episode proof prepared; source-delivery gate identified
+
+The next requested proof is a consistent fictional Indian cricket-star identity across the three real
+"Ek Love Story Aisi Bhi" episode masters. Seedream 5.0 Lite successfully generated a watermarked,
+2048x2048 front-facing fictional character with short styled hair and a full beard. The image and its
+original trusted Seedream URL are stored only under ignored `tmp/seedance-cricket-star/`. It is an
+original fictional character with a high-profile Indian cricket-star visual direction, not labelled or
+represented as the real Virat Kohli.
+
+The actual protected masters were located outside Git under Dipti's intake: Episode 1 is 74.416667 s,
+Episode 2 is 78.625 s and Episode 3 is 106.981875 s; each is portrait 1080x1920 H.264 with AAC audio.
+They cannot be sent as three whole Seedance calls: each reference video is limited to 2-15 seconds and
+the replaceable Arjun shots must be isolated so other characters and non-face frames remain untouched.
+A first four-second Episode 2 proof shot (28.75-32.75 s) was extracted at 720x1280/24 fps. It contains
+Arjun speaking with Riya's back and shoulder in the foreground, so it tests lead replacement and
+non-target preservation together.
+
+The first provider submission was rejected before task creation or billing with `InvalidParameter`:
+Seedance requires `reference_video` to be a web URL and does not accept a Base64 data URL. A private,
+temporary BytePlus TOS route was then attempted with the newly supplied valid AK/SK credentials. Bucket
+creation returned HTTP 403 `AccountDisable` because TOS is not activated on this BytePlus account; no
+bucket or object was created. The previously authorized staging alternative also remains unavailable:
+SSH to `49.248.193.9:22` timed out again. No protected episode clip was uploaded to an anonymous public
+file-sharing service, no Seedance video task was created and no video-generation charge was incurred.
+
+To resume, either activate BytePlus TOS and provide/permit a private bucket, or restore staging SSH and
+serve each temporary shot through a short-lived signed HTTPS URL on `starme.hungama.com`. Then submit
+the prepared Episode 2 proof first. Only after its manual QA passes should Engineering detect and edit
+all Arjun shots across Episodes 1-3, remux untouched original audio, concatenate unchanged and edited
+shots, and run duration/resolution/audio plus identity, lip-sync, non-target-face and continuity QA.
