@@ -1000,3 +1000,35 @@ tests. Deployment of the callback is also pending because SSH to both `49.248.19
 `10.0.0.63:22` timed out from the current Mac, and live HTTPS still returns 404 for the callback path.
 These are two separate blockers: activate the BytePlus plan first; restore server SSH before the next
 30-minute liveness attempt so the committed callback can be deployed.
+
+### 10 August 2026 - unblocked Android identity-readiness slice installed and verified
+
+While BytePlus Advanced/Premium activation remains external, Android now has an explicit,
+feature-flagged identity asset lifecycle. `STARME_REAL_IDENTITY_ENABLED` defaults to `false` for the
+current staging build. In staging-local mode a valid photo and name can continue to consent, but the
+capture screen states: "Your photo stays on this device. No face asset is uploaded in this test
+build." If the real-identity flag is enabled, capture fails closed at `AWAITING_LIVENESS` until an
+`ACTIVE` provider asset exists; order creation will use that asset ID when populated and otherwise
+retains the existing synthetic fixture only in local staging mode.
+
+Misleading capture claims were removed. The UI no longer says that the selfie has been matched to a
+live person, ownership verified, or age checked. The four rows now report only observable/local facts:
+photo readability, exactly one ML Kit face, open eyes/casting clarity, and readiness to perform the
+age confirmation at consent. The success toast is now "Local photo checks passed." A real eyes-open
+gate was added using ML Kit's existing classification output. Revocation resets the lifecycle and
+rows, clears the local asset reference, and accurately says that local photo removal and a server
+deletion request occurred rather than claiming deletion has already completed.
+
+Two restored-session defects were found during RMX3782 testing and fixed: a stored valid consent now
+restores the lifecycle as `STAGING_LOCAL_ONLY` (or `AWAITING_LIVENESS` under the real flag), and its
+verification rows restore as `PASSED` instead of contradicting the enabled Continue CTA with
+`WAITING`. Two new state tests prove staging continuation and real-provider fail-closed behavior.
+
+Android `testDebugUnitTest` (11 tests), `lintDebug`, and `assembleDebug` pass using a project-local,
+ignored JDK 17. The built configuration was inspected and contains
+`STARME_API_BASE_URL=https://starme.hungama.com` and `STARME_REAL_IDENTITY_ENABLED=false`. The APK was
+installed over the existing debug build on connected Realme RMX3782. On device, the corrected four
+rows show Passed, the local-only disclosure renders beneath them, the CTA remains usable, the front
+camera opened with the inset-safe shutter and canceled back to StarME, the activity remained
+foreground, and recent logs contained no fatal exception. APK size: 63,029,482 bytes; SHA-256:
+`8584cf557e17de524df40f8aa0649f7e4f0b784cef4be5beb0e5e9045f5ba83f`.

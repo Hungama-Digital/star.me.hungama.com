@@ -6,14 +6,24 @@ import java.io.File
 /** Status of one row in the Capture verification sequence (spec §3.3). */
 enum class VerifyState { WAITING, CHECKING, PASSED, FAILED }
 
+enum class IdentityAssetState {
+    LOCAL_CHECKS_PENDING,
+    STAGING_LOCAL_ONLY,
+    AWAITING_LIVENESS,
+    UPLOADING,
+    PROCESSING,
+    ACTIVE,
+    FAILED,
+}
+
 data class VerifyRow(val label: String, val state: VerifyState = VerifyState.WAITING)
 
 /** The four verification rows, in order. Row index 1 is the ML Kit face gate. */
 val defaultVerifyRows: List<VerifyRow> = listOf(
-    VerifyRow("Live selfie matches this photo"),
-    VerifyRow("Face is yours · own face only"),
-    VerifyRow("Age check · 18 and above"),
-    VerifyRow("Photo quality for casting"),
+    VerifyRow("Photo is readable on this device"),
+    VerifyRow("Exactly one face detected"),
+    VerifyRow("Face is clear enough for casting"),
+    VerifyRow("Consent step ready for age confirmation"),
 )
 
 /**
@@ -38,6 +48,9 @@ data class StarUiState(
     val name: String = "",
     val verifying: Boolean = false,
     val verified: Boolean = false,
+    val identityProviderEnabled: Boolean = false,
+    val identityAssetState: IdentityAssetState = IdentityAssetState.LOCAL_CHECKS_PENDING,
+    val identityAssetId: String? = null,
     val verifyRows: List<VerifyRow> = defaultVerifyRows,
     val verifyError: String? = null,
 
@@ -64,7 +77,9 @@ data class StarUiState(
     val remoteEpisodes: List<EpisodeDto> = emptyList(),
 ) {
     val hasPhoto: Boolean get() = photoPath != null
-    val canContinueCapture: Boolean get() = verified && name.isNotBlank()
+    val canContinueCapture: Boolean
+        get() = verified && name.isNotBlank() &&
+            (!identityProviderEnabled || identityAssetState == IdentityAssetState.ACTIVE)
     val canContinueConsent: Boolean get() = signed && consentRef != null
     val canContinueConcept: Boolean get() = shellId != null && roleId != null
 }

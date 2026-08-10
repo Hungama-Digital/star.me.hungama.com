@@ -24,6 +24,10 @@ android {
             .orElse("https://starme.hungama.com")
             .get()
         buildConfigField("String", "STARME_API_BASE_URL", "\"$apiBaseUrl\"")
+        val realIdentityEnabled = providers.gradleProperty("STARME_REAL_IDENTITY_ENABLED")
+            .orElse("false")
+            .get()
+        buildConfigField("boolean", "STARME_REAL_IDENTITY_ENABLED", realIdentityEnabled)
         manifestPlaceholders["usesCleartextTraffic"] = "false"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -50,6 +50,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.hungama.starme.state.StarUiState
+import com.hungama.starme.state.IdentityAssetState
 import com.hungama.starme.state.VerifyRow
 import com.hungama.starme.state.VerifyState
 import com.hungama.starme.ui.components.CameraCaptureView
@@ -169,6 +170,10 @@ fun CaptureScreen(
                     color = Color(0xFFE5A24D),
                 )
             }
+            if (state.verified) {
+                Spacer(Modifier.height(10.dp))
+                IdentityPreparationCard(state.identityAssetState)
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -196,6 +201,33 @@ fun CaptureScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun IdentityPreparationCard(assetState: IdentityAssetState) {
+    val colors = StarTheme.colors
+    val (title, detail, color) = when (assetState) {
+        IdentityAssetState.STAGING_LOCAL_ONLY -> Triple(
+            "Local staging check complete",
+            "Your photo stays on this device. No face asset is uploaded in this test build.",
+            colors.good,
+        )
+        IdentityAssetState.AWAITING_LIVENESS -> Triple(
+            "Identity activation required",
+            "Complete the secure provider verification before your photo can be prepared for casting.",
+            colors.gold,
+        )
+        IdentityAssetState.UPLOADING -> Triple("Preparing securely", "Uploading your authorized portrait.", colors.gold)
+        IdentityAssetState.PROCESSING -> Triple("Preparing securely", "Provider checks are processing.", colors.gold)
+        IdentityAssetState.ACTIVE -> Triple("Casting identity ready", "Your authorized face asset is active.", colors.good)
+        IdentityAssetState.FAILED -> Triple("Preparation needs attention", "Try identity preparation again.", Color(0xFFE5484D))
+        IdentityAssetState.LOCAL_CHECKS_PENDING -> Triple("Checking photo", "Local checks are still running.", colors.dim)
+    }
+    StarCard {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = color, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(5.dp))
+        Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.dim)
     }
 }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.hungama.starme.AppContainer
+import com.hungama.starme.BuildConfig
 import com.hungama.starme.data.manifest.ShellManifest
 import com.hungama.starme.face.FaceChecker
 import com.hungama.starme.network.ConsentRequest
@@ -33,7 +34,9 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
 
     private val faceChecker = FaceChecker()
 
-    private val _state = MutableStateFlow(StarUiState())
+    private val _state = MutableStateFlow(
+        StarUiState(identityProviderEnabled = BuildConfig.STARME_REAL_IDENTITY_ENABLED)
+    )
     val state: StateFlow<StarUiState> = _state.asStateFlow()
 
     private val _events = Channel<StarEvent>(Channel.BUFFERED)
@@ -63,6 +66,20 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     name = record?.name ?: it.name,
                     photoPath = record?.photoUri ?: it.photoPath,
                     verified = record != null || it.verified,
+                    verifyRows = if (record != null) {
+                        defaultVerifyRows.map { row -> row.copy(state = VerifyState.PASSED) }
+                    } else {
+                        it.verifyRows
+                    },
+                    identityAssetState = if (record != null) {
+                        if (it.identityProviderEnabled) {
+                            IdentityAssetState.AWAITING_LIVENESS
+                        } else {
+                            IdentityAssetState.STAGING_LOCAL_ONLY
+                        }
+                    } else {
+                        it.identityAssetState
+                    },
                 )
             }
         }
@@ -146,6 +163,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     photoFile = file,
                     photoPath = file.absolutePath,
                     verified = false,
+                    identityAssetState = IdentityAssetState.LOCAL_CHECKS_PENDING,
+                    identityAssetId = null,
                     verifyError = null,
                     verifyRows = defaultVerifyRows,
                 )
@@ -180,12 +199,34 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 return
             }
-            // Row index 2 (age) is a stub that passes; the real service fails closed (spec §8).
+            if (i == QUALITY_ROW && !faceResult.eyesOpen) {
+                rows[i] = rows[i].copy(state = VerifyState.FAILED)
+                _state.update {
+                    it.copy(
+                        verifyRows = rows.toList(),
+                        verifying = false,
+                        verified = false,
+                        verifyError = "Keep both eyes open and face the camera in even light.",
+                    )
+                }
+                return
+            }
             rows[i] = rows[i].copy(state = VerifyState.PASSED)
             _state.update { it.copy(verifyRows = rows.toList()) }
         }
-        _state.update { it.copy(verifying = false, verified = true, verifyError = null) }
-        _events.send(StarEvent.Toast("Verified · this face is yours"))
+        _state.update {
+            it.copy(
+                verifying = false,
+                verified = true,
+                verifyError = null,
+                identityAssetState = if (it.identityProviderEnabled) {
+                    IdentityAssetState.AWAITING_LIVENESS
+                } else {
+                    IdentityAssetState.STAGING_LOCAL_ONLY
+                },
+            )
+        }
+        _events.send(StarEvent.Toast("Local photo checks passed"))
     }
 
     private fun faceGuidance(faceCount: Int): String = when (faceCount) {
@@ -310,7 +351,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                             shellId = "ek-love-story-001",
                             roleId = s.roleId ?: "arjun",
                             packageId = "lead-debut-3",
-                            faceAssetId = "synthetic-device-capture",
+                            faceAssetId = s.identityAssetId ?: "synthetic-device-capture",
                         ),
                     )
                 }
@@ -508,15 +549,19 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     photoFile = null,
                     photoPath = null,
                     verified = false,
+                    verifyRows = defaultVerifyRows,
+                    identityAssetState = IdentityAssetState.LOCAL_CHECKS_PENDING,
+                    identityAssetId = null,
                 )
             }
-            _events.send(StarEvent.Toast("Consent revoked · biometric data scheduled for deletion"))
+            _events.send(StarEvent.Toast("Consent revoked · local photo removed and server deletion requested"))
             onDone()
         }
     }
 
     companion object {
         private const val FACE_ROW = 1
+        private const val QUALITY_ROW = 2
 
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
