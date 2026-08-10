@@ -1263,3 +1263,35 @@ output or charge resulted. The immediate manual-proof blocker is therefore an au
 or higher subscription on the test account. After access is enabled, repeat this exact one-clip run before
 scaling to the remaining Episode 1 shots, then download locally, restore the original AAC track if needed,
 and apply the previously documented identity/non-target/timing QA gates.
+
+### 10 August 2026 - non-render engineering resumed; reproducibility and recovery gaps closed
+
+Amol authorized completing all work independent of the blocked face/character replacement. The
+existing backend worker, provider orchestration, shot extraction, original-audio remux, structural QA,
+signed delivery, Android first-look/retake, revocation and cancellation paths were re-audited and their
+automated backend suite remained green. No claim is made that the missing personalized episode patch
+has been produced.
+
+Two independent product-engineering gaps were closed. First, `/v1/capabilities` now publishes the
+server-configured consent version and its Legal configuration status. Android retrieves this contract,
+records the same version in its local consent ledger, and fails closed with explicit copy when the server
+publishes no version. This removes `development-placeholder-v1` from the application logic and means the
+eventual Legal version can be activated server-side without rebuilding the APK. The displayed wording is
+still the current internal-test copy and must be replaced/approved through the Legal workstream.
+
+Second, Android now persists the active remote and local order identifiers in app-private,
+backup-excluded session storage, restores them after process death, and resumes the production journey. Failed remote
+order creation removes its pending local row instead of leaving an orphan. Making another drama or
+revoking consent clears the active-order recovery keys. A repository audit also found that the unanchored
+`.gitignore` rule `data/` had excluded the entire Kotlin persistence/session source package. The ignore
+rules are now root-anchored (`/data/`, `/storage/`) and the required Android source package is included in
+Git; this is essential for a fresh clone to build reproducibly.
+
+Verification on this checkpoint: backend Ruff, format, strict mypy and 39 pytest tests pass; Android
+`testDebugUnitTest`, `lintDebug` and `assembleDebug` pass using Homebrew OpenJDK 17. ADB is installed but
+no Android device is currently connected, so this exact APK has not yet received a fresh device install.
+The only generation blocker for the requested Episode 1 proof remains provider access: Higgsfield Recast
+requires Pro or higher, BytePlus rejects the external episode source under its privacy/trust policy, and
+local CineIQ execution remains unavailable. Legal final wording, real billing, true liveness/age service,
+provider commercial/privacy approval and broader device/usability acceptance also remain external or
+release-stage work; they are not honestly finishable in code alone.

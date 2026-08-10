@@ -20,6 +20,17 @@ data class SessionDto(
 )
 
 @Serializable
+data class CapabilityDto(
+    @SerialName("identity_capture") val identityCapture: Boolean,
+    @SerialName("consent_collection") val consentCollection: Boolean,
+    @SerialName("consent_version") val consentVersion: String? = null,
+    @SerialName("legal_text_status") val legalTextStatus: String,
+    val rendering: Boolean,
+    @SerialName("media_delivery") val mediaDelivery: Boolean,
+    val reason: String,
+)
+
+@Serializable
 data class ConsentRequest(
     @SerialName("typed_name") val typedName: String,
     @SerialName("consent_version") val consentVersion: String,
@@ -71,6 +82,8 @@ class StarMeApiClient(
     private val baseUrl: String = BuildConfig.STARME_API_BASE_URL.trimEnd('/'),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+
+    suspend fun capabilities(): CapabilityDto = call("GET", "/v1/capabilities")
 
     suspend fun redeem(code: String, deviceId: String): SessionDto =
         call("POST", "/v1/access/redeem", json.encodeToString(RedeemRequest(code, deviceId)))

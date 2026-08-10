@@ -24,8 +24,8 @@ htmlcov/
 # IDE and local runtime state
 .idea/
 .vscode/
-data/
-storage/
+/data/
+/storage/
 
 # Android local/build state
 android/.gradle/

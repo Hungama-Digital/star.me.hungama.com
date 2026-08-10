@@ -45,6 +45,11 @@ The synthetic vertical slice includes single-use tester access, authenticated co
 first-look approval/retake, Redis/RQ job contracts, revocation cancellation and signed delivery
 grants. See [API v1](Docs/API/StarME_API_v1.md).
 
+The backend capability response is the source of truth for the consent version. Android also
+persists the active local/remote order identifiers, allowing an authenticated production or premiere
+journey to recover after process death. The Android persistence source package is version-controlled;
+root-local runtime directories remain excluded with anchored `/data/` and `/storage/` ignore rules.
+
 The guarded Seedance operator path supports authentication checks, controlled 2-to-15-second shot
 extraction, explicit billable rendering, original-audio remuxing and structural quality gates. See
 the [Seedance proof runbook](Docs/Runbooks/StarME_Seedance_Proof_Runbook.md). A real-human proof still

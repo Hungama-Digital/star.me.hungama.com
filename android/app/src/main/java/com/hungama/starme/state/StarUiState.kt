@@ -58,6 +58,8 @@ data class StarUiState(
     val consentRef: String? = null,
     val signed: Boolean = false,
     val consentSubmitFailed: Boolean = false,
+    val consentVersion: String? = null,
+    val legalTextStatus: String = "pending_final_legal_wording",
 
     // Story
     val shellId: String? = null,

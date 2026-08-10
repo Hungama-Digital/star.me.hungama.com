@@ -45,8 +45,22 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     init {
         viewModelScope.launch {
             val authenticated = container.session.accessTokenOnce() != null
-            _state.update { it.copy(authenticated = authenticated) }
-            if (authenticated) _events.send(StarEvent.AccessGranted)
+            val remoteOrderId = container.session.activeRemoteOrderIdOnce()
+            val localOrderId = container.session.activeLocalOrderIdOnce()
+            _state.update {
+                it.copy(
+                    authenticated = authenticated,
+                    remoteOrderId = remoteOrderId,
+                    orderId = localOrderId,
+                )
+            }
+            if (authenticated) {
+                _events.send(StarEvent.AccessGranted)
+                if (remoteOrderId != null && localOrderId != null) {
+                    _events.send(StarEvent.OrderCreated)
+                }
+            }
+            refreshCapabilities()
         }
         viewModelScope.launch { container.wallet.ensureInitialized() }
         // Mirror the wallet balance into UI state.
@@ -103,6 +117,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             runCatching { container.api.redeem(code, container.session.deviceBindingId()) }
                 .onSuccess { remoteSession ->
                     container.session.setAccessToken(remoteSession.accessToken)
+                    refreshCapabilities()
                     _state.update {
                         it.copy(
                             authenticating = false,
@@ -244,6 +259,16 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
         }
         _state.update { it.copy(consentSubmitFailed = false) }
         viewModelScope.launch {
+            val consentVersion = _state.value.consentVersion
+            if (consentVersion == null) {
+                _state.update { it.copy(consentSubmitFailed = true) }
+                _events.send(
+                    StarEvent.Error(
+                        "Consent is not available on this server yet. Legal-approved wording must be configured before testing."
+                    )
+                )
+                return@launch
+            }
             val token = container.session.accessTokenOnce()
             if (token == null) {
                 _state.update { it.copy(consentSubmitFailed = true) }
@@ -252,7 +277,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             }
             val request = ConsentRequest(
                 typedName = _state.value.name,
-                consentVersion = "development-placeholder-v1",
+                consentVersion = consentVersion,
                 checkedLikeness = checkedA,
                 checkedRevocation = checkedB,
                 signatureAttested = true,
@@ -269,6 +294,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         signature = signature,
                         checkedA = checkedA,
                         checkedB = checkedB,
+                        consentVersion = consentVersion,
                     )
                     container.session.setActiveConsent(record.ref, record.name)
                     _state.update {
@@ -356,6 +382,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     )
                 }
                 remote.onSuccess { order ->
+                    container.session.setActiveOrder(order.id, localId)
                     container.wallet.add(-pkg.credits)
                     _state.update {
                         it.copy(
@@ -368,6 +395,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     }
                     _events.send(StarEvent.OrderCreated)
                 }.onFailure { error ->
+                    container.orders.discardPending(localId)
                     _events.send(StarEvent.Error(UserFacingErrors.order(error)))
                 }
             }.onFailure { e ->
@@ -510,6 +538,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     // ---- Premiere (Step 7) ----
     /** "Make another drama" — reset the story/order, keep identity + consent + credits. */
     fun onMakeAnother() {
+        viewModelScope.launch { container.session.clearActiveOrder() }
         _state.update {
             it.copy(
                 shellId = null,
@@ -542,6 +571,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             }
             container.consent.revoke(ref)
             container.session.clearConsent()
+            container.session.clearActiveOrder()
             _state.update {
                 it.copy(
                     consentRef = null,
@@ -552,10 +582,27 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     verifyRows = defaultVerifyRows,
                     identityAssetState = IdentityAssetState.LOCAL_CHECKS_PENDING,
                     identityAssetId = null,
+                    orderId = null,
+                    remoteOrderId = null,
+                    awaitingFirstLook = false,
+                    firstLookUrl = null,
+                    remoteEpisodes = emptyList(),
                 )
             }
             _events.send(StarEvent.Toast("Consent revoked · local photo removed and server deletion requested"))
             onDone()
+        }
+    }
+
+    private suspend fun refreshCapabilities() {
+        runCatching { container.api.capabilities() }.onSuccess { capabilities ->
+            _state.update {
+                it.copy(
+                    identityProviderEnabled = capabilities.identityCapture,
+                    consentVersion = capabilities.consentVersion,
+                    legalTextStatus = capabilities.legalTextStatus,
+                )
+            }
         }
     }
 

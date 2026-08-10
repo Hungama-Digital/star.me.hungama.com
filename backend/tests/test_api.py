@@ -59,5 +59,14 @@ def test_catalogue_contains_only_marked_synthetic_fixtures() -> None:
     assert all(shell["synthetic_fixture"] is True for shell in shells)
 
 
+def test_capabilities_publish_server_consent_configuration() -> None:
+    response = client.get("/v1/capabilities")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["consent_version"] is None
+    assert payload["legal_text_status"] == "pending_final_legal_wording"
+
+
 def test_catalogue_requires_authentication() -> None:
     assert client.get("/v1/catalogue/shells").status_code == 401

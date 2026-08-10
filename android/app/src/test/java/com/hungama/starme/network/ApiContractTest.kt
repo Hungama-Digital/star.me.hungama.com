@@ -38,4 +38,24 @@ class ApiContractTest {
         assertEquals(1, order.episodes.single().episodeNumber)
         assertEquals("https://private.example/stream", order.episodes.single().streamUrl)
     }
+
+    @Test
+    fun capabilitiesDecodeServerManagedConsentVersion() {
+        val payload = """
+            {
+              "identity_capture":false,
+              "consent_collection":true,
+              "consent_version":"development-placeholder-v1",
+              "legal_text_status":"configured",
+              "rendering":true,
+              "media_delivery":true,
+              "reason":"Internal staging configuration"
+            }
+        """.trimIndent()
+
+        val capabilities = json.decodeFromString<CapabilityDto>(payload)
+
+        assertEquals("development-placeholder-v1", capabilities.consentVersion)
+        assertEquals("configured", capabilities.legalTextStatus)
+    }
 }

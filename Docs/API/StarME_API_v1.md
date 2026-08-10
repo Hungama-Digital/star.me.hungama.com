@@ -16,7 +16,7 @@ backup, and only a keyed digest is stored by the backend.
 |---|---|---|
 | GET | `/health/live` | Process liveness |
 | GET | `/health/ready` | Database readiness |
-| GET | `/v1/capabilities` | Enabled/disabled processing capabilities |
+| GET | `/v1/capabilities` | Enabled/disabled processing capabilities plus the server-approved consent version/status |
 | POST | `/v1/operator/access-codes` | Issue a single-use tester code |
 | POST | `/v1/access/redeem` | Bind code to device and create session |
 | GET | `/v1/catalogue/shells` | Authenticated synthetic catalogue |
@@ -43,6 +43,10 @@ backup, and only a keyed digest is stored by the backend.
 - Stream/preview grants expire after 15 minutes.
 - Download grants expire after 30 minutes.
 - The synthetic media endpoint validates grants but intentionally returns no real media payload.
+
+Android must obtain `consent_version` from `/v1/capabilities`; it must not bake a Legal or staging
+version into the APK. A null version means consent submission is unavailable and the client fails
+closed. `legal_text_status` distinguishes configured server wording/version from the pending state.
 
 ## Safety boundary
 

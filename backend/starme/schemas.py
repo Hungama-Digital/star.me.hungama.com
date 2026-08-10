@@ -42,6 +42,8 @@ class CapabilityResponse(BaseModel):
     consent_collection: bool = False
     rendering: bool = False
     media_delivery: bool = False
+    consent_version: str | None = None
+    legal_text_status: str = "pending_final_legal_wording"
     reason: str
 
 

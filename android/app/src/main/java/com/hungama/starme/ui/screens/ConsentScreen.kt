@@ -107,6 +107,23 @@ fun ConsentScreen(
         ScreenHeading("Read, tick and sign")
         Lead("Plain language, no fine print. A signed copy stays in your consent ledger and travels with every render.")
 
+        if (state.consentVersion == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.orange.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                    .border(1.dp, colors.orange.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(14.dp),
+            ) {
+                Text(
+                    "Consent recording is paused until this server publishes an approved consent version.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.text,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
         // Consent note (scrollable)
         Column(
             modifier = Modifier

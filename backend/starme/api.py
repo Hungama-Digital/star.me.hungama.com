@@ -188,6 +188,10 @@ def capabilities(settings: SettingsDependency) -> CapabilityResponse:
         consent_collection=True,
         rendering=settings.render_provider in {"stub", "cineiq"},
         media_delivery=settings.storage_backend in {"memory", "s3"},
+        consent_version=settings.approved_consent_version,
+        legal_text_status=(
+            "configured" if settings.approved_consent_version else "pending_final_legal_wording"
+        ),
         reason=(
             "Sensitive processing is explicitly enabled with configured providers"
             if enabled
