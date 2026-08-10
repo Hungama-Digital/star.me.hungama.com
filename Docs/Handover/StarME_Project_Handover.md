@@ -1302,3 +1302,14 @@ touching PostgreSQL, Redis, media or server-local secrets. External HTTPS checks
 `ok`; `/v1/capabilities` now returns consent version `development-placeholder-v1` with
 `legal_text_status: configured`, while sensitive identity capture remains false. This is the previously
 approved staging-only exception, not final Legal approval.
+
+### 10 August 2026 - durable-workflow APK installed on RMX3782
+
+After the phone was reconnected, the debug APK built from commit `1470447` was installed in place on
+the RMX3782 (`com.hungama.starme.debug`, version 1.2 / versionCode 2), preserving existing app data.
+The device's Realme/Oplus post-install security screen temporarily took the foreground after the first
+install attempt; this was an OEM package-scan flow, not a StarME exception. A controlled second cold
+launch completed successfully in 1.394 seconds, left `MainActivity` as the top resumed fullscreen
+activity with a live process, and produced no `FATAL EXCEPTION`/`AndroidRuntime` entry. This verifies
+install and cold launch only; the newly added process-death order recovery still requires an active test
+order to exercise end to end.
