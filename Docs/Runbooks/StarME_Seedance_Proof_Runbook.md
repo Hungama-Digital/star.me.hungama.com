@@ -1,7 +1,7 @@
 # StarME Seedance 2.0 proof runbook
 
-**Status:** Provider, media pipeline and RQ contracts implemented; real-human asset-library access
-pending BytePlus AK/SK, Advanced Creation Rights and liveness verification.
+**Status:** Provider, media pipeline, RQ and private asset API contracts implemented; first verified
+asset group pending completion of BytePlus H5 liveness.
 
 ## Safety boundary
 
@@ -21,6 +21,34 @@ bypass BytePlus moderation. Keep `generate_audio=false`; StarME preserves and re
 
 Expected result: an authenticated 404 for the deliberately nonexistent task. This does not consume
 generation credits.
+
+## 1a. Create an authorized real-human asset group
+
+The private asset API uses `STARME_BYTEPLUS_ACCESS_KEY` and `STARME_BYTEPLUS_SECRET_KEY`, not the
+generation API key. Confirm current groups, then create a liveness session:
+
+```bash
+.venv/bin/starme-seedance asset-groups
+.venv/bin/starme-seedance liveness-start
+```
+
+The ignored session file is written with mode `0600`. Open the printed H5 URL within 30 minutes and
+complete BytePlus liveness. BytePlus redirects to the StarME callback, which deliberately does not
+echo or persist the token. Then retrieve the group:
+
+```bash
+.venv/bin/starme-seedance liveness-result
+```
+
+Host the authorized person's clean frontal close-up temporarily over HTTPS, create the asset and
+wait for preprocessing:
+
+```bash
+.venv/bin/starme-seedance asset-create \
+  --group-id group-... --url https://protected-temporary-url/front.jpg --name front
+```
+
+Only continue after the command reports an `asset://asset-...` URI backed by `Active` status.
 
 ## 2. Extract one controlled shot
 

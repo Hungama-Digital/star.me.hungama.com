@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -158,6 +158,26 @@ def readiness(
         state = ServiceState.DEGRADED
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return HealthResponse(status=state, environment=settings.environment, version=__version__)
+
+
+@router.get(
+    "/v1/byteplus/liveness/callback",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def byteplus_liveness_callback(resultCode: str = "unknown") -> HTMLResponse:  # noqa: N803
+    succeeded = resultCode == "10000"
+    title = "Verification complete" if succeeded else "Verification was not completed"
+    detail = (
+        "You can return to StarME. Your verification result will be retrieved securely."
+        if succeeded
+        else "Please return to StarME and start verification again."
+    )
+    return HTMLResponse(
+        "<!doctype html><html><head><meta name='viewport' content='width=device-width'>"
+        f"<title>{title}</title></head><body style='font-family:sans-serif;padding:32px;"
+        f"background:#100d18;color:#fff'><h1>{title}</h1><p>{detail}</p></body></html>"
+    )
 
 
 @router.get("/v1/capabilities", response_model=CapabilityResponse)

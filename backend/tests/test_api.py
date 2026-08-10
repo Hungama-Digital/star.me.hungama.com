@@ -12,6 +12,17 @@ def test_liveness() -> None:
     assert response.json()["environment"] == "test"
 
 
+def test_byteplus_liveness_callback_does_not_echo_token() -> None:
+    response = client.get(
+        "/v1/byteplus/liveness/callback",
+        params={"resultCode": "10000", "bytedToken": "sensitive-token"},
+    )
+
+    assert response.status_code == 200
+    assert "Verification complete" in response.text
+    assert "sensitive-token" not in response.text
+
+
 def test_readiness_with_local_database() -> None:
     response = client.get("/health/ready")
     assert response.status_code == 200

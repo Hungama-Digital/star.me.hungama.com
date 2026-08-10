@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     byteplus_model: str = "dreamina-seedance-2-0-260128"
     byteplus_api_base_url: str = "https://ark.ap-southeast.bytepluses.com/api/v3"
     byteplus_project_name: str = "default"
+    byteplus_region: str = "ap-southeast-1"
+    byteplus_liveness_callback_url: str = "https://starme.hungama.com/v1/byteplus/liveness/callback"
     byteplus_access_key: SecretStr | None = None
     byteplus_secret_key: SecretStr | None = None
     byteplus_poll_interval_seconds: float = Field(default=5, ge=1, le=60)

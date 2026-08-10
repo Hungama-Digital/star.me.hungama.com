@@ -963,3 +963,26 @@ them would likely produce an eligibility rejection and would not validate the su
 The one remaining input for the first paid provider proof is an `Active` eligible `asset://` URI.
 For a real subscriber, obtaining that URI still requires the BytePlus AK/SK pair, Advanced Creation
 Rights, liveness verification, `CreateAsset`, and polling `GetAsset` to `Active`.
+
+### 10 August 2026 - BytePlus private portrait asset control plane enabled
+
+Amol populated the ignored BytePlus Access Key and Secret Key. They were checked only for presence
+and never printed or committed. A live, read-only HMAC-signed `ListAssetGroups` request authenticated
+successfully against `ark.ap-southeast-1.byteplusapi.com` and returned zero `LivenessFace` groups,
+confirming both credentials and establishing that a new liveness verification is required.
+
+The official `byteplus-python-sdk-v2` dependency is pinned to 3.0.24 or newer because BytePlus
+documents a retry defect in earlier 3.0.x versions. `byteplus_assets.py` now wraps liveness-session
+creation, verified group retrieval, group listing, portrait `CreateAsset`, `GetAsset` polling to
+`Active`, failure/timeout handling, and asset/group deletion. Provider exceptions are wrapped without
+credential contents. CLI commands expose `asset-groups`, `liveness-start`, `liveness-result`,
+`asset-create`, and `asset-status`; liveness tokens are stored only in ignored `tmp/` files with
+mode `0600`.
+
+The backend adds `/v1/byteplus/liveness/callback` for BytePlus's H5 redirect. It displays success or
+retry guidance but never echoes or stores the `bytedToken`. The configured callback is
+`https://starme.hungama.com/v1/byteplus/liveness/callback`. It must be deployed before creating the
+short-lived liveness session. Verification now passes Ruff, formatting, strict mypy and 37 tests;
+the live group-list command returns an empty list as expected. Next: deploy callback, create/open the
+30-minute H5 session, let Amol complete liveness, retrieve the new group, then upload an authorized
+portrait URL and poll it to an `Active asset://` URI.
