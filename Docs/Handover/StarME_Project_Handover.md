@@ -1191,3 +1191,17 @@ route. Prompt changes and public URLs cannot bypass input moderation. Until that
 exists, the successful same-account Seedream -> Seedance synthetic proof remains valid, but Seedance
 cannot be claimed as the engine for the supplied external episode masters. The local CineIQ face-transfer
 route remains the required alternative for these clips.
+
+The asset entitlement was retested after Amol requested a private-asset route. `ListAssetGroups` still
+returned an empty list, but `CreateVisualValidateSession` now succeeded and produced a 30-minute H5
+liveness link; the earlier `SubscriptionRequired` account gate is therefore no longer present. The
+sensitive token/link is stored only in ignored mode-0600 local state and is not committed.
+
+This does not by itself authorize the episode source. BytePlus real-human asset groups each represent
+one liveness-verified person, and uploaded assets are face-matched to that person; multiple-face assets
+are rejected. A group created through Amol's liveness could hold Amol's matching selfie/video assets,
+but it cannot hold synthetic Arjun footage, and Episode 1 clips that also show Riya are independently
+ineligible as multi-face assets. Because synthetic Arjun has no real person who can complete liveness,
+the source masters require a BytePlus enterprise/support-approved synthetic asset route or a provider
+moderation exception. Do not complete an unrelated person's liveness merely to obtain a group ID; it
+will not solve source-video eligibility.
