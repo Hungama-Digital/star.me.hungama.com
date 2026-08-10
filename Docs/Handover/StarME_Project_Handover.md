@@ -1100,3 +1100,31 @@ serve each temporary shot through a short-lived signed HTTPS URL on `starme.hung
 the prepared Episode 2 proof first. Only after its manual QA passes should Engineering detect and edit
 all Arjun shots across Episodes 1-3, remux untouched original audio, concatenate unchanged and edited
 shots, and run duration/resolution/audio plus identity, lip-sync, non-target-face and continuity QA.
+
+### 10 August 2026 - Seedance upload clip pack created and verified
+
+All media and archives under the three Dipti intake folders were re-inventoried. `Dipti` contains four
+short MP4s, but visual inspection confirms they are two unrelated before/after demonstrations (an
+astronaut scene and a railway-platform scene), not episode chunks. `Dipti_2` contains only the three
+full Episode 1-3 masters. `Dipti_3` contains Arjun/Riya character-image archives and shell metadata but
+no videos. The existing `Character_Appearance_Documentation.xlsx` was therefore used as the source of
+truth for Arjun's Episode 1-3 time ranges.
+
+An upload-ready pack was generated under ignored
+`tmp/seedance-cricket-star/upload-clips/`: 7 Episode 1 clips, 7 Episode 2 clips and 12 Episode 3 clips.
+All 26 clips are 2-10 seconds, 720x1280 portrait H.264/24 fps with AAC audio. Combined size is
+34,599,945 bytes; the largest individual clip is 4,369,570 bytes. `manifest.json` records episode,
+start time, duration and expected on-screen characters for later timeline reconstruction;
+`verified-inventory.json` records FFprobe evidence. Episode-level QA contact sheets were inspected to
+confirm the windows correspond to the intended source material. These are candidate upload/edit
+windows; clips containing Riya or the Commander require strict non-target-face QA.
+
+The current official Seedance 2.0 contract rules out a single 70+ second generation: generated duration
+is an integer from 4-15 seconds (or `-1`, which still selects within that range); each reference video
+must be 2-15 seconds; up to three reference videos may be supplied but their combined duration cannot
+exceed 15 seconds. Seedance can extend or bridge clips, but every call remains a short generative shot,
+and BytePlus's own tutorial states that longer preview videos are stitched from multiple generated
+shots. The production design is therefore: edit only Arjun-containing shots, retain all other source
+frames, restore original audio, and assemble each complete episode locally. Do not submit all 26 paid
+tasks immediately: upload and approve the prepared Episode 2 single-face proof first, then scale after
+identity/non-target/performance QA passes.
