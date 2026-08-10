@@ -1295,3 +1295,10 @@ requires Pro or higher, BytePlus rejects the external episode source under its p
 local CineIQ execution remains unavailable. Legal final wording, real billing, true liveness/age service,
 provider commercial/privacy approval and broader device/usability acceptance also remain external or
 release-stage work; they are not honestly finishable in code alone.
+
+The backend portion of commit `1470447` was deployed to `/home/hungama/apps/starme` with timestamped
+backups of the two replaced source files. The API and worker images were rebuilt and recreated without
+touching PostgreSQL, Redis, media or server-local secrets. External HTTPS checks returned live/ready
+`ok`; `/v1/capabilities` now returns consent version `development-placeholder-v1` with
+`legal_text_status: configured`, while sensitive identity capture remains false. This is the previously
+approved staging-only exception, not final Legal approval.

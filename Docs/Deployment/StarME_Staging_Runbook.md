@@ -177,3 +177,12 @@ Still synthetic where it matters: episodes are the ORIGINAL unmodified masters (
 `STARME_ALLOW_SENSITIVE_PROCESSING` stays false. Real personalised episodes await CineIQ
 (`Docs/Intake/CineIQ_Integration_Requirements.md`). Rollback: blank `STARME_MEDIA_DIR` in `.env` and
 recreate api + worker to return to the synthetic 204 contract.
+
+## Capability/consent contract redeploy - 10 August 2026
+
+Backend files `api.py` and `schemas.py` from commit `1470447` were deployed with timestamped server
+backups, followed by isolated API/worker image rebuild and recreation. PostgreSQL, Redis, media and
+server-local `.env` were not changed. External live/readiness checks returned `ok` and
+`/v1/capabilities` published `development-placeholder-v1` with `legal_text_status: configured`.
+Sensitive identity capture remains disabled. Replace the staging-only placeholder version when final
+Legal wording is approved; the updated Android client discovers that version from the server.
