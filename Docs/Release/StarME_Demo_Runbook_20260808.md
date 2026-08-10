@@ -54,8 +54,11 @@ the episodes with our CineIQ engine, is the next integration."
 Single-use, device-bound, valid ~24 hours. Issue fresh ones the morning of the demo (Engineering /
 Amol runs the operator command). Redeem the code once on the demo phone at the opening screen.
 
-- Code 1 (primary): __________________
-- Code 2 (spare): __________________
+Codes issued for this demo window (single-use, valid ~24h from 10/08 morning):
+- `C3cVBy_tHDyu`
+- `agTW3OpRV63M`
+(`YVhrMIoObmqB` was consumed during the rehearsal.) Enter exactly as shown - codes are
+case-sensitive; the field no longer force-uppercases, so type or paste them verbatim.
 
 If a code shows "expired/invalid", it usually means the phone briefly lost the server; check the
 network (Section 2) and use the spare.
@@ -68,6 +71,16 @@ network (Section 2) and use the spare.
   production status** once to nudge it.
 - **Code rejected:** use the spare code; if both fail, Engineering issues a new one in seconds.
 - **Worst case:** have a **screen recording** of a clean run on the phone as a backup to play.
+
+## 6a. Rehearsal outcome (10/08/2026)
+
+A full end-to-end rehearsal on RMX3782 passed: access code, subscription, capture with all four
+verification checks green, consent recorded, concept (Ek Love Story Aisi Bhi), Arjun role, Lead
+Debut with demo top-up, order created, first look auto-surfaced, approve, and an automatic advance
+to the premiere (no Refresh tap) with the personalised poster, "AMOL" billing, three unlocked
+episodes and real episode playback. Two demo-blockers were found and fixed during the rehearsal:
+the access field was force-uppercasing case-sensitive codes, and the auto-poll re-raised the
+first-look prompt after approval and stalled before the premiere. Both are fixed and re-verified.
 
 ## 7. What to say if asked about timelines
 
