@@ -1141,6 +1141,12 @@ write permission for the supplied key/bucket policy. No Episode 1 object or publ
 Grant this key `s3:PutObject` for `contentpublic/starme/*` (and optionally `s3:DeleteObject` for cleanup),
 then rerun the seven-file upload and exact CDN byte/content-type checks.
 
+Amol subsequently identified `characters` as the intended writable folder. Both the nested key
+`characters/starme/seedance/episode-1/source/ep01_arjun_01.mp4` and the exact top-level key
+`characters/ep01_arjun_01.mp4` returned HTTP 403 `AccessDenied` on `PutObject`. The folder name is
+therefore not the cause: the supplied key/bucket policy still lacks object-write authorization. Grant
+`s3:PutObject` for `contentpublic/characters/*` before retrying. No test object was created.
+
 Candidate digital-character ID `char-3c5a1f77` cannot be fetched or previewed through the generation
 API. BytePlus documents digital characters as inference-only assets passed as
 `asset://char-3c5a1f77`; a real video task is required to validate account access and the ID. It remains
