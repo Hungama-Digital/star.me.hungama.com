@@ -1242,3 +1242,24 @@ camera/lighting are preserved, lip motion remains usable, no flicker/morphing ap
 matches and the result can be downloaded without public exposure. If B passes, obtain confirmed
 programmatic access and build a provider adapter; if only Motion Control passes by regenerating the whole
 scene, treat it as a synthetic-remake path rather than StarME personalization.
+
+### 10 August 2026 - Higgsfield Recast account check and manual proof blocker
+
+Amol selected a newly supplied, front-facing adult male portrait as the replacement identity for the
+manual proof, superseding the earlier fictional cricket-star portrait for this test. The portrait remains
+outside Git and must be treated as private tester material; this internal selection does not replace the
+pending production consent and Legal requirements.
+
+A new Higgsfield account was created and authenticated. The signed-in Recast UI at
+`https://higgsfield.ai/apps/recast` was verified to accept the intended workflow: a source video plus a
+custom character image. The six-second, 720x1280 Episode 1 source
+`tmp/seedance-cricket-star/upload-clips/episode-1/ep01_arjun_02.mp4` and Amol's selected portrait were
+both accepted by the upload controls. The UI priced this single generation at 18 credits.
+
+Submission did not create a render. Higgsfield displayed `UNLOCK RECAST STUDIO` and requires a Pro or
+higher subscription to generate video with custom characters, voices and backgrounds. A free account
+and/or credits alone do not unlock this feature. No plan was purchased, no render job was created and no
+output or charge resulted. The immediate manual-proof blocker is therefore an authorized Higgsfield Pro
+or higher subscription on the test account. After access is enabled, repeat this exact one-clip run before
+scaling to the remaining Episode 1 shots, then download locally, restore the original AAC track if needed,
+and apply the previously documented identity/non-target/timing QA gates.
