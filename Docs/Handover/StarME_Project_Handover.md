@@ -1032,3 +1032,40 @@ rows show Passed, the local-only disclosure renders beneath them, the CTA remain
 camera opened with the inset-safe shutter and canceled back to StarME, the activity remained
 foreground, and recent logs contained no fatal exception. APK size: 63,029,482 bytes; SHA-256:
 `8584cf557e17de524df40f8aa0649f7e4f0b784cef4be5beb0e5e9045f5ba83f`.
+
+### 10 August 2026 - first real synthetic personalized-render proof succeeded
+
+The complete provider-side identity-replacement hypothesis has now been exercised with real paid
+BytePlus generation calls. This used only fictional synthetic people: two separate 2048x2048 PNG
+portraits were generated with same-account `seedream-5-0-lite-260128`, watermarking enabled. The
+original, unmodified Seedream output URLs were then used within the documented 30-day trusted-input
+window, avoiding the Advanced/Premium liveness service that remains unavailable for real subscriber
+photos. Provider-signed URLs, credentials and generated media were kept only under ignored
+`tmp/seedance-personalization/`; none is committed.
+
+Seedance task `cgt-20260810191831-mkthh` animated the clean-shaven source portrait into a restrained
+five-second casting performance: a blink and head turn from camera to screen-right and back. It
+succeeded as a 5.041667-second, 720x1280, 24 fps H.264 portrait video. Seedance task
+`cgt-20260810192215-wv5vv` then received that source video plus the second, close-cropped and bearded
+fictional identity. The edit prompt required it to replace only the lead identity while preserving
+performance timing, gaze, body, clothing, background, camera, lighting, framing and duration. It
+succeeded with the same 5.041667-second, 720x1280, 24 fps H.264 structure.
+
+Manual review of one frame per second confirms a clear identity change: the personalized output
+consistently carries the replacement subject's close-cropped hair, face shape and beard across the
+front view, turn, near-profile and return. The source head movement, framing, grey shirt, dark
+background and lighting remain materially consistent. No obvious identity morph, additional person,
+cut, unexpected text or gross flicker was visible in this controlled close-up. The result therefore
+validates the project's central technical hypothesis for a simple single-face shot: Seedream trusted
+identity -> Seedance source performance -> Seedance identity replacement -> downloadable personalized
+video.
+
+This is not yet production acceptance for arbitrary movie footage or real customers. Both people are
+synthetic and the test is an easy locked-camera close-up with no occlusion, speech, hands, multiple
+faces or shot changes. Audio was deliberately disabled in both provider tasks, so audio presence was
+not claimed as passing; the separately tested FFmpeg pipeline remains responsible for remuxing a
+protected source shot's original audio. Seedance remains a generative prompt-driven edit rather than
+a deterministic classical face-swap engine. The next product proof should use one rights-cleared
+5-to-10-second catalogue shot, retain original audio, and test profile angles, partial occlusion and
+non-target-face protection. A real subscriber proof still requires BytePlus Advanced/Premium liveness
+and an `Active` verified portrait asset, or a provider-approved equivalent consent/identity path.
