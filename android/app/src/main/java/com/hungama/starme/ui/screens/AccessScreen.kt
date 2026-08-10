@@ -36,7 +36,9 @@ fun AccessScreen(
             onValueChange = onCodeChanged,
             label = { Text("Single-use access code") },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+            // Access codes are case-sensitive (mixed case), so never force capitalization,
+            // which silently corrupted the entered code (uppercased it) and failed redemption.
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
             modifier = Modifier.fillMaxWidth(),
         )
         state.accessError?.let {

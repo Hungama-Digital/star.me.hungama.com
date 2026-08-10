@@ -351,7 +351,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             val token = container.session.accessTokenOnce() ?: return@launch
             runCatching { container.api.order(token, remoteOrderId) }.onSuccess { order ->
                 val ready = order.status == "READY"
-                val awaiting = order.status == "AWAITING_FIRST_LOOK"
+                // Do not re-raise the first-look prompt once it is approved: the order can still
+                // read AWAITING_FIRST_LOOK briefly after approval until the render worker runs, and
+                // re-raising it would halt this poll loop and strand the user before the premiere.
+                val awaiting = order.status == "AWAITING_FIRST_LOOK" &&
+                    order.firstLook?.status != "APPROVED"
                 _state.update {
                     it.copy(
                         awaitingFirstLook = awaiting,
@@ -383,7 +387,8 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             runCatching { container.api.order(token, remoteOrderId) }
                 .onSuccess { order ->
                     val ready = order.status == "READY"
-                    val awaiting = order.status == "AWAITING_FIRST_LOOK"
+                    val awaiting = order.status == "AWAITING_FIRST_LOOK" &&
+                        order.firstLook?.status != "APPROVED"
                     _state.update {
                         it.copy(
                             rendering = false,
