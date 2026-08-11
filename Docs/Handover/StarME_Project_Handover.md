@@ -1426,3 +1426,9 @@ through the Gemini API and can perform image generation/editing from image plus 
 was identified in the current official-site review, so automated production additionally requires an
 authorized Higgsfield API/SDK contract from the creative team or a different callable motion/face engine.
 Do not automate browser UI as the production backend and do not commit the private reference videos.
+
+Amol subsequently selected OpenAI instead of Gemini for role-conditioned identity-reference generation.
+The local ignored `.env` and tracked `.env.example` now define `OPENAI_API_KEY` and
+`STARME_OPENAI_IMAGE_MODEL=gpt-image-2`. The key value must remain local/server-side and must never be
+committed or pasted into chat. This selection covers portrait/multi-angle image preparation only; it does
+not remove the requirement for a validated callable video face/motion-transfer engine.
