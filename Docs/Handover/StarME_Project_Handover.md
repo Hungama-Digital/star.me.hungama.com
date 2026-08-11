@@ -1508,3 +1508,43 @@ reconstruction and removal of secondary subjects are approved. It does not imple
 exact dashboard path across episodes or claim it as production face swapping. The next production gate is
 still a track-addressable face-patching engine (or the missing CineIQ executable/API) validated for
 non-target pixel preservation, original duration/timestamps, costume/body preservation and original audio.
+
+### 11 August 2026 - corrected Kling Omni Edit submission from Dipti's workflow
+
+Dipti clarified that her successful direct-output workflow used the complete source video, one
+ChatGPT-generated character image, Video mode and model `Omni`; no downstream compositing or editing was
+performed. Her prompt requested that the video setup and attire remain unchanged while only the selected
+character's face was patched. Inspection of the current Higgsfield model selector established the relevant
+dashboard option as **Kling 3.0 Omni Edit** (`Edit videos with text prompts`), which is separate from the
+previously tested **Kling 3.0 Motion Control** (`Transfer motion from video to image`). The earlier Motion
+Control proof therefore did not reproduce Dipti's model choice.
+
+The two-second `episode-1/ep01_arjun_01.mp4` was attempted as an Omni video input but was not accepted into
+the form, consistent with Kling's minimum-duration behavior. Engineering did not pad, slow or otherwise
+alter it. The corrected proof instead uses the untouched six-second multi-character Episode 1 shot
+`tmp/seedance-cricket-star/upload-clips/episode-1/ep01_arjun_02.mp4` (720x1280, 24 fps, H.264/AAC,
+48 kHz stereo, SHA-256 `6c0f6fdb44f018e8ea877275d93cd05e04665e7eb4f1cafa1e43bbcf30c59ff8`).
+The provider-uploaded source is asset `f900c361-6295-4f27-984a-e51f79e42a71`; downloading that asset and
+hashing it produced the same SHA-256, proving that the exact raw source reached Higgsfield. The character
+input is the private GPT-generated male denim reference; its provider image asset is
+`5b52e558-ff1b-4017-85f8-65ad0abc87bb` and underlying upload ID
+`623d8164-0c7e-4470-aad6-367dd1e3a8f6`.
+
+Exactly one **Kling 3.0 Omni Edit** job was submitted at 720p for 11 credits. The submitted instruction is:
+`Keep the uploaded video exactly as the source video. Replace only the face of the male character Arjun in
+the uploaded video with the face and identity from the attached image. The selected target is the adult
+male character, never the female character. Preserve the female character completely unchanged. Preserve
+every original character, shot, frame composition, camera movement, body, pose, expression timing, denim
+attire, background, lighting, duration and audio. Patch only Arjun's facial identity. Do not remove,
+replace, recast, crop or alter any other person or any non-face part of the video.` Both the verified video
+and image are attached to the provider job. Do not resubmit this prompt while its existing job is active;
+doing so would spend another 11 credits.
+
+At handover-update time, Higgsfield still showed this exact prompt-bound `Kling Video Edit` job as
+processing and had not exposed an output asset or a failure. A simultaneously appearing asset
+`f9dc6535-185a-4675-a4a2-fcdb61df91d4` was inspected and rejected as unrelated black-and-white footage; it
+is not the StarME result and must never be delivered or attributed to this job. Resume by locating the job
+through the exact prompt plus input video ID `f900c361-6295-4f27-984a-e51f79e42a71`, then download and QA
+only its resulting output. Required gates remain: Riya retained and unchanged, only Arjun's face changed,
+portrait framing and six-second duration preserved, clothing/body/background/camera unchanged, and
+original audio retained or restored.
