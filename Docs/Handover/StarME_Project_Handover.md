@@ -1440,3 +1440,30 @@ image was copied from the transient chat attachment into the ignored private pat
 `6e1ac76361c18a11c5ab08a7aeb97a9711e91caa935ed8d16805ad6de5906e3a`). The two Downloads videos remain
 reference-only. Actual work must use the StarME episode clips already under
 `tmp/seedance-cricket-star/upload-clips/episode-{1,2,3}/` plus this latest face image.
+
+### 11 August 2026 - authenticated Higgsfield account identifies the creative workflow
+
+Read-only inspection of the signed-in Higgsfield account and its generation history identified the exact
+creative-team mechanism as **Kling 3.0 Motion Control**, not Recast or Video Face Swap. The account contains
+a successful 1080p, 14-second Motion Control job from 20 July 2026 (Higgsfield asset
+`d2c95798-1a50-487d-b6b6-c1c9900d3776`) and a separate failed 720p, two-second attempt whose recorded
+error is `Input video duration is not supported`. The dashboard workflow accepts a motion-reference video
+and character image, with quality and scene-source controls.
+
+Kling's official Motion Control guidance matches Amol's creative-team explanation: transfer the actions,
+expressions and pacing of a driving video to a character image; use facial Element Binding/multi-angle
+references to improve identity consistency. It documents a 3-to-30-second, single-continuous-shot input
+range and recommends matching full/half-body framing. It also documents a critical StarME limitation:
+only one motion element is supported and, in multi-person footage, the system selects the largest visible
+person (or selects none when subjects are similarly sized). Therefore explicit content metadata naming
+`Arjun` is not by itself a provider-side selector; multi-person shots require a validated target-isolation
+or compositing stage, or a different API with explicit person/track binding.
+
+The existing Higgsfield subscription enables manual dashboard proofs but does not expose a documented
+backend credential in the inspected account. A production programmatic implementation requires either
+(a) an official Higgsfield API/SDK/enterprise credential for Kling 3.0 Motion Control, (b) direct official
+Kling API access, or (c) a separately approved API gateway/provider exposing the same model. Do not reverse
+engineer private dashboard endpoints as the production contract. Motion Control is generative
+whole-character reconstruction, so it can reproduce the creative reference style but must not be claimed
+to meet strict unchanged-master face-only acceptance until the output passes duration, motion, costume,
+background, non-target, identity and original-audio QA.
