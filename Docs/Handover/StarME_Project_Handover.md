@@ -1395,3 +1395,34 @@ face contract. Do not spend more credits on equivalent Higgsfield retries. The r
 true face-patching engine/API with explicit target-track selection and temporally consistent embeddings
 (for example the missing local CineIQ executable/API or another provider validated against the same
 non-target pixel, clothing, timing and original-audio gates).
+
+### 11 August 2026 - creative-team Motion Control reference pair and automation contract
+
+Amol supplied two private reference files outside Git: `/Users/amoldewase/Downloads/original.mp4`
+(SHA-256 `4ddbedf8cd003a374cb11e335d059964f9971fc70a14dda54382f33e16a65bf5`) and
+`/Users/amoldewase/Downloads/swappedvideo.mp4`
+(SHA-256 `6cfccc8dea24c0e9b6e0ec35fe4f161cc98cc2c7d64d2d562a59648345534ef2`). He explained the creative
+team's workflow: classify the designated source role/costume, transform the user's selfie into a matching
+role portrait (for example an astronaut), create useful face-angle references, and use Higgsfield Motion
+Control with the original motion reference plus the prepared identity. Production automation must accept
+explicit target-role metadata from the content owner; it must not guess which person to replace.
+
+The pair is a useful creative reference but is not a strict master-preserving proof. `original.mp4` is
+8.266667 seconds, 1920x1080, 30 fps, H.264/AAC at 48 kHz. `swappedvideo.mp4` is 6.965986 seconds,
+474x720, 60 fps, H.264/AAC at 44.1 kHz. It crops the source, removes source time, changes frame rate,
+resolution and audio properties. Therefore StarME must distinguish two acceptance profiles: (1) a
+creative Motion-Control reconstruction, where those changes may be acceptable after product approval;
+and (2) the Director's strict personalized-master contract, where duration/timestamps, camera/body motion,
+costume, background, edit, audio and every non-target role remain unchanged and only the designated face
+identity may change. The supplied pair satisfies the first profile visually but does not establish the
+second.
+
+The automatable design is: content-owner target-role/timecode manifest -> source shot/person/wardrobe
+analysis -> consented selfie quality/liveness gate -> role-conditioned identity reference generation ->
+multi-angle identity pack -> designated face/track isolation -> provider render -> restore original audio
+and master timing -> automated and human QA -> approve or fail closed. Nano Banana is officially available
+through the Gemini API and can perform image generation/editing from image plus text; use a server-side
+`GEMINI_API_KEY` when this stage is implemented. No official public Higgsfield Motion Control backend API
+was identified in the current official-site review, so automated production additionally requires an
+authorized Higgsfield API/SDK contract from the creative team or a different callable motion/face engine.
+Do not automate browser UI as the production backend and do not commit the private reference videos.
