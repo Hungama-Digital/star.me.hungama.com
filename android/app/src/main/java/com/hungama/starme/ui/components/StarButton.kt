@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +26,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hungama.starme.ui.theme.StarPalette
@@ -44,6 +50,8 @@ fun StarButton(
     style: StarButtonStyle = StarButtonStyle.PRIMARY,
 ) {
     val colors = StarTheme.colors
+    val haptics = LocalHapticFeedback.current
+    val indication = LocalIndication.current
     val shape = RoundedCornerShape(18.dp)
     val background: Brush = when (style) {
         StarButtonStyle.PRIMARY -> Brush.verticalGradient(listOf(colors.orange, colors.orangeDeep))
@@ -69,10 +77,14 @@ fun StarButton(
             .heightIn(min = 58.dp)
             .scale(pressScale)
             .clip(shape)
+            .semantics { role = Role.Button }
             .alpha(if (enabled) 1f else 0.35f)
             .background(background, shape)
             .let { if (style == StarButtonStyle.GHOST) it.border(BorderStroke(1.dp, colors.line), shape) else it }
-            .clickable(enabled = enabled, interactionSource = interaction, indication = null) { onClick() }
+            .clickable(enabled = enabled, interactionSource = interaction, indication = indication) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            }
             .padding(horizontal = 16.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center,
     ) {

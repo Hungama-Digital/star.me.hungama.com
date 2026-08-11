@@ -16,6 +16,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddCircle
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -50,6 +59,7 @@ import com.hungama.starme.ui.screens.ConsentScreen
 import com.hungama.starme.ui.screens.PackageScreen
 import com.hungama.starme.ui.screens.PremiereScreen
 import com.hungama.starme.ui.screens.ProductionScreen
+import com.hungama.starme.ui.screens.ProjectsScreen
 import com.hungama.starme.ui.screens.PromoScreen
 import com.hungama.starme.ui.screens.SettingsScreen
 import com.hungama.starme.ui.screens.SubscribeScreen
@@ -83,6 +93,13 @@ private fun StarApp(container: AppContainer) {
     val backEntry by nav.currentBackStackEntryAsState()
     val route = backEntry?.destination?.route
     val step = Step.fromRoute(route)
+    val showProductNavigation = state.authenticated && route in setOf(
+        Step.PROMO.route,
+        Step.PRODUCTION.route,
+        Step.PREMIERE.route,
+        Routes.PROJECTS,
+        Routes.SETTINGS,
+    )
 
     // One-shot events → navigation + snackbars.
     LaunchedEffect(Unit) {
@@ -123,8 +140,19 @@ private fun StarApp(container: AppContainer) {
             }
         },
         bottomBar = {
-            if (step != null) {
-                CtaDock { CtaButton(step = step, state = state, vm = vm, nav = nav) }
+            Column {
+                if (step != null) {
+                    CtaDock { CtaButton(step = step, state = state, vm = vm, nav = nav) }
+                }
+                if (showProductNavigation) {
+                    ProductNavigation(
+                        route = route,
+                        onHome = { nav.navigateProductRoot(Step.PROMO.route) },
+                        onCreate = { nav.navigateProductRoot(nextCreationRoute(state)) },
+                        onProjects = { nav.navigateProductRoot(Routes.PROJECTS) },
+                        onProfile = { nav.navigateProductRoot(Routes.SETTINGS) },
+                    )
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -219,8 +247,80 @@ private fun StarApp(container: AppContainer) {
                     onBack = { nav.popBackStack() },
                 )
             }
+            composable(Routes.PROJECTS) {
+                ProjectsScreen(
+                    manifest = vm.manifest,
+                    state = state,
+                    onCreate = { nav.navigateProductRoot(nextCreationRoute(state)) },
+                    onOpenProject = {
+                        nav.navigateProductRoot(
+                            if (state.renderComplete) Step.PREMIERE.route else Step.PRODUCTION.route
+                        )
+                    },
+                )
+            }
         }
     }
+    }
+}
+
+private data class ProductDestination(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val selected: Boolean,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun ProductNavigation(
+    route: String?,
+    onHome: () -> Unit,
+    onCreate: () -> Unit,
+    onProjects: () -> Unit,
+    onProfile: () -> Unit,
+) {
+    val items = listOf(
+        ProductDestination("Home", Icons.Rounded.Home, route == Step.PROMO.route, onHome),
+        ProductDestination("Create", Icons.Rounded.AddCircle, false, onCreate),
+        ProductDestination(
+            "Premieres",
+            Icons.Rounded.Movie,
+            route == Routes.PROJECTS || route == Step.PRODUCTION.route || route == Step.PREMIERE.route,
+            onProjects,
+        ),
+        ProductDestination("Profile", Icons.Rounded.Person, route == Routes.SETTINGS, onProfile),
+    )
+    NavigationBar(
+        containerColor = StarPalette.Surface.copy(alpha = 0.98f),
+        tonalElevation = 8.dp,
+        modifier = Modifier.navigationBarsPadding(),
+    ) {
+        items.forEach { item ->
+            NavigationBarItem(
+                selected = item.selected,
+                onClick = item.onClick,
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+            )
+        }
+    }
+}
+
+private fun nextCreationRoute(state: StarUiState): String = when {
+    !state.subscribed -> Step.SUBSCRIBE.route
+    !state.canContinueCapture -> Step.CAPTURE.route
+    !state.canContinueConsent -> Step.CONSENT.route
+    !state.canContinueConcept -> Step.CONCEPT.route
+    state.packageId == null -> Step.PACKAGE.route
+    state.renderComplete -> Step.CONCEPT.route
+    state.remoteOrderId != null || state.orderId != null -> Step.PRODUCTION.route
+    else -> Step.PACKAGE.route
+}
+
+private fun NavHostController.navigateProductRoot(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
@@ -245,46 +345,46 @@ private fun CtaButton(
     nav: NavHostController,
 ) {
     when (step) {
-        Step.PROMO -> StarButton("Start your debut", { nav.navigateStep(Step.SUBSCRIBE) })
+        Step.PROMO -> StarButton("Start Your Debut", { nav.navigateStep(Step.SUBSCRIBE) })
         Step.SUBSCRIBE -> StarButton(
             label = if (state.subscribing) "Subscribing…"
-            else "Subscribe · ₹499 and claim ${vm.manifest.welcomeCredits} credits",
+            else "Subscribe · ₹499 And Claim ${vm.manifest.welcomeCredits} Credits",
             onClick = { vm.onSubscribe() },
             enabled = !state.subscribing,
         )
         Step.CAPTURE -> StarButton(
-            label = if (state.canContinueCapture) "Continue to consent" else "Add your photo and name",
+            label = if (state.canContinueCapture) "Continue To Consent" else "Add Your Photo And Name",
             onClick = { nav.navigateStep(Step.CONSENT) },
             enabled = state.canContinueCapture,
         )
         Step.CONSENT -> StarButton(
-            label = if (state.canContinueConsent) "Continue · consent recorded" else "Tick both boxes and sign",
+            label = if (state.canContinueConsent) "Continue · Consent Recorded" else "Tick Both Boxes And Sign",
             onClick = { nav.navigateStep(Step.CONCEPT) },
             enabled = state.canContinueConsent,
         )
         Step.CONCEPT -> StarButton(
-            label = if (state.canContinueConcept) "Continue" else "Choose a story and role",
+            label = if (state.canContinueConcept) "Continue" else "Choose A Story And Role",
             onClick = { nav.navigateStep(Step.PACKAGE) },
             enabled = state.canContinueConcept,
         )
         Step.PACKAGE -> {
             val pkg = vm.manifest.pkg(state.packageId)
             when {
-                pkg == null -> StarButton("Choose your billing", {}, enabled = false)
+                pkg == null -> StarButton("Choose Your Billing", {}, enabled = false)
                 pkg.credits > state.credits -> StarButton(
-                    "Add ${pkg.credits - state.credits} credits · demo top-up",
+                    "Add ${pkg.credits - state.credits} Credits · Demo Top-Up",
                     { vm.onConfirmPackage() },
                 )
-                else -> StarButton("Confirm · ${pkg.credits} credits", { vm.onConfirmPackage() })
+                else -> StarButton("Confirm · ${pkg.credits} Credits", { vm.onConfirmPackage() })
             }
         }
         Step.PRODUCTION -> StarButton(
-            if (state.awaitingFirstLook) "Approve first look" else "Refresh production status",
+            if (state.awaitingFirstLook) "Approve First Look" else "Refresh Production Status",
             if (state.awaitingFirstLook) vm::approveFirstLook else vm::onStartRender,
             enabled = !state.rendering && !state.renderComplete,
         )
         Step.PREMIERE -> StarButton(
-            "Make another drama",
+            "Make Another Drama",
             {
                 vm.onMakeAnother()
                 nav.navigate(Step.CONCEPT.route) {

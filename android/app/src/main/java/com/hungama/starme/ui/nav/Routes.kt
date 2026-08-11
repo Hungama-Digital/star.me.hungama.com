@@ -22,6 +22,7 @@ enum class Step(val route: String) {
 object Routes {
     const val ACCESS = "access"
     const val SETTINGS = "settings"
+    const val PROJECTS = "projects"
 
     /** 0-based index into the 8-segment stepper, or null for off-flow routes. */
     fun stepperIndex(route: String?): Int? = Step.fromRoute(route)?.ordinal

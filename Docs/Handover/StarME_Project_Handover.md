@@ -1,8 +1,8 @@
 # StarME Project Handover
 
-**Handover status:** Ready for a new development chat; camera defect fixed, broader Android acceptance remains open
+**Handover status:** Ready for a new development chat; native Android product shell installed, broader acceptance remains open
 
-**Last updated:** 6 August 2026
+**Last updated:** 11 August 2026
 
 **Project owner / director:** Neeraj Sir
 
@@ -1548,3 +1548,49 @@ through the exact prompt plus input video ID `f900c361-6295-4f27-984a-e51f79e42a
 only its resulting output. Required gates remain: Riya retained and unchanged, only Arjun's face changed,
 portrait framing and six-second duration preserved, clothing/body/background/camera unchanged, and
 original audio retained or restored.
+
+### 11 August 2026 - native Android interaction and copy pass
+
+Amol's on-device review identified inconsistent sentence-case CTA copy and an overall web/HTML-like
+interaction feel. The Android client now uses title case consistently across the primary journey CTAs,
+including `Start Your Debut`, `Add Your Photo And Name`, `Continue To Consent`, consent, story,
+package, production and premiere actions. Capture actions are now `Take Selfie` and `Upload Photo`.
+The name input is explicitly marked `Name *`, uses `Example - Aarav Mehta`, shows that it is required
+for on-screen credits, and displays an error state when a photo exists without a name.
+
+After either CameraX capture or Android Photo Picker selection, Compose now requests focus on the name
+field and opens the software keyboard. Emoji capture controls were replaced by Material camera/gallery
+icons. Shared primary buttons now expose Android button semantics, retain ripple feedback, provide
+pressed-state animation and trigger haptic feedback. This is the first native-interaction pass; a deeper
+product pass should next replace remaining web-like custom controls with Material 3 navigation,
+top-app-bar, sheets/dialogs, loading/error surfaces and platform-aware motion while preserving StarME's
+cinematic brand.
+
+Verification: `testDebugUnitTest` and `assembleDebug` passed with JDK 17. The updated debug APK was
+installed successfully on RMX3782 (`EEXKCAUCQO9T45MZ`), cold-launched, and confirmed as the foreground
+activity without a startup crash. The existing tester session was preserved by the replacement install.
+
+### 11 August 2026 - guided next-action progression
+
+The Android journey now actively guides the tester to the next incomplete input instead of requiring
+them to search the page. Selecting a live world smoothly brings its Role section into view. In consent,
+checking the first acknowledgement brings the second acknowledgement into view, and completing both
+brings the signature area into view. The capture screen already moves focus to Name and opens the
+keyboard after CameraX capture or Photo Picker selection. Purchases, consent submission, first-look
+approval and other consequential actions remain explicit taps and are never auto-submitted.
+
+Verification: `testDebugUnitTest` and `assembleDebug` passed; the replacement APK installed on RMX3782,
+cold-launched successfully and was confirmed as the foreground activity with no startup crash.
+
+### 11 August 2026 - native product shell and project library
+
+The Android prototype now has a Material 3 product shell with four persistent top-level destinations:
+Home, Create, Premieres and Profile. Focused creation screens temporarily hide the tab bar to reduce
+distraction. Create resumes at the next incomplete safe step rather than restarting the journey. The new
+My Premieres screen provides an empty state for new users and a project/status card for an active order,
+including direct access to production, first look or the finished premiere. Existing consent, ordering,
+rendering and session contracts were preserved.
+
+Verification: `testDebugUnitTest` and `assembleDebug` passed. The replacement APK installed and
+cold-launched on RMX3782. A device screenshot at `tmp/android-native-shell.png` visually confirmed the
+native navigation bar, correct selected destination and foreground activity without a startup crash.

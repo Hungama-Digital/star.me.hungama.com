@@ -2,6 +2,7 @@ package com.hungama.starme.ui.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -51,6 +54,7 @@ import com.hungama.starme.ui.theme.StarTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 private data class ConsentSection(val heading: String, val body: String)
 
@@ -81,6 +85,7 @@ private val CONSENT_SECTIONS = listOf(
     ),
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConsentScreen(
     state: StarUiState,
@@ -92,6 +97,21 @@ fun ConsentScreen(
     var checkedB by remember { mutableStateOf(false) }
     val signature = rememberSignatureController()
     val hasInk = signature.hasInk
+    val secondConsentRequester = remember { BringIntoViewRequester() }
+    val signatureRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(checkedA, checkedB) {
+        when {
+            checkedA && !checkedB -> {
+                delay(120)
+                secondConsentRequester.bringIntoView()
+            }
+            checkedA && checkedB && !hasInk -> {
+                delay(120)
+                signatureRequester.bringIntoView()
+            }
+        }
+    }
 
     // Sign automatically once both boxes are ticked and there is ink (demo behaviour).
     LaunchedEffect(checkedA, checkedB, hasInk) {
@@ -162,6 +182,7 @@ fun ConsentScreen(
             checked = checkedB,
             onCheckedChange = { checkedB = it },
             label = "I understand I can revoke consent anytime and my biometric data will be deleted within 30 days.",
+            modifier = Modifier.bringIntoViewRequester(secondConsentRequester),
         )
 
         Spacer(Modifier.height(8.dp))
@@ -175,6 +196,7 @@ fun ConsentScreen(
         )
         Box(
             modifier = Modifier
+                .bringIntoViewRequester(signatureRequester)
                 .fillMaxWidth()
                 .height(140.dp)
                 .background(Color(0xFF100D17), RoundedCornerShape(14.dp))
@@ -226,7 +248,7 @@ fun ConsentScreen(
                     )
                     Spacer(Modifier.height(10.dp))
                     StarButton(
-                        label = "Try again",
+                        label = "Try Again",
                         onClick = { signature.toBitmap()?.let { onSigned(it, checkedA, checkedB) } },
                     )
                 }
@@ -258,10 +280,15 @@ fun ConsentScreen(
 }
 
 @Composable
-private fun ConsentCheck(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
+private fun ConsentCheck(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
     val colors = StarTheme.colors
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.Top,

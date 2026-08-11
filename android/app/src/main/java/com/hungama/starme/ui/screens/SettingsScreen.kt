@@ -74,7 +74,7 @@ fun SettingsScreen(
             )
             Spacer(Modifier.height(14.dp))
             StarButton(
-                label = "Revoke consent & delete my biometrics",
+                label = "Revoke Consent & Delete My Biometrics",
                 style = StarButtonStyle.GHOST,
                 onClick = { confirming = true },
             )

@@ -21,6 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -35,8 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -74,6 +82,9 @@ fun CaptureScreen(
     var showCamera by remember { mutableStateOf(false) }
     var openAfterPermission by remember { mutableStateOf(false) }
     var cameraMessage by remember { mutableStateOf<String?>(null) }
+    var focusNameAfterPhoto by remember { mutableStateOf(false) }
+    val nameFocusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
 
     LaunchedEffect(cameraPermission.status.isGranted, openAfterPermission) {
@@ -84,9 +95,22 @@ fun CaptureScreen(
         }
     }
 
+    LaunchedEffect(state.photoPath, focusNameAfterPhoto) {
+        if (state.photoPath != null && focusNameAfterPhoto) {
+            focusNameAfterPhoto = false
+            nameFocusRequester.requestFocus()
+            keyboard?.show()
+        }
+    }
+
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
-    ) { uri -> uri?.let(onPhotoSelected) }
+    ) { uri ->
+        uri?.let {
+            focusNameAfterPhoto = true
+            onPhotoSelected(it)
+        }
+    }
 
     Stage {
         Eyebrow("Step 2 · Your close-up")
@@ -98,7 +122,8 @@ fun CaptureScreen(
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             Pill(
-                text = "📷 Take selfie",
+                text = "Take Selfie",
+                icon = Icons.Rounded.PhotoCamera,
                 modifier = Modifier.weight(1f),
                 onClick = {
                     if (cameraPermission.status.isGranted) showCamera = true
@@ -110,7 +135,8 @@ fun CaptureScreen(
                 },
             )
             Pill(
-                text = "🖼 Upload photo",
+                text = "Upload Photo",
+                icon = Icons.Rounded.AddPhotoAlternate,
                 modifier = Modifier.weight(1f),
                 onClick = {
                     photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -136,7 +162,10 @@ fun CaptureScreen(
             value = state.name,
             onValueChange = onNameChanged,
             singleLine = true,
-            placeholder = { Text("e.g. Aarav Mehta", color = colors.dim) },
+            label = { Text("Name *") },
+            placeholder = { Text("Example - Aarav Mehta", color = colors.dim) },
+            supportingText = { Text("Required for your on-screen credits") },
+            isError = state.photoPath != null && state.name.isBlank(),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Words,
                 imeAction = ImeAction.Done,
@@ -151,7 +180,9 @@ fun CaptureScreen(
                 unfocusedTextColor = colors.text,
             ),
             shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(nameFocusRequester),
         )
 
         // Verification rows
@@ -191,6 +222,7 @@ fun CaptureScreen(
                 CameraCaptureView(
                     onCaptured = { uri ->
                         showCamera = false
+                        focusNameAfterPhoto = true
                         onPhotoSelected(uri)
                     },
                     onCancel = { showCamera = false },
@@ -271,7 +303,7 @@ private fun CaptureFrame(photoPath: String?) {
 }
 
 @Composable
-private fun Pill(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun Pill(text: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val colors = StarTheme.colors
     Box(
         modifier = modifier
@@ -282,7 +314,13 @@ private fun Pill(text: String, modifier: Modifier = Modifier, onClick: () -> Uni
             .padding(vertical = 13.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = colors.text)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = colors.orange, modifier = Modifier.size(20.dp))
+            Text(text, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = colors.text)
+        }
     }
 }
 

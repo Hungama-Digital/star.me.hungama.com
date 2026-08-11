@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.hungama.starme.data.manifest.ShellDef
 import com.hungama.starme.data.manifest.ShellManifest
 import com.hungama.starme.state.StarUiState
@@ -49,6 +53,7 @@ import com.hungama.starme.ui.theme.DisplayFontFamily
 import com.hungama.starme.ui.theme.StarPalette
 import com.hungama.starme.ui.theme.StarTheme
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConceptScreen(
     manifest: ShellManifest,
@@ -57,6 +62,14 @@ fun ConceptScreen(
     onSelectRole: (String) -> Unit,
 ) {
     val colors = StarTheme.colors
+    val roleRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(state.shellId) {
+        if (state.shellId != null) {
+            delay(320)
+            roleRequester.bringIntoView()
+        }
+    }
     Stage {
         Eyebrow("Step 4 · Your story")
         ScreenHeading("Pick your world")
@@ -99,7 +112,7 @@ fun ConceptScreen(
                 visible = roleEntered,
                 enter = fadeIn(tween(260)) + expandVertically(tween(260)),
             ) {
-                Column {
+                Column(modifier = Modifier.bringIntoViewRequester(roleRequester)) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "YOUR ROLE",

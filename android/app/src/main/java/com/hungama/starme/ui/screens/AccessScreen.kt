@@ -47,7 +47,7 @@ fun AccessScreen(
         }
         Spacer(Modifier.height(18.dp))
         StarButton(
-            label = if (state.authenticating) "Verifying…" else "Continue securely",
+            label = if (state.authenticating) "Verifying…" else "Continue Securely",
             onClick = onRedeem,
             enabled = state.accessCode.length >= 8 && !state.authenticating,
         )

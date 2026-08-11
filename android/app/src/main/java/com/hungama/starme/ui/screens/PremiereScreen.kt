@@ -121,7 +121,7 @@ fun PremiereScreen(
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StarButton(
-                label = "Save poster",
+                label = "Save Poster",
                 style = StarButtonStyle.GOLD,
                 modifier = Modifier.weight(1f),
                 onClick = {
@@ -134,7 +134,7 @@ fun PremiereScreen(
                 },
             )
             StarButton(
-                label = "Share trailer",
+                label = "Share Trailer",
                 style = StarButtonStyle.GHOST,
                 modifier = Modifier.weight(1f),
                 onClick = {
