@@ -1432,3 +1432,11 @@ The local ignored `.env` and tracked `.env.example` now define `OPENAI_API_KEY` 
 `STARME_OPENAI_IMAGE_MODEL=gpt-image-2`. The key value must remain local/server-side and must never be
 committed or pasted into chat. This selection covers portrait/multi-angle image preparation only; it does
 not remove the requirement for a validated callable video face/motion-transfer engine.
+
+The OpenAI key was added by Amol and verified on 11 August with a non-generation authenticated lookup of
+`gpt-image-2` (HTTP 200); the key value was not displayed or recorded. The latest supplied 516x594 face
+image was copied from the transient chat attachment into the ignored private path
+`tmp/openai-character-reference/user-face-latest.png` (SHA-256
+`6e1ac76361c18a11c5ab08a7aeb97a9711e91caa935ed8d16805ad6de5906e3a`). The two Downloads videos remain
+reference-only. Actual work must use the StarME episode clips already under
+`tmp/seedance-cricket-star/upload-clips/episode-{1,2,3}/` plus this latest face image.
