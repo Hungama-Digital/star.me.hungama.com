@@ -1467,3 +1467,44 @@ engineer private dashboard endpoints as the production contract. Motion Control 
 whole-character reconstruction, so it can reproduce the creative reference style but must not be claimed
 to meet strict unchanged-master face-only acceptance until the output passes duration, motion, costume,
 background, non-target, identity and original-audio QA.
+
+### 11 August 2026 - GPT Image 2 plus Kling Motion Control manual proof
+
+Amol authorized one immediate dashboard proof using the latest supplied face, an actual StarME clip and
+the credited Higgsfield account. Engineering selected the four-second portrait clip
+`tmp/seedance-cricket-star/upload-clips/episode-2/ep02_arjun_04.mp4` because Arjun is the dominant,
+front-facing male subject; Riya is present as the foreground interlocutor. The untouched input is 720x1280,
+24 fps, H.264/AAC, 48 kHz stereo and exactly 4.000 seconds.
+
+GPT Image 2 created a single-person, vertical, chest-up identity reference that preserves the latest user
+face while matching Arjun's dark-blue denim shirt, male role, framing and warm scene lighting. The private,
+ignored reference is
+`tmp/openai-character-reference/motion-proof-001/user-arjun-denim-reference-v1.png` (941x1672; SHA-256
+`2a02ca007e576da87fb423865bb0c730e344dbbc235ca262b95d226f135619d1`). The authoritative identity input
+was the latest user face; the StarME frame was used only for role, wardrobe, composition and lighting.
+No private face or generated reference was committed.
+
+Exactly one Higgsfield **Kling 3.0 Motion Control** job was submitted through the signed-in dashboard for
+eight credits. Settings were 720p and `Scene control mode: Video`; inputs were the four-second StarME clip
+and the GPT-generated male denim reference. The completed Higgsfield asset is
+`5ee4524c-494d-42cd-b399-100fd4cb5449`. Its private downloaded provider output is
+`tmp/openai-character-reference/motion-proof-001/higgsfield-kling-output-5ee4524c.mp4` (SHA-256
+`c149ce29a87e8378ae59dce89cdbd0616de8b814c134ff93ab58495b8352efd8`). A review copy with the original
+StarME audio restored is
+`tmp/openai-character-reference/motion-proof-001/higgsfield-kling-output-5ee4524c-original-audio.mp4`
+(SHA-256 `9bd55958434289efdd1a3cc487fa1e9907c0994409f96401eeac28aab34aac9e`).
+
+The proof establishes a **creative workflow pass**: the correct adult male identity and denim role were
+used, Arjun's head direction/facial performance was transferred, and the generated identity remained
+visually coherent through the short shot. It is nevertheless a **strict product acceptance fail**. The
+provider output is 720x1264, 30 fps and 3.467 seconds instead of 720x1280, 24 fps and 4.000 seconds; it
+reframes the shot, removes Riya's foreground body/face, reconstructs background pixels, and supplies audio
+whose decoded signal differs from the source. Restoring the source audio improves the review copy but
+cannot restore the missing 0.533 seconds or the removed non-target character.
+
+Product conclusion: GPT Image 2 plus Kling Motion Control is viable for creative recasting where shot
+reconstruction and removal of secondary subjects are approved. It does not implement StarME's strict
+"keep the source master unchanged and replace only designated Arjun's face" contract. Do not scale this
+exact dashboard path across episodes or claim it as production face swapping. The next production gate is
+still a track-addressable face-patching engine (or the missing CineIQ executable/API) validated for
+non-target pixel preservation, original duration/timestamps, costume/body preservation and original audio.
