@@ -27,9 +27,15 @@ fun AccessScreen(
 ) {
     val colors = StarTheme.colors
     Stage {
-        Eyebrow("Private internal prototype")
-        ScreenHeading("Enter your tester code")
-        Lead("StarME is currently limited to named adult testers on approved devices.")
+        Eyebrow(if (state.accessError != null) "Session renewal" else "Private internal prototype")
+        ScreenHeading(if (state.accessError != null) "Welcome Back" else "Enter Your Tester Code")
+        Lead(
+            if (state.accessError != null) {
+                "Your work is safe on this device. Enter a new code to securely continue where you left off."
+            } else {
+                "StarME is currently limited to named adult testers on approved devices."
+            },
+        )
         Spacer(Modifier.height(18.dp))
         OutlinedTextField(
             value = state.accessCode,

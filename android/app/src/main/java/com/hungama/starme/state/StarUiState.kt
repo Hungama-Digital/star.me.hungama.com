@@ -95,5 +95,6 @@ sealed interface StarEvent {
     data object RetakeRequested : StarEvent
     data object CreditsToppedUp : StarEvent
     data object AccessGranted : StarEvent
+    data object SessionExpired : StarEvent
     data class Error(val message: String) : StarEvent
 }

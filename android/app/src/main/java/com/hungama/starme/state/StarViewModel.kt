@@ -11,6 +11,7 @@ import com.hungama.starme.BuildConfig
 import com.hungama.starme.data.manifest.ShellManifest
 import com.hungama.starme.face.FaceChecker
 import com.hungama.starme.network.ConsentRequest
+import com.hungama.starme.network.ApiException
 import com.hungama.starme.network.OrderRequest
 import com.hungama.starme.util.Demo
 import kotlinx.coroutines.channels.Channel
@@ -137,6 +138,32 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     }
                 }
         }
+    }
+
+    /**
+     * A tester token is intentionally short-lived. Expiry must be a navigable state, not just a
+     * snackbar on top of a protected screen. Local membership, photo, consent and project data are
+     * deliberately preserved; only the unusable remote credential is removed.
+     */
+    private suspend fun expireTesterSession() {
+        container.session.clearAccessToken()
+        _state.update {
+            it.copy(
+                authenticated = false,
+                authenticating = false,
+                accessCode = "",
+                accessError = "Your tester session expired. Enter a new single-use code to continue.",
+            )
+        }
+        _events.send(StarEvent.SessionExpired)
+    }
+
+    private suspend fun handleSessionExpiry(error: Throwable): Boolean {
+        if (error is ApiException && error.statusCode == 401) {
+            expireTesterSession()
+            return true
+        }
+        return false
     }
 
     // ---- Subscribe (Step 1) ----
@@ -272,7 +299,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             val token = container.session.accessTokenOnce()
             if (token == null) {
                 _state.update { it.copy(consentSubmitFailed = true) }
-                _events.send(StarEvent.Error("Tester session expired. Enter a new access code."))
+                expireTesterSession()
                 return@launch
             }
             val request = ConsentRequest(
@@ -311,7 +338,10 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                 if (attempt < 2) delay(1200)
             }
             _state.update { it.copy(consentSubmitFailed = true) }
-            _events.send(StarEvent.Error(UserFacingErrors.consent(lastError ?: IllegalStateException("consent failed"))))
+            val failure = lastError ?: IllegalStateException("consent failed")
+            if (!handleSessionExpiry(failure)) {
+                _events.send(StarEvent.Error(UserFacingErrors.consent(failure)))
+            }
         }
     }
 
@@ -358,7 +388,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             }
             val token = container.session.accessTokenOnce()
             if (token == null) {
-                _events.send(StarEvent.Error("Tester session expired. Enter a new access code."))
+                expireTesterSession()
                 return@launch
             }
             val created = container.orders.createOrder(
@@ -396,7 +426,9 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     _events.send(StarEvent.OrderCreated)
                 }.onFailure { error ->
                     container.orders.discardPending(localId)
-                    _events.send(StarEvent.Error(UserFacingErrors.order(error)))
+                    if (!handleSessionExpiry(error)) {
+                        _events.send(StarEvent.Error(UserFacingErrors.order(error)))
+                    }
                 }
             }.onFailure { e ->
                 _events.send(StarEvent.Error(e.message ?: "Order could not be created."))
@@ -417,7 +449,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     fun pollProductionStatus() {
         val remoteOrderId = _state.value.remoteOrderId ?: return
         viewModelScope.launch {
-            val token = container.session.accessTokenOnce() ?: return@launch
+            val token = container.session.accessTokenOnce()
+            if (token == null) {
+                expireTesterSession()
+                return@launch
+            }
             runCatching { container.api.order(token, remoteOrderId) }.onSuccess { order ->
                 val ready = order.status == "READY"
                 // Do not re-raise the first-look prompt once it is approved: the order can still
@@ -442,7 +478,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     _events.send(StarEvent.Toast("Now premiering · you"))
                     _events.send(StarEvent.RenderComplete)
                 }
-            }
+            }.onFailure { handleSessionExpiry(it) }
         }
     }
 
@@ -452,7 +488,12 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
         if (s.rendering) return
         viewModelScope.launch {
             _state.update { it.copy(rendering = true, renderComplete = false, renderProgress = 0f) }
-            val token = container.session.accessTokenOnce() ?: return@launch
+            val token = container.session.accessTokenOnce()
+            if (token == null) {
+                _state.update { it.copy(rendering = false) }
+                expireTesterSession()
+                return@launch
+            }
             runCatching { container.api.order(token, remoteOrderId) }
                 .onSuccess { order ->
                     val ready = order.status == "READY"
@@ -482,9 +523,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         _events.send(StarEvent.RenderComplete)
                     }
                 }
-                .onFailure {
+                .onFailure { error ->
                     _state.update { it.copy(rendering = false) }
-                    _events.send(StarEvent.Error("Render status could not be refreshed."))
+                    if (!handleSessionExpiry(error)) {
+                        _events.send(StarEvent.Error("Render status could not be refreshed."))
+                    }
                 }
         }
     }
@@ -500,7 +543,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
     private fun decideFirstLook(decision: String) {
         val orderId = _state.value.remoteOrderId ?: return
         viewModelScope.launch {
-            val token = container.session.accessTokenOnce() ?: return@launch
+            val token = container.session.accessTokenOnce()
+            if (token == null) {
+                expireTesterSession()
+                return@launch
+            }
             runCatching { container.api.decideFirstLook(token, orderId, decision) }
                 .onSuccess { order ->
                     if (decision == "RETAKE") {
@@ -531,7 +578,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                         }
                     }
                 }
-                .onFailure { _events.send(StarEvent.Error("First-look decision could not be saved.")) }
+                .onFailure { error ->
+                    if (!handleSessionExpiry(error)) {
+                        _events.send(StarEvent.Error("First-look decision could not be saved."))
+                    }
+                }
         }
     }
 
@@ -564,10 +615,15 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
             val token = container.session.accessTokenOnce()
             if (token != null) {
                 runCatching { container.api.revokeConsent(token, ref) }
-                    .onFailure {
-                        _events.send(StarEvent.Error("Server revocation failed; local data was not changed."))
+                    .onFailure { error ->
+                        if (!handleSessionExpiry(error)) {
+                            _events.send(StarEvent.Error("Server revocation failed; local data was not changed."))
+                        }
                         return@launch
                     }
+            } else {
+                expireTesterSession()
+                return@launch
             }
             container.consent.revoke(ref)
             container.session.clearConsent()

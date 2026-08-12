@@ -114,6 +114,10 @@ private fun StarApp(container: AppContainer) {
                 StarEvent.AccessGranted -> nav.navigate(Step.PROMO.route) {
                     popUpTo(Routes.ACCESS) { inclusive = true }
                 }
+                StarEvent.SessionExpired -> nav.navigate(Routes.ACCESS) {
+                    popUpTo(nav.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
                 StarEvent.RetakeRequested -> nav.navigate(Step.CAPTURE.route) {
                     popUpTo(Step.CAPTURE.route) { inclusive = true }
                 }

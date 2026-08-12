@@ -1682,3 +1682,17 @@ surface. The fixed subscription action remains independently reachable below the
 Both changes were inspected on RMX3782 using device screenshots and UI Automator hierarchy dumps. Local
 evidence is retained at `tmp/membership-visual.png`, `tmp/member.xml`, `tmp/role-centered.png` and
 `tmp/role-centered.xml`. The resulting review build is Android `1.4.2` (`versionCode 6`).
+
+### 12 August 2026 - recoverable tester-session expiry, version 1.4.3
+
+Product testing exposed a dead end when the backend's short-lived tester session expired: protected API
+calls displayed a snackbar asking for a new code but left the tester on the protected screen, where no code
+field existed. Session expiry is now a first-class navigation event. Any missing token or HTTP 401 detected
+during consent, order creation, production polling/refresh, first-look approval/retake, or revocation clears
+only the unusable access token, marks the UI unauthenticated, and resets the navigation stack to the tester
+access screen. Local membership, credits, captured identity/consent records, selection and project state are
+preserved so successful reauthentication can resume the journey.
+
+The access screen explicitly changes to a `Welcome Back` session-renewal state, explains that on-device work
+is safe, exposes the single-use-code field and provides the secure continuation action. Successful redemption
+replaces the token and returns to the product Home. This review build is Android `1.4.3` (`versionCode 7`).
