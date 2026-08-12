@@ -1663,3 +1663,22 @@ is retained locally in `tmp/ui-fix-home.png`, `tmp/ui-fix-step5.png`, `tmp/ui-fi
 
 The corrected review build is Android `1.4.1` (`versionCode 5`). It is the current APK to use for product
 review; the external production-release gates listed above remain unchanged.
+
+### 12 August 2026 - membership visualisation and role-action alignment, version 1.4.2
+
+The role-selection card was refined again after product review. Its action is now a 220dp-wide, centred
+button beneath the complete role description, with centred label text and equal horizontal breathing room.
+This intentionally avoids trying to align a short button against variable-length descriptive copy. Android
+UI Automator measured the Arjun description at `[114,1798][966,1896]` and the centred action at
+`[258,1986][822,2052]`, providing a clear 90-pixel vertical separation and symmetric placement.
+
+The second journey screen (membership, labelled Step 1 within the creative flow and Step 2 in the global
+eight-stage progress) is no longer a text-only plan list. It now presents a native cinematic StarME annual
+membership pass showing the ₹499 price and welcome-credit balance, backed by a red film-brand gradient,
+annual badge and visual card treatment. A three-tile `Your Premiere Kit` strip communicates drama access,
+credits and the included retake through symbols and short labels, followed by an instant-activation status
+surface. The fixed subscription action remains independently reachable below the scrollable content.
+
+Both changes were inspected on RMX3782 using device screenshots and UI Automator hierarchy dumps. Local
+evidence is retained at `tmp/membership-visual.png`, `tmp/member.xml`, `tmp/role-centered.png` and
+`tmp/role-centered.xml`. The resulting review build is Android `1.4.2` (`versionCode 6`).

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -194,13 +195,15 @@ private fun RoleCard(name: String, desc: String, selected: Boolean, onClick: () 
         Text(
             if (selected) "SELECTED" else "CHOOSE ROLE",
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .align(Alignment.End)
-                .padding(top = 14.dp)
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 18.dp)
+                .width(220.dp)
                 .background(if (selected) colors.good else colors.orange, RoundedCornerShape(30.dp))
-                .padding(horizontal = 16.dp, vertical = 9.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
 }
