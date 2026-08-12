@@ -1594,3 +1594,72 @@ rendering and session contracts were preserved.
 Verification: `testDebugUnitTest` and `assembleDebug` passed. The replacement APK installed and
 cold-launched on RMX3782. A device screenshot at `tmp/android-native-shell.png` visually confirmed the
 native navigation bar, correct selected destination and foreground activity without a startup crash.
+### 12 August 2026 - Emergent design handoff interpreted natively
+
+Amol supplied `/Users/amoldewase/Downloads/EMERGENT`, a complete transcript of an unfinished Emergent
+Expo/FastAPI/Mongo implementation. It describes the same eight-step StarME product, not a separate
+application. Its useful design contribution is a disciplined cinematic system: neutral near-black
+surfaces, cinematic red for primary actions, restrained gold, Anton/Inter typography, native haptics,
+animated progress, camera/photo capture, signature consent, production stages and a premiere surface.
+Its Expo state container and unsecured best-effort Mongo API must not replace the existing Kotlin/Compose
+client or authenticated FastAPI/PostgreSQL/RQ staging architecture.
+
+The native Android theme now incorporates that visual direction: `#09090C` background, `#16161D` and
+`#22222D` surfaces, `#D91E36`/`#8E0F22` primary gradient, `#D4AF37` gold and `#2A9D8F` success. Cards use
+native elevation, the StarME wordmark carries `A FAST TV ORIGINAL`, and the eight-stage progress chrome
+now identifies both step number and name. The existing native product shell, guided next-action behavior,
+device-bound access, backend consent/order flow and project library remain intact.
+
+Verification: `testDebugUnitTest` and `assembleDebug` passed. Installation was attempted immediately,
+but no Android device was connected on 12 August; the review APK is available at
+`android/app/build/outputs/apk/debug/app-debug.apk` and needs an on-device visual/interaction pass when
+RMX3782 reconnects.
+
+The Emergent-informed review build was subsequently versioned as Android `1.3` (`versionCode 3`) for
+clear identification during device review. `testDebugUnitTest` and `assembleDebug` passed again after
+the version change. The replacement APK installed successfully on RMX3782 (`EEXKCAUCQO9T45MZ`),
+cold-launched as the foreground activity, and reported the expected version from Android Package
+Manager. On-device screenshot `tmp/starme-v1.3-review.png` confirms the cinematic red/gold theme,
+named progress chrome, native bottom navigation and primary CTA render without clipping.
+### 12 August 2026 - production UI structural rebuild, version 1.4
+
+The presentation layer moved beyond the uniform web-wizard composition. Home is now media-first with
+full-bleed drama key art, a Watch Trailer affordance and horizontally scrolling casting posters. Story
+selection is a swipeable vertical-poster rail rather than a form grid. Tapping a live world opens a native
+Material 3 role bottom sheet; tapping a package opens a native package-detail sheet before selection.
+My Premieres now uses drama artwork as a project thumbnail. Focused creation steps, the native bottom
+navigation, guided next-action behavior and protected backend workflow remain intact.
+
+Two original, rights-safe fictional drama artworks were generated with the built-in OpenAI image tool and
+saved as `android/app/src/main/res/drawable-nodpi/story_love_keyart.png` and
+`story_action_keyart.png`. They contain no logos, text, celebrity likeness or copyrighted character. The
+prompts requested premium vertical Indian romance/sci-fi and action/crime streaming artwork respectively,
+using fictional adults, near-black/red/gold or blue/red palettes, no watermark and a dark lower overlay
+area. These are internal review assets pending final creative-owner approval and source/rights logging.
+
+The review build is Android `1.4` (`versionCode 4`). `testDebugUnitTest`, `lintDebug`, `assembleDebug`,
+`assembleRelease`, R8 minification and resource shrinking all passed. The debug APK installed on RMX3782,
+cold-launched and reported version 1.4. The release APK remains unsigned; production signing credentials,
+Play Console policy declarations, approved analytics/crash-reporting accounts, final Legal text, real media
+and full device/accessibility/performance acceptance remain external release gates. Do not call the binary
+store-certified until those gates close.
+
+### 12 August 2026 - device-driven layout hardening, version 1.4.1
+
+Android review identified three concrete layout defects in the 1.4 presentation. The Home `Start Your
+Debut` action is now docked directly above the native bottom navigation instead of floating above an
+unnecessary navigation-inset gap. Step 5 show cards constrain long titles to two lines with ellipsis and
+stable line height, preventing the show name from colliding with surrounding metadata. Role cards in the
+native selection sheet now use a vertical information hierarchy, with the `CHOOSE ROLE` action aligned
+independently below the description so neither long copy nor enlarged fonts can displace or overlap it.
+
+These corrections were verified on the connected RMX3782 using Android UI Automator hierarchy dumps and
+device screenshots, in addition to compilation. At normal scale, the Step 5 subtitle, show title and role
+instruction occupied separate bounds; the Arjun role description ended at y=1926 and its action began at
+y=1995. At Android font scale 1.30, the role description ended at y=1906 and its action began at y=1975,
+leaving a 69-pixel separation. The phone setting was restored to its original 1.0 after the test. Evidence
+is retained locally in `tmp/ui-fix-home.png`, `tmp/ui-fix-step5.png`, `tmp/ui-fix-role-sheet.png`,
+`tmp/ui-fix-role-font130.png` and their associated XML hierarchy dumps.
+
+The corrected review build is Android `1.4.1` (`versionCode 5`). It is the current APK to use for product
+review; the external production-release gates listed above remain unchanged.

@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -82,14 +83,15 @@ fun StarCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.35f))
             .background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
                     listOf(colors.surface2, colors.surface),
                 ),
-                RoundedCornerShape(24.dp),
+                RoundedCornerShape(20.dp),
             )
-            .border(1.dp, colors.line, RoundedCornerShape(24.dp))
-            .padding(20.dp),
+            .border(1.dp, colors.line, RoundedCornerShape(20.dp))
+            .padding(18.dp),
         content = content,
     )
 }

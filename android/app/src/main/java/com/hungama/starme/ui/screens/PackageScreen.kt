@@ -15,9 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,10 +41,12 @@ import com.hungama.starme.ui.components.Lead
 import com.hungama.starme.ui.components.ScreenHeading
 import com.hungama.starme.ui.components.SmallDim
 import com.hungama.starme.ui.components.Stage
+import com.hungama.starme.ui.components.StarButton
 import com.hungama.starme.ui.theme.DisplayFontFamily
 import com.hungama.starme.ui.theme.StarPalette
 import com.hungama.starme.ui.theme.StarTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PackageScreen(
     manifest: ShellManifest,
@@ -46,6 +54,7 @@ fun PackageScreen(
     onSelectPackage: (String) -> Unit,
 ) {
     val colors = StarTheme.colors
+    var previewPackage by remember { mutableStateOf<PackageDef?>(null) }
     Stage {
         Eyebrow("Step 5 · Your billing")
         ScreenHeading("How big is your debut?")
@@ -55,7 +64,7 @@ fun PackageScreen(
             PackageRow(
                 pkg = pkg,
                 selected = state.packageId == pkg.id,
-                onClick = { onSelectPackage(pkg.id) },
+                onClick = { previewPackage = pkg },
             )
         }
 
@@ -68,6 +77,36 @@ fun PackageScreen(
                 "You have ${state.credits} credits. Top up the balance to confirm."
             }
             SmallDim(note)
+        }
+    }
+
+    previewPackage?.let { pkg ->
+        ModalBottomSheet(
+            onDismissRequest = { previewPackage = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = colors.surface,
+        ) {
+            Column(Modifier.padding(horizontal = 22.dp, vertical = 8.dp)) {
+                Text(pkg.name, style = MaterialTheme.typography.headlineSmall)
+                Text(pkg.desc, color = colors.dim, modifier = Modifier.padding(top = 4.dp))
+                Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${pkg.episodes} Episodes", fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Coin(14)
+                        Text("  ${pkg.credits} Credits", fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.height(22.dp))
+                StarButton(
+                    label = "Choose ${pkg.name}",
+                    onClick = {
+                        onSelectPackage(pkg.id)
+                        previewPackage = null
+                    },
+                )
+                Spacer(Modifier.height(26.dp))
+            }
         }
     }
 }

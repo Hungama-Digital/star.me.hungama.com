@@ -8,18 +8,20 @@ import androidx.compose.ui.graphics.Color
  * [StarColors] and is reached through [LocalStarColors].
  */
 object StarPalette {
-    val Bg = Color(0xFF09070D)
-    val Surface = Color(0xFF17121E)
-    val Surface2 = Color(0xFF21182A)
-    val Line = Color(0xFF3B2D45)
+    // Emergent's strongest contribution was a disciplined cinema palette:
+    // near-black neutral surfaces, one red action colour and restrained gold.
+    val Bg = Color(0xFF09090C)
+    val Surface = Color(0xFF16161D)
+    val Surface2 = Color(0xFF22222D)
+    val Line = Color(0xFF343443)
 
-    val Orange = Color(0xFFFF4F6D)
-    val OrangeDeep = Color(0xFFB71949)
-    val Gold = Color(0xFFFFC56E)
-    val Good = Color(0xFF63D7AE)
+    val Orange = Color(0xFFD91E36)
+    val OrangeDeep = Color(0xFF8E0F22)
+    val Gold = Color(0xFFD4AF37)
+    val Good = Color(0xFF2A9D8F)
 
     val Text = Color(0xFFFFF7F2)
-    val Dim = Color(0xFFB8AABD)
+    val Dim = Color(0xFF9C93AB)
 
     // Shell gradients
     val Love1 = Color(0xFF3C0B2B)

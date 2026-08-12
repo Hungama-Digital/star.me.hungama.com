@@ -1,12 +1,7 @@
 package com.hungama.starme.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,15 +10,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,14 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import androidx.compose.ui.unit.sp
+import com.hungama.starme.R
 import com.hungama.starme.data.manifest.ShellDef
 import com.hungama.starme.data.manifest.ShellManifest
 import com.hungama.starme.state.StarUiState
@@ -50,10 +49,9 @@ import com.hungama.starme.ui.components.Lead
 import com.hungama.starme.ui.components.ScreenHeading
 import com.hungama.starme.ui.components.Stage
 import com.hungama.starme.ui.theme.DisplayFontFamily
-import com.hungama.starme.ui.theme.StarPalette
 import com.hungama.starme.ui.theme.StarTheme
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConceptScreen(
     manifest: ShellManifest,
@@ -62,195 +60,147 @@ fun ConceptScreen(
     onSelectRole: (String) -> Unit,
 ) {
     val colors = StarTheme.colors
-    val roleRequester = remember { BringIntoViewRequester() }
+    var roleSheetVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.shellId) {
-        if (state.shellId != null) {
-            delay(320)
-            roleRequester.bringIntoView()
-        }
-    }
     Stage {
-        Eyebrow("Step 4 · Your story")
-        ScreenHeading("Pick your world")
-        Lead("Two worlds are casting now. Four more open soon.")
+        Eyebrow("Step 4 · Your Story")
+        ScreenHeading("Choose Your World")
+        Lead("Swipe through original worlds. Tap a poster to step into the cast.")
 
-        // 2-column shell grid, in manifest order, with a staggered entrance.
-        var entered by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) { entered = true }
-        manifest.shells.chunked(2).forEach { pair ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                pair.forEachIndexed { _, shell ->
-                    val index = manifest.shells.indexOf(shell)
-                    AnimatedVisibility(
-                        visible = entered,
-                        enter = fadeIn(tween(320, delayMillis = index * 70)) +
-                            slideInVertically(tween(320, delayMillis = index * 70)) { it / 6 },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        ShellCard(
-                            shell = shell,
-                            loveStyle = index % 2 == 0,
-                            selected = state.shellId == shell.id,
-                            onClick = { if (shell.isLive) onSelectShell(shell.id) },
-                        )
-                    }
-                }
-                if (pair.size == 1) Spacer(Modifier.weight(1f))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            items(manifest.shells) { shell ->
+                WorldPoster(
+                    shell = shell,
+                    selected = state.shellId == shell.id,
+                    onClick = {
+                        if (shell.isLive) {
+                            onSelectShell(shell.id)
+                            roleSheetVisible = true
+                        }
+                    },
+                )
             }
         }
 
-        // Role picker appears after a shell is chosen, sliding into place.
-        val selectedShell = manifest.shell(state.shellId)
-        if (selectedShell != null && selectedShell.isLive) {
-            var roleEntered by remember(selectedShell.id) { mutableStateOf(false) }
-            LaunchedEffect(selectedShell.id) { roleEntered = true }
-            AnimatedVisibility(
-                visible = roleEntered,
-                enter = fadeIn(tween(260)) + expandVertically(tween(260)),
-            ) {
-                Column(modifier = Modifier.bringIntoViewRequester(roleRequester)) {
-            Spacer(Modifier.height(4.dp))
+        val selected = manifest.shell(state.shellId)
+        if (selected != null) {
+            Spacer(Modifier.height(22.dp))
+            Text("CURRENT CASTING", color = colors.orange, style = MaterialTheme.typography.labelMedium)
+            Text(selected.title, style = MaterialTheme.typography.headlineSmall)
             Text(
-                "YOUR ROLE",
-                color = colors.dim,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                letterSpacing = 0.14.em,
-                modifier = Modifier.padding(bottom = 8.dp),
+                if (state.roleId == null) "Choose a role to continue" else "Your role is selected · tap the poster to change it",
+                color = if (state.roleId == null) colors.dim else colors.good,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                selectedShell.roles.forEach { role ->
+        }
+    }
+
+    val selected = manifest.shell(state.shellId)
+    if (roleSheetVisible && selected != null) {
+        ModalBottomSheet(
+            onDismissRequest = { roleSheetVisible = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = colors.surface,
+        ) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Text("Choose Your Role", style = MaterialTheme.typography.headlineSmall)
+                Text("Who will you become in ${selected.title}?", color = colors.dim)
+                Spacer(Modifier.height(18.dp))
+                selected.roles.forEach { role ->
                     RoleCard(
                         name = role.name,
                         desc = role.desc,
                         selected = state.roleId == role.id,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onSelectRole(role.id) },
+                        onClick = {
+                            onSelectRole(role.id)
+                            roleSheetVisible = false
+                        },
                     )
+                    Spacer(Modifier.height(12.dp))
                 }
-            }
-                }
+                Spacer(Modifier.height(22.dp))
             }
         }
     }
 }
 
 @Composable
-private fun ShellCard(
-    shell: ShellDef,
-    loveStyle: Boolean,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun WorldPoster(shell: ShellDef, selected: Boolean, onClick: () -> Unit) {
     val colors = StarTheme.colors
-    val gradient = if (loveStyle) {
-        Brush.radialGradient(
-            colors = listOf(StarPalette.Love2, StarPalette.Love1, Color(0xFF0E0710)),
-            center = Offset(360f, 0f),
-            radius = 700f,
-        )
-    } else {
-        Brush.radialGradient(
-            colors = listOf(StarPalette.Act2, StarPalette.Act1, Color(0xFF070C12)),
-            center = Offset(120f, 0f),
-            radius = 700f,
-        )
+    val artwork = when (shell.id) {
+        "love" -> R.drawable.story_love_keyart
+        "act" -> R.drawable.story_action_keyart
+        else -> if (shell.id.hashCode() % 2 == 0) R.drawable.story_love_keyart else R.drawable.story_action_keyart
     }
-    val interaction = remember { MutableInteractionSource() }
     Box(
-        modifier = modifier
-            .aspectRatio(3f / 4.1f)
-            .clip(RoundedCornerShape(16.dp))
-            .alpha(if (shell.isLive) 1f else 0.45f)
-            .background(gradient)
-            .border(
-                width = 2.dp,
-                color = if (selected) colors.orange else colors.line,
-                shape = RoundedCornerShape(16.dp),
-            )
-            .clickable(
-                enabled = shell.isLive,
-                interactionSource = interaction,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(14.dp),
+        modifier = Modifier
+            .size(width = 250.dp, height = 390.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .alpha(if (shell.isLive) 1f else 0.48f)
+            .border(if (selected) 3.dp else 1.dp, if (selected) colors.orange else colors.line, RoundedCornerShape(22.dp))
+            .clickable(enabled = shell.isLive, onClick = onClick),
     ) {
-        // Bottom scrim for legibility
-        Box(
-            Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color(0xE6080608))
-                )
+        Image(
+            painter = painterResource(artwork),
+            contentDescription = "${shell.title} poster",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
         )
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xF209090C)))))
         if (!shell.isLive) {
             Text(
-                "SOON",
-                color = colors.dim,
+                "COMING SOON",
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).background(Color.Black.copy(alpha = .65f), RoundedCornerShape(30.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
+                color = Color.White,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.14.em,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(Color(0x8C000000))
-                    .border(1.dp, colors.line, RoundedCornerShape(999.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
             )
         }
-        Column(modifier = Modifier.align(Alignment.BottomStart)) {
+        Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
+            Text(shell.kicker.uppercase(), color = colors.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Text(
-                text = shell.title,
+                shell.title,
                 fontFamily = DisplayFontFamily,
-                fontWeight = FontWeight.Black,
-                fontSize = 21.sp,
-                lineHeight = 22.sp,
-                color = colors.text,
+                fontSize = 25.sp,
+                lineHeight = 28.sp,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = shell.kicker.uppercase(),
-                color = Color(0xFFD8CFE2),
-                fontSize = 10.sp,
-                letterSpacing = 0.18.em,
-                modifier = Modifier.padding(top = 6.dp),
-            )
+            if (shell.isLive) Text("TAP TO VIEW ROLES", color = Color.White.copy(alpha = .7f), fontSize = 10.sp)
         }
     }
 }
 
 @Composable
-private fun RoleCard(
-    name: String,
-    desc: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun RoleCard(name: String, desc: String, selected: Boolean, onClick: () -> Unit) {
     val colors = StarTheme.colors
     val interaction = remember { MutableInteractionSource() }
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) StarPalette.Surface2 else colors.surface)
-            .border(
-                2.dp,
-                if (selected) colors.orange else colors.line,
-                RoundedCornerShape(14.dp),
-            )
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) colors.surface2 else colors.surface)
+            .border(2.dp, if (selected) colors.orange else colors.line, RoundedCornerShape(18.dp))
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 16.dp),
+            .padding(18.dp),
     ) {
-        Text(name, style = MaterialTheme.typography.titleMedium, color = colors.text)
-        Spacer(Modifier.height(4.dp))
-        Text(desc, style = MaterialTheme.typography.bodySmall, color = colors.dim)
+        Text(name, style = MaterialTheme.typography.titleMedium)
+        Text(
+            desc,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.dim,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Text(
+            if (selected) "SELECTED" else "CHOOSE ROLE",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(top = 14.dp)
+                .background(if (selected) colors.good else colors.orange, RoundedCornerShape(30.dp))
+                .padding(horizontal = 16.dp, vertical = 9.dp),
+        )
     }
 }

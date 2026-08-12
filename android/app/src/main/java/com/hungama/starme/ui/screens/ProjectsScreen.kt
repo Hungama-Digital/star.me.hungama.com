@@ -1,12 +1,14 @@
 package com.hungama.starme.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,10 +20,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hungama.starme.data.manifest.ShellManifest
+import com.hungama.starme.R
 import com.hungama.starme.state.StarUiState
 import com.hungama.starme.ui.components.Lead
 import com.hungama.starme.ui.components.ScreenHeading
@@ -57,7 +63,14 @@ fun ProjectsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(Icons.Rounded.Movie, contentDescription = null, tint = colors.gold)
+                    Image(
+                        painter = painterResource(
+                            if (shell?.id == "act") R.drawable.story_action_keyart else R.drawable.story_love_keyart
+                        ),
+                        contentDescription = "${shell?.title ?: "Project"} thumbnail",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(width = 92.dp, height = 126.dp).clip(RoundedCornerShape(14.dp)),
+                    )
                     Column {
                         Text(shell?.title ?: "Your StarME Story", style = MaterialTheme.typography.titleLarge)
                         Text(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -43,22 +44,31 @@ fun StarTopBar(credits: Int, walletVisible: Boolean, modifier: Modifier = Modifi
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "STAR",
+                    fontFamily = DisplayFontFamily,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    letterSpacing = 0.04.em,
+                    color = colors.text,
+                )
+                Text(
+                    text = "ME",
+                    color = colors.gold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    letterSpacing = 0.18.em,
+                    modifier = Modifier.padding(start = 5.dp, top = 2.dp),
+                )
+            }
             Text(
-                text = "STAR",
-                fontFamily = DisplayFontFamily,
-                fontWeight = FontWeight.Black,
-                fontSize = 22.sp,
-                letterSpacing = 0.04.em,
-                color = colors.text,
-            )
-            Text(
-                text = "ME",
-                color = colors.gold,
+                text = "A FAST TV ORIGINAL",
+                color = colors.dim,
+                fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
                 letterSpacing = 0.18.em,
-                modifier = Modifier.padding(start = 5.dp, top = 2.dp),
             )
         }
         AnimatedVisibility(visible = walletVisible) {
@@ -108,25 +118,40 @@ fun Coin(size: Int = 14) {
 @Composable
 fun StarStepper(current: Int?, total: Int, modifier: Modifier = Modifier) {
     val colors = StarTheme.colors
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        repeat(total) { i ->
-            val on = current != null && i <= current
-            val barColor by animateColorAsState(
-                targetValue = if (on) colors.orange else colors.line,
-                label = "stepper$i",
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (current != null) {
+            Text(
+                text = "STEP ${current + 1} OF $total  ·  ${stepName(current)}",
+                color = colors.dim,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.12.em,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
             )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(barColor)
-            )
+        }
+        Row(
+            modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            repeat(total) { i ->
+                val on = current != null && i <= current
+                val barColor by animateColorAsState(
+                    targetValue = if (on) colors.orange else colors.line,
+                    label = "stepper$i",
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(barColor)
+                )
+            }
         }
     }
 }
+
+private fun stepName(index: Int): String = listOf(
+    "Welcome", "Membership", "Your Close-Up", "Consent",
+    "Choose Your World", "Choose Your Package", "In Production", "Premiere",
+).getOrElse(index) { "StarME" }.uppercase()

@@ -126,7 +126,7 @@ private fun StarApp(container: AppContainer) {
             .fillMaxSize()
             .background(
                 Brush.radialGradient(
-                    colors = listOf(Color(0xFF291329), StarPalette.Bg),
+                    colors = listOf(Color(0xFF1A0B12), StarPalette.Bg),
                     radius = 1500f,
                 ),
             ),
@@ -142,7 +142,9 @@ private fun StarApp(container: AppContainer) {
         bottomBar = {
             Column {
                 if (step != null) {
-                    CtaDock { CtaButton(step = step, state = state, vm = vm, nav = nav) }
+                    CtaDock(applyNavigationInset = !showProductNavigation) {
+                        CtaButton(step = step, state = state, vm = vm, nav = nav)
+                    }
                 }
                 if (showProductNavigation) {
                     ProductNavigation(
@@ -326,12 +328,15 @@ private fun NavHostController.navigateProductRoot(route: String) {
 
 /** The persistent bottom CTA dock with the demo's fade-up gradient. */
 @Composable
-private fun CtaDock(content: @Composable () -> Unit) {
+private fun CtaDock(
+    applyNavigationInset: Boolean,
+    content: @Composable () -> Unit,
+) {
     Column(
         modifier = Modifier
-            .background(Brush.verticalGradient(listOf(Color.Transparent, StarPalette.Bg.copy(alpha = 0.94f))))
-            .navigationBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 18.dp),
+            .background(StarPalette.Bg.copy(alpha = 0.98f))
+            .let { if (applyNavigationInset) it.navigationBarsPadding() else it }
+            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
     ) {
         content()
     }
