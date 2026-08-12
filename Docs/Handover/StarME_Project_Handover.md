@@ -1715,3 +1715,15 @@ and strict MyPy passed across 19 source files. `config.py` and `security.py` wer
 200 for live/readiness and two consecutive redemptions from distinct device IDs both returned 200 with the
 same cutoff. Remove both staging environment values after the cutoff even though enforcement already rejects
 the code automatically.
+
+The first shared-code implementation assigned every device the single identity `shared-staging-review`.
+Device testing then exposed an ownership regression: RMX3782 retained active consent
+`STARME-2026-3B0129`, owned by its established identity `Amol-RMX3782`, so order creation correctly rejected
+that consent under the new shared identity. Taking a new selfie could not resolve this because selfie capture
+does not create or transfer consent. The shared-code redemption logic was therefore hardened to preserve the
+most recent established tester identity for the same peppered device digest. A genuinely new device receives
+its own deterministic pseudonymous `shared-device-*` identity, preventing Amol and Neeraj sir from sharing
+consents or projects merely because they use the same temporary code. Existing affected shared sessions were
+repaired server-side by matching only their hashed device digest; one session was repaired. The API was
+rebuilt/restarted, readiness returned 200, and the active consent now has a current session with the matching
+owner. The expanded suite passes 46 tests plus Ruff and strict MyPy.

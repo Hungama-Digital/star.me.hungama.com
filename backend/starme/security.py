@@ -50,11 +50,28 @@ def redeem_code(
     if is_shared:
         assert shared_expiry is not None  # narrowed by is_shared; keeps the session cutoff explicit
         device_digest = digest(device_id, settings.token_hash_pepper.get_secret_value())
+        # Preserve the device's established tester identity. A shared staging code must not collapse
+        # multiple testers into one consent/order owner, otherwise existing active consent becomes
+        # unusable and different testers' projects can be mixed. New devices receive an isolated,
+        # deterministic pseudonymous identity derived from the already-peppered device digest.
+        prior_session = session.scalar(
+            select(ClientSession)
+            .where(
+                ClientSession.device_digest == device_digest,
+                ClientSession.tester_reference != "shared-staging-review",
+            )
+            .order_by(ClientSession.created_at.desc())
+        )
+        tester_reference = (
+            prior_session.tester_reference
+            if prior_session is not None
+            else f"shared-device-{device_digest[:16]}"
+        )
         token = secrets.token_urlsafe(32)
         session.add(
             ClientSession(
                 token_digest=digest(token, settings.token_hash_pepper.get_secret_value()),
-                tester_reference="shared-staging-review",
+                tester_reference=tester_reference,
                 device_digest=device_digest,
                 expires_at=shared_expiry,
             )
