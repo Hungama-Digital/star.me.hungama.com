@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import lru_cache
 from typing import Literal
 
@@ -27,6 +28,9 @@ class Settings(BaseSettings):
     allow_sensitive_processing: bool = False
     operator_api_key: SecretStr = SecretStr("local-operator-change-me")
     token_hash_pepper: SecretStr = SecretStr("local-token-pepper-change-me")
+    # Optional, time-boxed staging-only access bypass. Never embed this value in a client build.
+    shared_tester_code: SecretStr | None = None
+    shared_tester_code_expires_at: datetime | None = None
     delivery_signing_key: SecretStr = SecretStr("local-delivery-key-change-me")
     public_api_base_url: str = "http://127.0.0.1:8000"
     approved_consent_version: str | None = None
@@ -58,6 +62,10 @@ class Settings(BaseSettings):
             }
             if any(value.startswith("local-") for value in values):
                 raise ValueError("Replace all local cryptographic defaults before deployment")
+        if self.environment == "production" and self.shared_tester_code is not None:
+            raise ValueError("Shared tester access is forbidden in production")
+        if (self.shared_tester_code is None) != (self.shared_tester_code_expires_at is None):
+            raise ValueError("Configure both shared tester code and its expiry, or neither")
         return self
 
     @property

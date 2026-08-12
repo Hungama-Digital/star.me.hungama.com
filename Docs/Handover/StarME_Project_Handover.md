@@ -1696,3 +1696,22 @@ preserved so successful reauthentication can resume the journey.
 The access screen explicitly changes to a `Welcome Back` session-renewal state, explains that on-device work
 is safe, exposes the single-use-code field and provides the secure continuation action. Successful redemption
 replaces the token and returns to the product Home. This review build is Android `1.4.3` (`versionCode 7`).
+
+### 12 August 2026 - temporary shared staging tester access
+
+At Amol's explicit request, staging temporarily accepts `u47ATgHLGyRB` as a reusable shared tester code for
+Amol and Neeraj sir through **19 August 2026 at 05:59:05 UTC (11:29:05 IST)**. This is implemented only in
+the backend through the paired server settings `STARME_SHARED_TESTER_CODE` and
+`STARME_SHARED_TESTER_CODE_EXPIRES_AT`; the code is not embedded in the Android APK. Each device receives
+its own bearer token and device digest, but all shared-code sessions use the staging audit identity
+`shared-staging-review` and expire at the same fixed cutoff. The ordinary issued-code path remains single-use,
+device-bound and 12 hours long.
+
+The bypass fails closed after the cutoff, requires both settings together, and configuration validation
+forbids enabling it when `STARME_ENVIRONMENT=production`. Coverage includes reuse on two devices, fixed
+session cutoff, post-cutoff rejection and production rejection. All 45 backend tests passed, Ruff was clean,
+and strict MyPy passed across 19 source files. `config.py` and `security.py` were backed up and deployed to
+`/home/hungama/apps/starme`; only the API container was rebuilt/restarted. External HTTPS verification returned
+200 for live/readiness and two consecutive redemptions from distinct device IDs both returned 200 with the
+same cutoff. Remove both staging environment values after the cutoff even though enforcement already rejects
+the code automatically.

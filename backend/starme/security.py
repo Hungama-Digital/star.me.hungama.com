@@ -39,6 +39,29 @@ def redeem_code(
     session: Session, code: str, device_id: str, settings: Settings
 ) -> tuple[str, datetime]:
     now = utcnow()
+    shared_code = settings.shared_tester_code
+    shared_expiry = settings.shared_tester_code_expires_at
+    is_shared = (
+        shared_code is not None
+        and shared_expiry is not None
+        and hmac.compare_digest(code, shared_code.get_secret_value())
+        and shared_expiry.replace(tzinfo=UTC) > now
+    )
+    if is_shared:
+        assert shared_expiry is not None  # narrowed by is_shared; keeps the session cutoff explicit
+        device_digest = digest(device_id, settings.token_hash_pepper.get_secret_value())
+        token = secrets.token_urlsafe(32)
+        session.add(
+            ClientSession(
+                token_digest=digest(token, settings.token_hash_pepper.get_secret_value()),
+                tester_reference="shared-staging-review",
+                device_digest=device_digest,
+                expires_at=shared_expiry,
+            )
+        )
+        session.commit()
+        return token, shared_expiry
+
     code_row = session.scalar(
         select(AccessCode).where(
             AccessCode.code_digest == digest(code, settings.token_hash_pepper.get_secret_value())
