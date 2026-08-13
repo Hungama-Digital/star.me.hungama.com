@@ -14,8 +14,8 @@ android {
         applicationId = "com.hungama.starme"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.4.3"
+        versionCode = 8
+        versionName = "1.4.4"
 
         // Default to the staging host so tester/debug builds reach the real server even
         // when -PSTARME_API_BASE_URL is not passed. Override for local/emulator work with

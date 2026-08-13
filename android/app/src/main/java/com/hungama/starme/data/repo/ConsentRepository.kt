@@ -63,6 +63,15 @@ class ConsentRepository(
         fileStore.deleteConsentAssets(ref)
     }
 
+    /**
+     * Marks a restored local reference unusable when the server says it belongs to a different
+     * tester identity. Keep the current capture files available so the tester can consent again;
+     * this is recovery from stale ownership, not a user-requested biometric deletion.
+     */
+    suspend fun invalidateLocalOwnership(ref: String) {
+        dao.revoke(ref, System.currentTimeMillis())
+    }
+
     private fun generateRef(): String {
         val year = Year.now().value
         val sb = StringBuilder(6)

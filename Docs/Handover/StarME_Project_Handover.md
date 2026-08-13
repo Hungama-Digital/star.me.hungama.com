@@ -1727,3 +1727,24 @@ consents or projects merely because they use the same temporary code. Existing a
 repaired server-side by matching only their hashed device digest; one session was repaired. The API was
 rebuilt/restarted, readiness returned 200, and the active consent now has a current session with the matching
 owner. The expanded suite passes 46 tests plus Ruff and strict MyPy.
+
+### 13 August 2026 - stale-consent recovery for shared-code reviewers, version 1.4.4
+
+A second colleague encountered `The consent is no longer active` after authenticating with the temporary
+shared tester code. The code grants access but does not—and must not—make consent common across people or
+devices. The affected device retained a local consent reference created under a legacy shared-login owner;
+taking another selfie did not help because capture does not create, transfer or replace consent. The backend
+correctly rejected the cross-owner reference, but Android previously displayed only an error and left the
+reviewer stranded on package confirmation.
+
+Android 1.4.4 turns HTTP 409 stale-consent ownership into a recoverable journey state. The unusable local
+reference is marked invalid so it cannot return after process restart, the active-consent pointer is cleared,
+and navigation automatically returns to Consent with an explanation that the photo and selections remain
+saved. The tester completes a fresh consent under that device's current isolated identity and can continue;
+no other tester's consent or project is exposed or reused. User-requested revocation remains a separate path
+that deletes local biometric files, whereas this ownership recovery deliberately retains the current capture
+for re-consent. Clean new devices remain unaffected and follow the normal consent flow.
+
+The build is Android `1.4.4` (`versionCode 8`). `testDebugUnitTest`, `lintDebug`, `assembleDebug`,
+`assembleRelease`, R8 and resource shrinking passed. Reviewers who already have legacy local consent state
+must update to 1.4.4; this cannot be safely solved by making consent globally shared on the backend.

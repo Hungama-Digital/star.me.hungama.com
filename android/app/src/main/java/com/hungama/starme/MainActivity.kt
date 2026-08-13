@@ -118,6 +118,10 @@ private fun StarApp(container: AppContainer) {
                     popUpTo(nav.graph.id) { inclusive = true }
                     launchSingleTop = true
                 }
+                StarEvent.ConsentRequired -> nav.navigate(Step.CONSENT.route) {
+                    popUpTo(Step.CONSENT.route) { inclusive = true }
+                    launchSingleTop = true
+                }
                 StarEvent.RetakeRequested -> nav.navigate(Step.CAPTURE.route) {
                     popUpTo(Step.CAPTURE.route) { inclusive = true }
                 }

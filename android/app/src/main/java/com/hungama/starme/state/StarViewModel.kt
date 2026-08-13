@@ -166,6 +166,28 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
         return false
     }
 
+    private suspend fun recoverStaleConsent(reference: String, error: Throwable): Boolean {
+        if (error is ApiException && error.statusCode == 409) {
+            container.consent.invalidateLocalOwnership(reference)
+            container.session.clearConsent()
+            _state.update {
+                it.copy(
+                    consentRef = null,
+                    signed = false,
+                    consentSubmitFailed = false,
+                )
+            }
+            _events.send(StarEvent.ConsentRequired)
+            _events.send(
+                StarEvent.Toast(
+                    "Please confirm consent for this tester session. Your photo and selections are saved.",
+                ),
+            )
+            return true
+        }
+        return false
+    }
+
     // ---- Subscribe (Step 1) ----
     fun onSubscribe() {
         if (_state.value.subscribing || _state.value.subscribed) {
@@ -426,7 +448,7 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                     _events.send(StarEvent.OrderCreated)
                 }.onFailure { error ->
                     container.orders.discardPending(localId)
-                    if (!handleSessionExpiry(error)) {
+                    if (!handleSessionExpiry(error) && !recoverStaleConsent(ref, error)) {
                         _events.send(StarEvent.Error(UserFacingErrors.order(error)))
                     }
                 }
