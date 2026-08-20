@@ -1778,3 +1778,30 @@ Verification: Ruff, Ruff format, strict mypy (20 files) and 59 pytest tests pass
 ignored local/server `.env` files only. Phase 2 (wiring first-look/full-render jobs and episode
 assembly to this pipeline) remains open; subscriber selfies additionally need a private bucket or
 delete-after-registration discipline plus the unchanged Legal/consent gates.
+
+### 20 August 2026 - real render workflow wired (Phase 2)
+
+The synthetic first-look and full-render job stubs now have a real Seedance execution path selected
+by `STARME_RENDER_PROVIDER=seedance`. New `episode_assembly.py` rebuilds a complete personalized
+episode from the content-owner shot manifest: designated-role shots are cut from the master,
+face-swapped through the Phase 1 pipeline, conformed back to their exact source duration (cloning
+the final frame to absorb Seedance 2.5's ~0.3 s trim so the timeline never drifts), interleaved
+with untouched footage re-encoded at the master's native resolution, concatenated, and finished by
+remuxing the complete original episode audio. Episode-level structural gates (duration, dimensions,
+orientation, codec, audio) fail closed. The first look swaps only the first designated Episode 1
+shot and delivers its midpoint frame.
+
+Workflow wiring: `complete_first_look`/`complete_full_render` run the real path under the seedance
+provider and record honest FAILED job/order states with reasons on any error; orders must carry an
+`asset://` face reference or the job fails closed (the Android identity upload remains the missing
+link for tester faces). Shell metadata now carries `role_character` and `role_video_desc`
+(content-owner designation, never pixel inference). Inputs are expected at
+`{media_dir}/shells/{shell_id}/episode-{n}.mp4` plus `shot-manifest.json`. Outputs land in the
+shared renders volume under `orders/{order_id}/...`; the API mounts that volume read-only and
+`/v1/media` serves those keys through the existing signed-grant contract. Revocation's provider
+cancellation now also covers the seedance provider.
+
+Costing note: a full Lead Debut order renders every designated shot across three episodes
+(currently 26 shots), roughly $1.5-2 per shot at 720p on Seedance 2.5; enable the provider on
+staging deliberately. Verification: Ruff, Ruff format, strict mypy (21 files) and 69 pytest tests
+pass, including a real-FFmpeg assembly integration test with an identity-swap fake provider.

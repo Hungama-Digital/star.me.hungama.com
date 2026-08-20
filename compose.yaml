@@ -44,6 +44,9 @@ services:
     volumes:
       # Read-only passthrough media (real show assets). Populated out of band, not in Git.
       - ./media:/media:ro
+      # Personalized render outputs, written by the worker and served read-only
+      # through /v1/media grants for orders/ keys.
+      - starme_renders:/renders:ro
     depends_on:
       postgres:
         condition: service_healthy

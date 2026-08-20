@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6379/0"
     queue_backend: Literal["inline", "rq"] = "inline"
     storage_backend: Literal["disabled", "memory", "s3"] = "disabled"
-    render_provider: Literal["disabled", "stub", "cineiq"] = "disabled"
+    render_provider: Literal["disabled", "stub", "cineiq", "seedance"] = "disabled"
     signed_url_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     download_url_ttl_seconds: int = Field(default=1800, ge=60, le=3600)
     allow_sensitive_processing: bool = False

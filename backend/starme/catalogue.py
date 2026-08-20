@@ -10,5 +10,7 @@ SYNTHETIC_SHELLS = (
         concept="love_story",
         enabled_role="arjun",
         episode_count=3,
+        role_character="Arjun",
+        role_video_desc="the young adult man playing Arjun, the male lead",
     ),
 )

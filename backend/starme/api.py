@@ -424,6 +424,10 @@ def synthetic_media_contract(
     ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Delivery grant invalid")
     media_file = resolve_media_file(settings.media_dir, key)
+    if media_file is None and key.startswith("orders/"):
+        # Personalized render outputs live in the shared renders volume,
+        # mounted read-only in the API container.
+        media_file = resolve_media_file(settings.render_work_dir, key)
     if media_file is not None:
         disposition = "attachment" if purpose == "download" else "inline"
         return FileResponse(

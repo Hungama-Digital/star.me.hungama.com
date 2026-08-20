@@ -55,6 +55,11 @@ class SyntheticShell(BaseModel):
     enabled_role: str
     episode_count: int
     synthetic_fixture: bool = True
+    # Content-owner metadata for the real render pipeline: the manifest
+    # character name of the replaceable role and how to describe that person
+    # to the edit model. Never inferred from pixels.
+    role_character: str = ""
+    role_video_desc: str = ""
 
 
 class IssueAccessCodeRequest(BaseModel):
