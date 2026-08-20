@@ -12,6 +12,7 @@ dependencies = [
   "byteplus-python-sdk-v2>=3.0.24,<4",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
+  "minio>=7.2,<8",
   "psycopg[binary]>=3.2,<4",
   "pydantic-settings>=2.7,<3",
   "redis>=5.2,<6",

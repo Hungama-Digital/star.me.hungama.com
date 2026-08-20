@@ -7,6 +7,56 @@ class SubjectReplacementPrompt:
     variant: str
 
 
+# Appended to every face-swap prompt; without it the generated face tends to
+# come out oversized relative to the body. Proven in the 20 August 2026 runs.
+_PROPORTION_CLAUSE = (
+    "The rendered face must be scaled and proportioned correctly to match the "
+    "subject's natural human proportions exactly as they appear in the video - "
+    "head size, neck width, shoulder width, chest, arms, and hands must all be "
+    "consistent and realistic relative to each other and to the face; the face "
+    "must not be larger, smaller, or misaligned relative to the head and body."
+)
+
+# The liveliness fix from the winning 20 August dashboard run: without this the
+# model transplants the reference photo's neutral stillness onto the moving face.
+_EXPRESSION_CLAUSE = (
+    "Keep the subject's expression, smile and mouth movement exactly as they are "
+    "in @Video 1; do not copy the neutral expression from the reference image."
+)
+
+
+def face_swap_prompt(
+    *,
+    subject_video_desc: str,
+    image_desc: str = "",
+    extra_notes: str = "",
+) -> SubjectReplacementPrompt:
+    """The production face-swap prompt (variant face_swap_direct_v1).
+
+    This is the exact recipe that won the 20 August 2026 three-way proof on the
+    merged Episode 1 clip: one direct Seedance edit, subject bound explicitly,
+    proportion and expression clauses, everything else locked to the source.
+    `subject_video_desc` identifies the designated role in the source video and
+    must come from content-owner metadata, never from pixel inference.
+    """
+    if not subject_video_desc:
+        raise ValueError("subject_video_desc is required")
+    img_hint = f" ({image_desc})" if image_desc else ""
+    text = (
+        f"Strictly edit @Video 1. Define {subject_video_desc} in @Video 1 as "
+        f"<Subject 1>; replace <Subject 1>'s face with the face in @Image 1{img_hint}. "
+        f"Apply the reference face in every frame, precisely tracking the subject's "
+        f"head position, size, orientation and motion, and blend it naturally with "
+        f"the neck, skin tone and lighting of the scene. {_PROPORTION_CLAUSE} "
+        f"{_EXPRESSION_CLAUSE} Everything else must remain completely unchanged "
+        f"from @Video 1: all body movements and actions, clothing, scene layout, "
+        f"background, lighting effects, original audio, video duration, and camera "
+        f"movement. Do not modify any other person. Do not add, remove, or alter "
+        f"any other element." + (f" {extra_notes}" if extra_notes else "")
+    )
+    return SubjectReplacementPrompt(text=text, variant="face_swap_direct_v1")
+
+
 def subject_replacement_prompt(*, variant: str = "identity_lock") -> SubjectReplacementPrompt:
     """Prompt for replacing only the designated lead in Video 1.
 

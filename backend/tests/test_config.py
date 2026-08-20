@@ -29,5 +29,8 @@ def test_byteplus_configuration_has_safe_non_secret_defaults() -> None:
     assert settings.byteplus_api_key is None
     assert settings.byteplus_access_key is None
     assert settings.byteplus_secret_key is None
-    assert settings.byteplus_model == "dreamina-seedance-2-0-260128"
+    assert settings.byteplus_model == "dreamina-seedance-2-5-260628"
+    assert settings.byteplus_asset_group_id is None
+    assert settings.linode_access_key is None
+    assert settings.linode_secret is None
     assert settings.byteplus_project_name == "default"

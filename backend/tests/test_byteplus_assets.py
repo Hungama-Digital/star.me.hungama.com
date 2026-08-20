@@ -106,3 +106,47 @@ def test_provider_error_code_is_surfaced_without_full_response() -> None:
         assets.create_liveness_session("https://callback.example")
 
     assert "internal detail" not in str(caught.value)
+
+
+def test_create_asset_group_returns_aigc_group_id() -> None:
+    api = FakeUniversalApi([{"Id": "group-20260819183514-swcdv"}])
+    group_id = client(api).create_asset_group("starme-renders")
+    assert group_id == "group-20260819183514-swcdv"
+    action, body = api.calls[0]
+    assert action == "CreateAssetGroup"
+    assert body == {"Name": "starme-renders", "ProjectName": "default"}
+
+
+def test_ensure_active_asset_registers_and_waits() -> None:
+    api = FakeUniversalApi(
+        [
+            {"Id": "asset-9"},
+            {"Id": "asset-9", "GroupId": "group-1", "Status": "Processing"},
+            {"Id": "asset-9", "GroupId": "group-1", "Status": "Active", "AssetType": "Video"},
+        ]
+    )
+    asset = client(api).ensure_active_asset(
+        group_id="group-1",
+        source_url="https://media.example/shot.mp4",
+        asset_type="Video",
+        name="proof-source",
+        sleep=lambda _: None,
+    )
+    assert asset.uri == "asset://asset-9"
+    assert api.calls[0][0] == "CreateAsset"
+    assert api.calls[0][1]["AssetType"] == "Video"
+
+
+def test_rejected_asset_fails_closed() -> None:
+    api = FakeUniversalApi(
+        [
+            {"Id": "asset-9"},
+            {"Id": "asset-9", "GroupId": "group-1", "Status": "Rejected"},
+        ]
+    )
+    with pytest.raises(BytePlusAssetError, match="rejected"):
+        client(api).ensure_active_asset(
+            group_id="group-1",
+            source_url="https://media.example/face.png",
+            sleep=lambda _: None,
+        )

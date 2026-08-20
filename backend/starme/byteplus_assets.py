@@ -101,6 +101,41 @@ class BytePlusAssetClient:
         items = result.get("Items") or []
         return [item for item in items if isinstance(item, dict)]
 
+    def create_asset_group(self, name: str) -> str:
+        """Create an AIGC asset group (the only type CreateAssetGroup supports).
+
+        Verified 19 August 2026: unlike the liveness flow, this group type is
+        created directly and its assets accept real faces registered from a
+        fetchable HTTPS URL.
+        """
+        result = self._call("CreateAssetGroup", {"Name": name, "ProjectName": self.project_name})
+        group_id = str(result.get("Id") or "")
+        if not group_id:
+            raise BytePlusAssetError("CreateAssetGroup response omitted group ID")
+        return group_id
+
+    def ensure_active_asset(
+        self,
+        *,
+        group_id: str,
+        source_url: str,
+        asset_type: str = "Image",
+        name: str | None = None,
+        timeout_seconds: float = 300,
+        poll_interval_seconds: float = 5,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> PortraitAsset:
+        """Register a hosted file as an asset and wait until it is Active."""
+        asset_id = self.create_asset(
+            group_id=group_id, source_url=source_url, asset_type=asset_type, name=name
+        )
+        return self.wait_for_asset(
+            asset_id,
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+            sleep=sleep,
+        )
+
     def create_asset(
         self,
         *,
@@ -146,8 +181,8 @@ class BytePlusAssetClient:
             asset = self.get_asset(asset_id)
             if asset.status == "Active":
                 return asset
-            if asset.status == "Failed":
-                raise BytePlusAssetError(f"Asset {asset_id} preprocessing failed")
+            if asset.status in {"Failed", "Rejected"}:
+                raise BytePlusAssetError(f"Asset {asset_id} preprocessing {asset.status.lower()}")
             if time.monotonic() >= deadline:
                 raise BytePlusAssetTimeout(f"Asset {asset_id} did not become Active")
             sleep(poll_interval_seconds)

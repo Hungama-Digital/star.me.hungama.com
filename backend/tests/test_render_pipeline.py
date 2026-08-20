@@ -46,6 +46,7 @@ def spec(tmp_path: Path) -> SeedanceRenderSpec:
         source_video_path=str(tmp_path / "shot.mp4"),
         original_audio_path=str(tmp_path / "audio.m4a"),
         reference_asset_uris=("asset://authorized-front",),
+        subject_video_desc="the young man in the dark blue denim shirt (Arjun)",
     )
 
 
@@ -104,3 +105,110 @@ def test_rq_queue_uses_dedicated_queue(tmp_path: Path, monkeypatch: pytest.Monke
 
     assert job_id == "rq-1"
     assert captured["name"] == "starme-seedance"
+
+
+def test_v25_model_forces_adaptive_and_negative_duration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    class Client25(FakeClient):
+        def submit(self, request):  # type: ignore[no-untyped-def]
+            captured["duration"] = request.duration
+            captured["ratio"] = request.ratio
+            captured["prompt"] = request.prompt
+            return SeedanceTask(id="provider-1", status="queued")
+
+    media_probe = MediaProbe(5, 1080, 1920, "h264", True)
+    quality = QualityReport(True, {"duration_preserved": True}, media_probe, media_probe)
+    monkeypatch.setattr("starme.render_pipeline._client", lambda settings: Client25())
+    monkeypatch.setattr(
+        "starme.render_pipeline.remux_original_audio",
+        lambda generated, audio, final: final.write_bytes(b"final") or final,
+    )
+    monkeypatch.setattr("starme.render_pipeline.structural_quality_report", lambda *_: quality)
+    settings = Settings(render_work_dir=str(tmp_path / "renders"), byteplus_api_key="test")
+    assert "seedance-2-5" in settings.byteplus_model
+
+    execute_seedance_render(asdict(spec(tmp_path)), settings)
+
+    assert captured["duration"] == -1
+    assert captured["ratio"] == "adaptive"
+    prompt = str(captured["prompt"])
+    assert prompt.startswith("Strictly edit @Video 1.")
+    assert "do not copy the neutral expression" in prompt
+
+
+def test_stage_inputs_hosts_registers_and_cleans_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from starme.byteplus_assets import PortraitAsset
+    from starme.render_pipeline import stage_inputs
+
+    (tmp_path / "shot.mp4").write_bytes(b"video-bytes")
+
+    class FakeStorage:
+        def __init__(self) -> None:
+            self.deleted: list[str] = []
+
+        def object_key(self, name):  # type: ignore[no-untyped-def]
+            return f"starme/renders/random/{name}"
+
+        def put(self, key, content, content_type):  # type: ignore[no-untyped-def]
+            assert content == b"video-bytes"
+            assert content_type == "video/mp4"
+
+        def public_url(self, key):  # type: ignore[no-untyped-def]
+            return f"https://images.hungama.com/{key}"
+
+        def delete(self, key):  # type: ignore[no-untyped-def]
+            self.deleted.append(key)
+
+    class FakeAssets:
+        def __init__(self) -> None:
+            self.registered: list[tuple[str, str]] = []
+
+        def ensure_active_asset(self, *, group_id, source_url, asset_type, name):  # type: ignore[no-untyped-def]
+            assert group_id == "group-test"
+            self.registered.append((source_url, asset_type))
+            return PortraitAsset(
+                id=f"reg-{len(self.registered)}",
+                group_id=group_id,
+                status="Active",
+                asset_type=asset_type,
+            )
+
+    storage = FakeStorage()
+    assets = FakeAssets()
+    monkeypatch.setattr(
+        "starme.render_pipeline.LinodeObjectStorage",
+        SimpleNamespace(from_settings=lambda settings: storage),
+    )
+    monkeypatch.setattr("starme.render_pipeline._asset_client", lambda settings: assets)
+    settings = Settings(byteplus_api_key="test", byteplus_asset_group_id="group-test")
+    base = SeedanceRenderSpec(
+        reference="proof-002",
+        source_video_url="",
+        source_video_path=str(tmp_path / "shot.mp4"),
+        original_audio_path=str(tmp_path / "audio.m4a"),
+        reference_asset_uris=("https://cdn.example/face.png", "asset://already-active"),
+        subject_video_desc="the designated lead",
+    )
+
+    staged = stage_inputs(base, settings)
+
+    assert staged.source_video_url == "asset://reg-1"
+    assert staged.reference_asset_uris == ("asset://reg-2", "asset://already-active")
+    hosted_url = "https://images.hungama.com/starme/renders/random/shot.mp4"
+    assert assets.registered[0] == (hosted_url, "Video")
+    assert assets.registered[1] == ("https://cdn.example/face.png", "Image")
+    assert storage.deleted == ["starme/renders/random/shot.mp4"]
+
+
+def test_stage_inputs_is_a_noop_without_an_asset_group(tmp_path: Path) -> None:
+    from starme.render_pipeline import stage_inputs
+
+    settings = Settings(byteplus_api_key="test")
+    base = spec(tmp_path)
+
+    assert stage_inputs(base, settings) is base

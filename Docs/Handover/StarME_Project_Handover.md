@@ -1748,3 +1748,33 @@ for re-consent. Clean new devices remain unaffected and follow the normal consen
 The build is Android `1.4.4` (`versionCode 8`). `testDebugUnitTest`, `lintDebug`, `assembleDebug`,
 `assembleRelease`, R8 and resource shrinking passed. Reviewers who already have legacy local consent state
 must update to 1.4.4; this cannot be safely solved by making consent globally shared on the backend.
+
+### 20 August 2026 - proven Seedance 2.5 face-swap recipe integrated (Phase 1)
+
+Akash's Face Swap Studio package (shared outside Git) and three controlled paid proofs on the
+merged Episode 1 clip (shots 01+02, 8.02 s) established the production recipe: a single direct
+Seedance edit on `dreamina-seedance-2-5-260628` with an explicit subject binding, a body-proportion
+clause and an expression-preservation clause. The 2.5 direct run won product review over the 2.0
+direct baseline (weak liveliness) and the 2x-cost masked pipeline. The asset path that clears
+BytePlus real-face input moderation was also proven end to end without TOS or liveness: host the
+input at a fetchable HTTPS URL (Linode object storage, CDN `images.hungama.com`), register it into
+an AIGC asset group via `CreateAsset`, poll flat `GetAsset` to `Active`, and reference it as
+`asset://` in the generation request. AIGC group `group-20260819183514-swcdv` was created with
+`CreateAssetGroup` (the only supported type; `ListAssetGroups` requires a `Filter` parameter).
+
+Backend changes: `config.py` adds `STARME_BYTEPLUS_ASSET_GROUP_ID` and `STARME_LINODE_*` settings
+and switches the default model to Seedance 2.5; new `linode_storage.py` implements the
+`ObjectStorage` protocol via MinIO (transient hosting, random key component, delete after
+registration because the bucket is public); `byteplus_assets.py` gains `create_asset_group`,
+`ensure_active_asset` and Rejected-state handling; `prompts.py` gains the `face_swap_direct_v1`
+variant with the proportion and expression clauses baked in (subject description must come from
+content-owner metadata); `render_pipeline.py` gains `stage_inputs` (host -> register -> `asset://`,
+no-op when no asset group is configured) and enforces `ratio=adaptive`/`duration=-1` for 2.5 edit
+tasks. Known 2.5 deviations recorded from the proofs: ~0.3 s duration trim (within the existing
+0.75 s structural gate) and regenerated audio (the pipeline already remuxes the original track);
+Seedance 2.0 remains one setting away as the duration-exact fallback.
+
+Verification: Ruff, Ruff format, strict mypy (20 files) and 59 pytest tests pass. Secrets stay in
+ignored local/server `.env` files only. Phase 2 (wiring first-look/full-render jobs and episode
+assembly to this pipeline) remains open; subscriber selfies additionally need a private bucket or
+delete-after-registration discipline plus the unchanged Legal/consent gates.

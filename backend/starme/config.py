@@ -37,13 +37,27 @@ class Settings(BaseSettings):
     # Seedance generation uses the ModelArk API key. The private real-human asset
     # library is a separate API surface authenticated with an Access Key pair.
     byteplus_api_key: SecretStr | None = None
-    byteplus_model: str = "dreamina-seedance-2-0-260128"
+    # Seedance 2.5 won the 20 August three-way proof (liveliness); its edit tasks
+    # require ratio=adaptive and duration=-1, enforced in render_pipeline.
+    byteplus_model: str = "dreamina-seedance-2-5-260628"
     byteplus_api_base_url: str = "https://ark.ap-southeast.bytepluses.com/api/v3"
     byteplus_project_name: str = "default"
     byteplus_region: str = "ap-southeast-1"
     byteplus_liveness_callback_url: str = "https://starme.hungama.com/v1/byteplus/liveness/callback"
     byteplus_access_key: SecretStr | None = None
     byteplus_secret_key: SecretStr | None = None
+    # AIGC asset group (CreateAssetGroup). When set, render inputs are registered
+    # as private asset:// references, which is what clears real-face moderation.
+    byteplus_asset_group_id: str | None = None
+    # Linode object storage hosts render inputs at HTTPS URLs BytePlus can fetch
+    # during CreateAsset. The bucket is public; keys are unguessable and inputs
+    # should be deleted after registration.
+    linode_endpoint_url: str | None = None
+    linode_bucket: str | None = None
+    linode_cdn_base_url: str | None = None
+    linode_prefix: str = "starme/renders"
+    linode_access_key: SecretStr | None = None
+    linode_secret: SecretStr | None = None
     byteplus_poll_interval_seconds: float = Field(default=5, ge=1, le=60)
     byteplus_task_timeout_seconds: int = Field(default=900, ge=60, le=3600)
     render_work_dir: str = "tmp/renders"
