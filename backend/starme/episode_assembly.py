@@ -91,19 +91,57 @@ def shots_for_episode(shots: list[Shot], episode: int, role_character: str) -> l
     return selected
 
 
-def plan_segments(total_duration: float, shots: list[Shot]) -> list[Segment]:
-    """Alternate keep/swap segments covering the full episode exactly once."""
-    segments: list[Segment] = []
-    cursor = 0.0
+# Seedance 2.5 edit tasks reject reference videos outside this range
+# (verified against the live API on 21 August 2026).
+MIN_PROVIDER_SECONDS = 4.0
+MAX_PROVIDER_SECONDS = 30.0
+
+
+def widen_swap_windows(
+    total_duration: float, shots: list[Shot], min_seconds: float = MIN_PROVIDER_SECONDS
+) -> list[Segment]:
+    """Grow designated shots below the provider minimum into adjacent footage.
+
+    The extra seconds are still untouched source frames and the swap prompt
+    locks everything except the designated face, so widening a window is safe.
+    Windows that grow into each other are merged.
+    """
+    windows: list[Segment] = []
     for shot in shots:
-        if shot.start < cursor:
-            raise EpisodeAssemblyError(f"Shot {shot.clip} starts before the running cursor")
         if shot.end > total_duration + 0.05:
             raise EpisodeAssemblyError(f"Shot {shot.clip} extends past the episode master")
-        if shot.start > cursor:
-            segments.append(Segment("keep", cursor, shot.start))
-        segments.append(Segment("swap", shot.start, min(shot.end, total_duration), shot.clip))
-        cursor = shot.end
+        start, end = shot.start, min(shot.end, total_duration)
+        if end - start < min_seconds:
+            end = min(start + min_seconds, total_duration)
+            start = max(0.0, end - min_seconds)
+        if windows and start < windows[-1].end:
+            merged = windows[-1]
+            windows[-1] = Segment(
+                "swap", merged.start, max(merged.end, end), f"{merged.clip}+{shot.clip}"
+            )
+        else:
+            windows.append(Segment("swap", start, end, shot.clip))
+    for window in windows:
+        if window.duration > MAX_PROVIDER_SECONDS:
+            raise EpisodeAssemblyError(
+                f"Swap window {window.clip} is {window.duration:.1f}s; the provider "
+                f"accepts at most {MAX_PROVIDER_SECONDS:.0f}s - split the manifest shots"
+            )
+    return windows
+
+
+def plan_segments(total_duration: float, shots: list[Shot]) -> list[Segment]:
+    """Alternate keep/swap segments covering the full episode exactly once."""
+    for earlier, later in zip(shots, shots[1:], strict=False):
+        if later.start < earlier.end:
+            raise EpisodeAssemblyError(f"Shot {later.clip} starts before the running cursor")
+    segments: list[Segment] = []
+    cursor = 0.0
+    for window in widen_swap_windows(total_duration, shots):
+        if window.start > cursor:
+            segments.append(Segment("keep", cursor, window.start))
+        segments.append(Segment("swap", max(window.start, cursor), window.end, window.clip))
+        cursor = window.end
     if cursor < total_duration:
         segments.append(Segment("keep", cursor, total_duration))
     return segments
@@ -406,7 +444,8 @@ def render_first_look(
     render: RenderFn = execute_seedance_render,
 ) -> Path:
     """Swap the first designated shot and deliver its midpoint frame as the first look."""
-    segment = Segment("swap", shot.start, shot.end, shot.clip)
+    total_duration = probe_media(master).duration_seconds
+    segment = widen_swap_windows(total_duration, [shot])[0]
     swapped = _swap_segment(
         master=master,
         segment=segment,

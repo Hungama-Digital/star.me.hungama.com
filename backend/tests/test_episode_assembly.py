@@ -169,3 +169,34 @@ def test_render_first_look_produces_a_frame(tmp_path: Path) -> None:
     )
     assert frame.is_file()
     assert frame.stat().st_size > 1000
+
+
+def test_short_shots_widen_to_the_provider_minimum() -> None:
+    from starme.episode_assembly import widen_swap_windows
+
+    # The real Episode 1 opener: a 2s shot must become a 4s window.
+    windows = widen_swap_windows(74.0, [shot(1, "ep01_arjun_01", 7, 2)])
+    assert [(w.start, w.end) for w in windows] == [(7.0, 11.0)]
+    # At the episode tail the window extends backwards instead.
+    tail = widen_swap_windows(10.0, [shot(1, "tail", 8, 2)])
+    assert [(w.start, w.end) for w in tail] == [(6.0, 10.0)]
+    # Windows that grow into each other merge into one provider call:
+    # a widens to [2,6), b widens to [5,9), so the merged window is [2,9).
+    merged = widen_swap_windows(20.0, [shot(1, "a", 2, 2), shot(1, "b", 5, 2)])
+    assert [(w.start, w.end, w.clip) for w in merged] == [(2.0, 9.0, "a+b")]
+
+
+def test_plan_segments_uses_widened_windows() -> None:
+    segments = plan_segments(20.0, [shot(1, "short", 2, 2)])
+    assert [(s.kind, s.start, s.end) for s in segments] == [
+        ("keep", 0.0, 2.0),
+        ("swap", 2.0, 6.0),
+        ("keep", 6.0, 20.0),
+    ]
+
+
+def test_oversized_window_fails_closed() -> None:
+    from starme.episode_assembly import EpisodeAssemblyError, widen_swap_windows
+
+    with pytest.raises(EpisodeAssemblyError, match="at most 30"):
+        widen_swap_windows(60.0, [shot(1, "long", 2, 31)])
