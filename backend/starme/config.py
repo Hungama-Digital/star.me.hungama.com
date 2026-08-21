@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     byteplus_poll_interval_seconds: float = Field(default=5, ge=1, le=60)
     byteplus_task_timeout_seconds: int = Field(default=900, ge=60, le=3600)
     render_work_dir: str = "tmp/renders"
+    # Operator-registered face assets for named internal testers, keyed by
+    # tester_reference (JSON object in the environment). Bridges orders created
+    # with synthetic face ids until the Android identity upload exists.
+    tester_face_assets: dict[str, str] = {}
     # Optional local media root. When set, /v1/media serves real shell files from here
     # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
     # This is NOT the real render pipeline and does not enable sensitive processing.

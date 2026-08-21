@@ -58,6 +58,14 @@ def _parser() -> argparse.ArgumentParser:
     asset.add_argument("--url", required=True)
     asset.add_argument("--name")
 
+    register = commands.add_parser(
+        "register-face",
+        help="Operator route: host a named tester's portrait transiently and "
+        "register it as a private asset:// reference",
+    )
+    register.add_argument("--file", type=Path, required=True, help="Local portrait image")
+    register.add_argument("--name", required=True, help="Tester reference, e.g. Amol-RMX3782")
+
     status = commands.add_parser("asset-status", help="Retrieve portrait asset status")
     status.add_argument("asset_id")
     return parser
@@ -123,6 +131,40 @@ def main() -> None:
         )
         active = asset_client.wait_for_asset(asset_id)
         print(json.dumps({"asset_id": active.id, "asset_uri": active.uri}, indent=2))
+        return
+    if args.command == "register-face":
+        settings = get_settings()
+        if not settings.byteplus_asset_group_id:
+            raise SystemExit("STARME_BYTEPLUS_ASSET_GROUP_ID is required in .env")
+        from starme.linode_storage import LinodeObjectStorage
+
+        storage = LinodeObjectStorage.from_settings(settings)
+        if storage is None:
+            raise SystemExit("STARME_LINODE_* hosting settings are required in .env")
+        suffix = args.file.suffix.lower()
+        content_type = "image/png" if suffix == ".png" else "image/jpeg"
+        key = storage.object_key(f"{args.name}{suffix}")
+        storage.put(key, args.file.read_bytes(), content_type)
+        try:
+            active = _asset_client().ensure_active_asset(
+                group_id=settings.byteplus_asset_group_id,
+                source_url=storage.public_url(key),
+                asset_type="Image",
+                name=args.name,
+            )
+        finally:
+            storage.delete(key)
+        print(
+            json.dumps(
+                {
+                    "tester_reference": args.name,
+                    "asset_uri": active.uri,
+                    "next_step": "Add to STARME_TESTER_FACE_ASSETS in the server .env, e.g. "
+                    f'{{"{args.name}": "{active.uri}"}}',
+                },
+                indent=2,
+            )
+        )
         return
     if args.command == "asset-status":
         asset = _asset_client().get_asset(args.asset_id)

@@ -57,16 +57,25 @@ def episode_key(order: Order, number: int) -> str:
 
 def _seedance_order_inputs(
     order: Order, settings: Settings
-) -> tuple[SyntheticShell, Path, list[Shot]]:
+) -> tuple[SyntheticShell, Path, list[Shot], str]:
     """Fail-closed preconditions for the real render provider.
 
-    The face reference must already be a registered private asset:// URI (the
-    only route BytePlus accepts for real faces) and the shell must carry its
+    The face reference must be a registered private asset:// URI (the only
+    route BytePlus accepts for real faces) - either on the order itself or via
+    the operator-maintained tester mapping - and the shell must carry its
     content-owner role metadata plus on-disk masters and shot manifest.
     """
-    if not order.face_asset_id.startswith("asset://"):
+    if not settings.allow_sensitive_processing:
         raise RuntimeError(
-            "Order has no registered asset:// face reference; real rendering is blocked"
+            "STARME_ALLOW_SENSITIVE_PROCESSING must be enabled before real face rendering"
+        )
+    face_uri = order.face_asset_id
+    if not face_uri.startswith("asset://"):
+        face_uri = settings.tester_face_assets.get(order.tester_reference, "")
+    if not face_uri.startswith("asset://"):
+        raise RuntimeError(
+            "No registered asset:// face reference for this order or tester; "
+            "real rendering is blocked"
         )
     if not settings.media_dir:
         raise RuntimeError("STARME_MEDIA_DIR is required for the seedance render provider")
@@ -77,7 +86,7 @@ def _seedance_order_inputs(
     manifest_path = media_root / "shells" / shell.id / "shot-manifest.json"
     if not manifest_path.is_file():
         raise RuntimeError(f"Shot manifest is missing: shells/{shell.id}/shot-manifest.json")
-    return shell, media_root, load_shot_manifest(manifest_path)
+    return shell, media_root, load_shot_manifest(manifest_path), face_uri
 
 
 def _fail_job(session: Session, job: RenderJob, order: Order, reason: str) -> None:
@@ -110,7 +119,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
     session.flush()
     if settings.render_provider == "seedance":
         try:
-            shell, media_root, manifest = _seedance_order_inputs(order, settings)
+            shell, media_root, manifest, face_uri = _seedance_order_inputs(order, settings)
             shots = shots_for_episode(manifest, 1, shell.role_character)
             if not shots:
                 raise RuntimeError("The manifest has no designated shots in episode 1")
@@ -121,7 +130,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
                 shot=shots[0],
                 work_dir=work_root / "orders" / order.id / "work",
                 destination=work_root / object_key,
-                face_asset_uri=order.face_asset_id,
+                face_asset_uri=face_uri,
                 subject_video_desc=shell.role_video_desc,
                 reference=f"{order.id}-first-look",
                 settings=settings,
@@ -153,7 +162,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
     session.flush()
     if settings.render_provider == "seedance":
         try:
-            shell, media_root, manifest = _seedance_order_inputs(order, settings)
+            shell, media_root, manifest, face_uri = _seedance_order_inputs(order, settings)
             work_root = Path(settings.render_work_dir)
             for number in range(1, shell.episode_count + 1):
                 shots = shots_for_episode(manifest, number, shell.role_character)
@@ -164,7 +173,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
                     shots=shots,
                     work_dir=work_root / "orders" / order.id / "work" / f"ep{number}",
                     destination=destination,
-                    face_asset_uri=order.face_asset_id,
+                    face_asset_uri=face_uri,
                     subject_video_desc=shell.role_video_desc,
                     reference_prefix=f"{order.id}-ep{number}",
                     settings=settings,

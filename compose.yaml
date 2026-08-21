@@ -35,7 +35,7 @@ services:
       STARME_DATABASE_URL: postgresql+psycopg://starme:${STARME_POSTGRES_PASSWORD:-starme_local_only}@postgres:5432/starme
       STARME_REDIS_URL: redis://redis:6379/0
       STARME_QUEUE_BACKEND: rq
-      STARME_RENDER_PROVIDER: stub
+      STARME_RENDER_PROVIDER: ${STARME_RENDER_PROVIDER:-stub}
       STARME_STORAGE_BACKEND: memory
       STARME_RENDER_WORK_DIR: /renders
     command: ["sh", "-c", "alembic upgrade head && uvicorn starme.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
@@ -60,7 +60,7 @@ services:
       STARME_DATABASE_URL: postgresql+psycopg://starme:${STARME_POSTGRES_PASSWORD:-starme_local_only}@postgres:5432/starme
       STARME_REDIS_URL: redis://redis:6379/0
       STARME_QUEUE_BACKEND: rq
-      STARME_RENDER_PROVIDER: stub
+      STARME_RENDER_PROVIDER: ${STARME_RENDER_PROVIDER:-stub}
       STARME_STORAGE_BACKEND: memory
       STARME_RENDER_WORK_DIR: /renders
     command: ["rq", "worker", "starme-first-look", "starme-full-render", "starme-seedance", "--url", "redis://redis:6379/0"]
