@@ -78,7 +78,7 @@ def _make_master(path: Path, seconds: int) -> None:
             "-f",
             "lavfi",
             "-i",
-            f"testsrc=size=720x1280:rate=24:duration={seconds}",
+            f"testsrc=size=1080x1920:rate=24:duration={seconds}",
             "-f",
             "lavfi",
             "-i",
@@ -134,7 +134,8 @@ def test_assemble_episode_rebuilds_full_length_with_audio(tmp_path: Path) -> Non
     }
     probe = probe_media(final)
     assert abs(probe.duration_seconds - 8.0) <= 0.75
-    assert (probe.width, probe.height) == (720, 1280)
+    # Masters are 1080x1920; provider inputs are 720p and get upscaled back.
+    assert (probe.width, probe.height) == (1080, 1920)
     assert probe.has_audio
 
 

@@ -95,6 +95,9 @@ def shots_for_episode(shots: list[Shot], episode: int, role_character: str) -> l
 # (verified against the live API on 21 August 2026).
 MIN_PROVIDER_SECONDS = 4.0
 MAX_PROVIDER_SECONDS = 30.0
+# The proven Seedance render tier; provider inputs are cut to this size so the
+# render pipeline's structural gate compares source and output like for like.
+PROVIDER_WIDTH, PROVIDER_HEIGHT = 720, 1280
 
 
 def widen_swap_windows(
@@ -303,14 +306,19 @@ def _swap_segment(
     width: int = 720,
     height: int = 1280,
 ) -> Path:
-    """Cut one designated shot, face-swap it, and conform it back to exact length."""
+    """Cut one designated shot, face-swap it, and conform it back to exact length.
+
+    The provider input is cut at its native 720p tier so the render pipeline's
+    internal structural gate compares like with like; the swapped result is
+    upscaled to the assembly format (the master's resolution) afterwards.
+    """
     shot_video = _cut_segment(
         master,
         segment.start,
         segment.duration,
         work_dir / f"{reference}-src.mp4",
-        width=width,
-        height=height,
+        width=PROVIDER_WIDTH,
+        height=PROVIDER_HEIGHT,
     )
     shot_audio = _extract_full_audio_range(master, segment, work_dir / f"{reference}-src.m4a")
     spec = SeedanceRenderSpec(
