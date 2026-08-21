@@ -306,12 +306,40 @@ def _swap_batch(
         subject_video_desc=subject_video_desc,
         extra_notes=extra_notes,
     )
-    result = render(asdict(spec), settings)
+    try:
+        result = _render_with_retry(render, asdict(spec), settings)
+    except Exception:
+        if len(batch) > 1:
+            # Isolate the offending shot: render each one alone. Shots below
+            # the provider minimum cannot stand alone and fall back unswapped.
+            pieces: dict[str, Path] = {}
+            for shot in batch:
+                if shot.duration >= MIN_PROVIDER_SECONDS:
+                    pieces.update(
+                        _swap_batch(
+                            master=master,
+                            batch=[shot],
+                            work_dir=work_dir,
+                            reference=f"{reference}-{shot.clip}",
+                            face_asset_uri=face_asset_uri,
+                            subject_video_desc=subject_video_desc,
+                            extra_notes=extra_notes,
+                            settings=settings,
+                            render=render,
+                            piece_width=piece_width,
+                            piece_height=piece_height,
+                        )
+                    )
+            return pieces
+        # A single shot the provider keeps refusing: fall back to the
+        # original footage rather than failing the whole episode. The
+        # assembler records the compromise for QA.
+        return {}
     generated = Path(str(result["generated_video_path"]))
-    pieces: dict[str, Path] = {}
+    swapped: dict[str, Path] = {}
     offset = 0.0
     for index, shot in enumerate(batch):
-        pieces[shot.clip] = _cut_piece_exact(
+        swapped[shot.clip] = _cut_piece_exact(
             generated,
             offset,
             shot.duration,
@@ -320,7 +348,20 @@ def _swap_batch(
             height=piece_height,
         )
         offset += shot.duration
-    return pieces
+    return swapped
+
+
+def _render_with_retry(
+    render: RenderFn, spec_data: dict[str, Any], settings: Settings, attempts: int = 2
+) -> dict[str, Any]:
+    """Provider output moderation is stochastic; one retry often clears it."""
+    last: Exception | None = None
+    for _ in range(attempts):
+        try:
+            return render(spec_data, settings)
+        except Exception as exc:  # noqa: BLE001 - retried, then surfaced to the caller
+            last = exc
+    raise last if last else RuntimeError("render failed")
 
 
 def assemble_episode(
@@ -369,20 +410,25 @@ def assemble_episode(
         )
 
     timeline: list[Path] = []
+    unswapped: list[str] = []
     for index, segment in enumerate(segments):
-        if segment.kind == "keep":
-            timeline.append(
-                _cut_video(
-                    master,
-                    segment.start,
-                    segment.duration,
-                    work_dir / f"{reference_prefix}-keep{index:02d}.mp4",
-                    width=width,
-                    height=height,
-                )
-            )
-        else:
+        if segment.kind == "swap" and segment.clip in pieces:
             timeline.append(pieces[segment.clip])
+            continue
+        if segment.kind == "swap":
+            # Provider refused this shot even alone; keep the original
+            # footage rather than failing the whole episode.
+            unswapped.append(segment.clip)
+        timeline.append(
+            _cut_video(
+                master,
+                segment.start,
+                segment.duration,
+                work_dir / f"{reference_prefix}-seg{index:02d}.mp4",
+                width=width,
+                height=height,
+            )
+        )
 
     silent = _concat_encode(
         timeline,
@@ -400,6 +446,7 @@ def assemble_episode(
         "segments": len(segments),
         "swapped_segments": sum(1 for segment in segments if segment.kind == "swap"),
         "provider_batches": len(batch_shots(shots)),
+        "unswapped_clips": unswapped,
         "quality_checks": report.checks,
     }
 
