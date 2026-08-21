@@ -1830,3 +1830,29 @@ reference yet. The next slice is the identity-upload link - either the operator 
 register each named tester's portrait, as was done for Amol's proofs) or the Android capture
 upload - after which the provider switch can be flipped deliberately with cost awareness
 (roughly 26 shots, $40-50 per full Lead Debut order at 720p).
+
+### 21 August 2026 - first complete personalized episode delivered through the product
+
+The full product loop closed today on staging with Amol as the named tester. The operator route
+was activated: sensitive processing enabled, render provider set to seedance, and
+`STARME_TESTER_FACE_ASSETS` maps `Amol-RMX3782` to his registered Active asset. Two live-API
+defects were found by real orders and fixed with regression tests: designated shots under the
+provider's 4-second minimum are now widened into adjacent untouched footage (merged when windows
+collide, capped at the 30-second ceiling), and provider inputs are cut at the 720p render tier so
+the per-shot structural gate compares like with like before assembly upscales to master resolution.
+`STARME_RENDER_EPISODE_LIMIT` was added for staged cost control (staging currently 1) after Amol
+approved a full render mid-test and chose to restrict spend; the in-flight job was stopped and
+requeued under the limit.
+
+An Android defect was also found and fixed on-device: the client overrode its identity mode with
+the server's `identity_capture` capability and stranded testers at "Identity activation required";
+real-identity mode now requires both the build flag and the server capability. The rebuilt APK
+required uninstall/reinstall (new Mac's debug signature), which Amol authorized.
+
+Result: order `e0728798` from the phone produced a real first look (~$1.7) and, after approval, a
+complete personalized Episode 1 - 74.416667 s, exactly the master's duration, 1080x1920/24 fps,
+original audio, all seven Arjun shots carrying the tester's face - served READY to the device
+(~$12-14 for 7 shots, plus ~$4 lost to the two interrupted/failed attempts). Known cosmetic issue:
+order status only commits at job completion, so the app shows a stale state during long renders -
+add mid-job commits in a follow-up. Remaining external gates (final Legal wording, real billing,
+liveness/age service, device-matrix acceptance) are unchanged.

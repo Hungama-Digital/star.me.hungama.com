@@ -676,7 +676,11 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
         runCatching { container.api.capabilities() }.onSuccess { capabilities ->
             _state.update {
                 it.copy(
-                    identityProviderEnabled = capabilities.identityCapture,
+                    // Real-identity mode needs BOTH this build's upload capability and the
+                    // server flag. The server enabling sensitive processing (operator-mapped
+                    // faces) must not strand builds that cannot upload an identity asset.
+                    identityProviderEnabled =
+                        BuildConfig.STARME_REAL_IDENTITY_ENABLED && capabilities.identityCapture,
                     consentVersion = capabilities.consentVersion,
                     legalTextStatus = capabilities.legalTextStatus,
                 )
