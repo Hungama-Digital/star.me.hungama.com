@@ -3,22 +3,30 @@ import pytest
 from starme.prompts import face_swap_prompt, subject_replacement_prompt
 
 
-def test_face_swap_prompt_carries_the_proven_recipe() -> None:
+def test_face_swap_prompt_is_verbatim_run_a() -> None:
+    notes = (
+        "Keep his expression, smile and mouth movement exactly as they are in "
+        "the source video; do not copy the neutral expression from the "
+        "reference image. Do not modify the woman in the foreground in any way."
+    )
     prompt = face_swap_prompt(
         subject_video_desc="the young man in the dark blue denim shirt (Arjun)",
         image_desc="the man facing the camera",
-        extra_notes="Do not modify the woman in the foreground.",
+        extra_notes=notes,
     )
-    assert prompt.variant == "face_swap_direct_v1"
+    assert prompt.variant == "face_swap_direct_v2"
     text = prompt.text
-    assert text.startswith("Strictly edit @Video 1.")
-    assert "the young man in the dark blue denim shirt (Arjun)" in text
-    assert "(the man facing the camera)" in text
-    # The liveliness fix: expression must follow the video, not the photo.
+    # Byte-faithful to Face Swap Studio's build_direct_swap_prompt.
+    assert text.startswith(
+        "Strictly edit @Video 1. Define the young man in the dark blue denim "
+        "shirt (Arjun) in @Video 1 as <Subject 1>; replace <Subject 1>'s face "
+        "with the face in @Image 1 (the man facing the camera). Apply each "
+        "reference face in every frame"
+    )
+    # The liveliness fix rides in the notes, exactly as in the approved run.
     assert "do not copy the neutral expression" in text
-    # The proportion clause that prevents oversized faces.
     assert "must not be larger, smaller, or misaligned" in text
-    assert text.endswith("Do not modify the woman in the foreground.")
+    assert text.endswith("Do not modify the woman in the foreground in any way.")
 
 
 def test_face_swap_prompt_requires_subject_description() -> None:

@@ -127,11 +127,12 @@ def complete_first_look(session: Session, job_id: str) -> None:
             work_root = Path(settings.render_work_dir)
             render_first_look(
                 master=media_root / "shells" / shell.id / "episode-1.mp4",
-                shot=shots[0],
+                shots=shots,
                 work_dir=work_root / "orders" / order.id / "work",
                 destination=work_root / object_key,
                 face_asset_uri=face_uri,
                 subject_video_desc=shell.role_video_desc,
+                extra_notes=shell.role_render_notes,
                 reference=f"{order.id}-first-look",
                 settings=settings,
             )
@@ -167,6 +168,10 @@ def complete_full_render(session: Session, job_id: str) -> None:
             episode_count = shell.episode_count
             if settings.render_episode_limit:
                 episode_count = min(episode_count, settings.render_episode_limit)
+            # Re-renders replace any earlier outputs for this order.
+            for stale in list(order.episodes):
+                session.delete(stale)
+            session.flush()
             for number in range(1, episode_count + 1):
                 shots = shots_for_episode(manifest, number, shell.role_character)
                 object_key = f"orders/{order.id}/episode-{number}.mp4"
@@ -178,6 +183,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
                     destination=destination,
                     face_asset_uri=face_uri,
                     subject_video_desc=shell.role_video_desc,
+                    extra_notes=shell.role_render_notes,
                     reference_prefix=f"{order.id}-ep{number}",
                     settings=settings,
                 )

@@ -23,7 +23,7 @@ class SeedanceRenderSpec:
     source_video_path: str
     original_audio_path: str
     reference_asset_uris: tuple[str, ...]
-    prompt_variant: str = "face_swap_direct_v1"
+    prompt_variant: str = "face_swap_direct_v2"
     ratio: str = "adaptive"
     duration: int | None = None
     # face_swap_direct_v1 inputs; the subject description is content-owner
@@ -40,7 +40,7 @@ class SeedanceRenderSpec:
             source_video_path=str(data["source_video_path"]),
             original_audio_path=str(data["original_audio_path"]),
             reference_asset_uris=tuple(str(item) for item in data["reference_asset_uris"]),
-            prompt_variant=str(data.get("prompt_variant", "face_swap_direct_v1")),
+            prompt_variant=str(data.get("prompt_variant", "face_swap_direct_v2")),
             ratio=str(data.get("ratio", "adaptive")),
             duration=int(data["duration"]) if data.get("duration") is not None else None,
             subject_video_desc=str(data.get("subject_video_desc", "")),
@@ -134,7 +134,7 @@ def stage_inputs(spec: SeedanceRenderSpec, settings: Settings) -> SeedanceRender
 
 
 def _build_prompt(spec: SeedanceRenderSpec) -> str:
-    if spec.prompt_variant == "face_swap_direct_v1":
+    if spec.prompt_variant.startswith("face_swap_direct"):
         return face_swap_prompt(
             subject_video_desc=spec.subject_video_desc,
             image_desc=spec.image_desc,
@@ -166,7 +166,11 @@ def execute_seedance_render(
         ratio="adaptive" if is_v25 else spec.ratio,
         duration=-1 if is_v25 else spec.duration,
         generate_audio=False,
-        watermark=True,
+        # The product-approved 20 August run used the Studio default
+        # (watermark off); the provider's "AI generated" badge otherwise
+        # burns into every swapped shot. Internal watermarking policy is
+        # a separate open Director decision recorded in the handover.
+        watermark=False,
     )
     with _client(settings) as client:
         submitted = client.submit(request)

@@ -56,10 +56,12 @@ class SyntheticShell(BaseModel):
     episode_count: int
     synthetic_fixture: bool = True
     # Content-owner metadata for the real render pipeline: the manifest
-    # character name of the replaceable role and how to describe that person
-    # to the edit model. Never inferred from pixels.
+    # character name of the replaceable role, how to describe that person to
+    # the edit model, and the scene-lock notes appended to the swap prompt.
+    # Never inferred from pixels.
     role_character: str = ""
     role_video_desc: str = ""
+    role_render_notes: str = ""
 
 
 class IssueAccessCodeRequest(BaseModel):

@@ -23,7 +23,8 @@ class FakeClient:
 
     def submit(self, request):  # type: ignore[no-untyped-def]
         assert request.generate_audio is False
-        assert request.watermark is True
+        # Run-A contract: Studio default, no provider badge on swapped shots.
+        assert request.watermark is False
         return SeedanceTask(id="provider-1", status="queued")
 
     def wait(self, task_id, **kwargs):  # type: ignore[no-untyped-def]
@@ -47,6 +48,10 @@ def spec(tmp_path: Path) -> SeedanceRenderSpec:
         original_audio_path=str(tmp_path / "audio.m4a"),
         reference_asset_uris=("asset://authorized-front",),
         subject_video_desc="the young man in the dark blue denim shirt (Arjun)",
+        extra_notes=(
+            "Keep his expression, smile and mouth movement exactly as they are in the "
+            "source video; do not copy the neutral expression from the reference image."
+        ),
     )
 
 

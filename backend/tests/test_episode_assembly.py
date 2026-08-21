@@ -1,5 +1,4 @@
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from starme.episode_assembly import (
     EpisodeAssemblyError,
     Shot,
     assemble_episode,
+    batch_shots,
     load_shot_manifest,
     plan_segments,
     render_first_look,
@@ -63,11 +63,34 @@ def test_plan_segments_covers_the_episode_exactly_once() -> None:
         ("swap", 10.0, 15.0),
         ("keep", 15.0, 20.0),
     ]
-    # A shot at the very start produces no leading keep segment.
-    assert plan_segments(6.0, [shot(1, "a", 0, 6)]) == plan_segments(6.0, [shot(1, "a", 0, 6)])
-    assert plan_segments(6.0, [shot(1, "a", 0, 6)])[0].kind == "swap"
     with pytest.raises(EpisodeAssemblyError, match="past the episode"):
         plan_segments(5.0, [shot(1, "a", 2, 6)])
+
+
+def test_batching_mirrors_the_approved_run() -> None:
+    # The real Episode 1 manifest: [2,6,4,5,5,4,4] seconds. The 2s opener rides
+    # with its neighbours exactly like the verified 20 August merged clip.
+    durations = [2, 6, 4, 5, 5, 4, 4]
+    shots = [shot(1, f"c{i}", sum(durations[:i]) * 2 + 7, d) for i, d in enumerate(durations)]
+    batches = batch_shots(shots)
+    assert [[s.clip for s in batch] for batch in batches] == [
+        ["c0", "c1", "c2"],
+        ["c3", "c4", "c5"],
+        ["c6"],
+    ]
+    assert all(4 <= sum(s.duration for s in batch) <= 15 for batch in batches)
+
+
+def test_batching_repairs_a_short_final_batch() -> None:
+    # 14s + 2s: the trailing 2s shot cannot stand alone, so it borrows the
+    # previous batch's last shot.
+    shots = [shot(1, "a", 0, 7), shot(1, "b", 10, 7), shot(1, "c", 20, 2)]
+    batches = batch_shots(shots)
+    assert [[s.clip for s in batch] for batch in batches] == [["a"], ["b", "c"]]
+    with pytest.raises(EpisodeAssemblyError, match="at least 4"):
+        batch_shots([shot(1, "only", 0, 2)])
+    with pytest.raises(EpisodeAssemblyError, match="at most 15"):
+        batch_shots([shot(1, "long", 0, 16)])
 
 
 def _make_master(path: Path, seconds: int) -> None:
@@ -100,19 +123,45 @@ def _make_master(path: Path, seconds: int) -> None:
 
 
 def fake_render(spec_data: dict[str, object], settings: Settings) -> dict[str, object]:
-    """Identity 'swap': the provider returns the source shot unchanged."""
+    """Identity 'swap' that re-encodes with DIFFERENT parameters.
+
+    Real provider outputs never share our encoder settings; the 21 August
+    corruption escaped because the old fake returned byte-identical encodes.
+    """
     source = Path(str(spec_data["source_video_path"]))
-    generated = source.with_name(source.name.replace("-src", "-generated"))
-    shutil.copyfile(source, generated)
+    generated = source.with_name(source.name.replace(".mp4", "-generated.mp4"))
+    subprocess.run(  # noqa: S603
+        [  # noqa: S607
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(source),
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-crf",
+            "30",
+            "-profile:v",
+            "baseline",
+            "-pix_fmt",
+            "yuv420p",
+            str(generated),
+        ],
+        check=True,
+        capture_output=True,
+    )
     return {"generated_video_path": str(generated)}
 
 
 def test_assemble_episode_rebuilds_full_length_with_audio(tmp_path: Path) -> None:
     master = tmp_path / "episode-1.mp4"
-    _make_master(master, 8)
+    _make_master(master, 12)
+    # A 2s shot and a 3s shot: batched together into one 5s provider call.
     result = assemble_episode(
         master=master,
-        shots=[shot(1, "mid", 2, 3)],
+        shots=[shot(1, "s1", 2, 2), shot(1, "s2", 6, 3)],
         work_dir=tmp_path / "work",
         destination=tmp_path / "final" / "episode-1.mp4",
         face_asset_uri="asset://face-1",
@@ -123,8 +172,9 @@ def test_assemble_episode_rebuilds_full_length_with_audio(tmp_path: Path) -> Non
     )
     final = Path(str(result["final_video_path"]))
     assert final.is_file()
-    assert result["segments"] == 3
-    assert result["swapped_segments"] == 1
+    assert result["segments"] == 5
+    assert result["swapped_segments"] == 2
+    assert result["provider_batches"] == 1
     assert result["quality_checks"] == {
         "duration_preserved": True,
         "dimensions_preserved": True,
@@ -133,8 +183,8 @@ def test_assemble_episode_rebuilds_full_length_with_audio(tmp_path: Path) -> Non
         "audio_present": True,
     }
     probe = probe_media(final)
-    assert abs(probe.duration_seconds - 8.0) <= 0.75
-    # Masters are 1080x1920; provider inputs are 720p and get upscaled back.
+    assert abs(probe.duration_seconds - 12.0) <= 0.75
+    # Masters are 1080x1920; provider batches run at 720p and upscale back.
     assert (probe.width, probe.height) == (1080, 1920)
     assert probe.has_audio
 
@@ -156,10 +206,10 @@ def test_assemble_episode_requires_designated_shots(tmp_path: Path) -> None:
 
 def test_render_first_look_produces_a_frame(tmp_path: Path) -> None:
     master = tmp_path / "episode-1.mp4"
-    _make_master(master, 8)
+    _make_master(master, 12)
     frame = render_first_look(
         master=master,
-        shot=shot(1, "mid", 2, 3),
+        shots=[shot(1, "s1", 2, 2), shot(1, "s2", 6, 3)],
         work_dir=tmp_path / "work",
         destination=tmp_path / "first_look.jpg",
         face_asset_uri="asset://face-1",
@@ -170,34 +220,3 @@ def test_render_first_look_produces_a_frame(tmp_path: Path) -> None:
     )
     assert frame.is_file()
     assert frame.stat().st_size > 1000
-
-
-def test_short_shots_widen_to_the_provider_minimum() -> None:
-    from starme.episode_assembly import widen_swap_windows
-
-    # The real Episode 1 opener: a 2s shot must become a 4s window.
-    windows = widen_swap_windows(74.0, [shot(1, "ep01_arjun_01", 7, 2)])
-    assert [(w.start, w.end) for w in windows] == [(7.0, 11.0)]
-    # At the episode tail the window extends backwards instead.
-    tail = widen_swap_windows(10.0, [shot(1, "tail", 8, 2)])
-    assert [(w.start, w.end) for w in tail] == [(6.0, 10.0)]
-    # Windows that grow into each other merge into one provider call:
-    # a widens to [2,6), b widens to [5,9), so the merged window is [2,9).
-    merged = widen_swap_windows(20.0, [shot(1, "a", 2, 2), shot(1, "b", 5, 2)])
-    assert [(w.start, w.end, w.clip) for w in merged] == [(2.0, 9.0, "a+b")]
-
-
-def test_plan_segments_uses_widened_windows() -> None:
-    segments = plan_segments(20.0, [shot(1, "short", 2, 2)])
-    assert [(s.kind, s.start, s.end) for s in segments] == [
-        ("keep", 0.0, 2.0),
-        ("swap", 2.0, 6.0),
-        ("keep", 6.0, 20.0),
-    ]
-
-
-def test_oversized_window_fails_closed() -> None:
-    from starme.episode_assembly import EpisodeAssemblyError, widen_swap_windows
-
-    with pytest.raises(EpisodeAssemblyError, match="at most 30"):
-        widen_swap_windows(60.0, [shot(1, "long", 2, 31)])
