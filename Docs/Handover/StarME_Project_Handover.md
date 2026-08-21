@@ -1805,3 +1805,28 @@ Costing note: a full Lead Debut order renders every designated shot across three
 (currently 26 shots), roughly $1.5-2 per shot at 720p on Seedance 2.5; enable the provider on
 staging deliberately. Verification: Ruff, Ruff format, strict mypy (21 files) and 69 pytest tests
 pass, including a real-FFmpeg assembly integration test with an identity-swap fake provider.
+
+### 21 August 2026 - Phase 3 staging deployment of the real render stack
+
+Key-based SSH from the current Mac to the staging host was established via the private address
+10.0.0.63 (the public address's SSH remains firewalled; Amol installed the new ed25519 public key
+using the server password interactively). Commits `b386eaa` and `b96a342` were archived from the
+verified branch state and extracted to `/home/hungama/apps/starme` without touching the server
+`.env` or media. Ten provider settings were appended to the server-local `.env` (BytePlus ARK key,
+AK/SK, asset group `group-20260819183514-swcdv`, and the Linode hosting values); no secret value
+was displayed or recorded. The shot manifest was installed at
+`media/shells/ek-love-story-001/shot-manifest.json` beside the three episode masters already on
+the host.
+
+Only the StarME api and worker images were rebuilt and recreated; PostgreSQL and Redis kept
+running untouched. The new `starme_starme_renders` volume is mounted read-only in the API for
+`orders/` delivery keys. External verification passed: live/ready return ok over public HTTPS,
+`/v1/capabilities` still reports the staging consent exception and sensitive processing disabled,
+and the worker listens on all three queues including `starme-seedance`.
+
+The render provider deliberately remains `stub` (pinned in compose.yaml): enabling `seedance`
+today would fail every tester's first look because no tester has a registered `asset://` face
+reference yet. The next slice is the identity-upload link - either the operator route (manually
+register each named tester's portrait, as was done for Amol's proofs) or the Android capture
+upload - after which the provider switch can be flipped deliberately with cost awareness
+(roughly 26 shots, $40-50 per full Lead Debut order at 720p).
