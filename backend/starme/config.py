@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     # tester_reference (JSON object in the environment). Bridges orders created
     # with synthetic face ids until the Android identity upload exists.
     tester_face_assets: dict[str, str] = {}
+    # Staging cost control: cap how many episodes a full render produces per
+    # order. Unset renders the package's complete episode count.
+    render_episode_limit: int | None = Field(default=None, ge=1, le=10)
     # Optional local media root. When set, /v1/media serves real shell files from here
     # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
     # This is NOT the real render pipeline and does not enable sensitive processing.

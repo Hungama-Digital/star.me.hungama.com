@@ -164,7 +164,10 @@ def complete_full_render(session: Session, job_id: str) -> None:
         try:
             shell, media_root, manifest, face_uri = _seedance_order_inputs(order, settings)
             work_root = Path(settings.render_work_dir)
-            for number in range(1, shell.episode_count + 1):
+            episode_count = shell.episode_count
+            if settings.render_episode_limit:
+                episode_count = min(episode_count, settings.render_episode_limit)
+            for number in range(1, episode_count + 1):
                 shots = shots_for_episode(manifest, number, shell.role_character)
                 object_key = f"orders/{order.id}/episode-{number}.mp4"
                 destination = work_root / object_key
