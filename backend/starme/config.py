@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     # Staging cost control: cap how many episodes a full render produces per
     # order. Unset renders the package's complete episode count.
     render_episode_limit: int | None = Field(default=None, ge=1, le=10)
+    # Every swapped window is face-matched against the subscriber's reference
+    # portrait (media_dir/faces/{tester_reference}.*) and re-rolled on failure.
+    face_qa_enabled: bool = True
+    render_max_rolls: int = Field(default=3, ge=1, le=5)
     # Optional local media root. When set, /v1/media serves real shell files from here
     # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
     # This is NOT the real render pipeline and does not enable sensitive processing.

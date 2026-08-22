@@ -17,6 +17,13 @@ COPY pyproject.toml README.md alembic.ini ./
 COPY backend ./backend
 RUN python -m pip install --upgrade pip && python -m pip install .
 
+# Bake the face-QA model so workers never download at render time.
+ENV INSIGHTFACE_HOME=/opt/insightface
+RUN python -c "from insightface.app import FaceAnalysis; \
+    FaceAnalysis(name='buffalo_s', root='/opt/insightface', \
+    providers=['CPUExecutionProvider'])" \
+    && chmod -R a+rX /opt/insightface
+
 USER starme
 EXPOSE 8000
 CMD ["uvicorn", "starme.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

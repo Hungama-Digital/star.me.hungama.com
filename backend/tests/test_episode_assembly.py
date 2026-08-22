@@ -67,18 +67,21 @@ def test_plan_segments_covers_the_episode_exactly_once() -> None:
         plan_segments(5.0, [shot(1, "a", 2, 6)])
 
 
-def test_batching_mirrors_the_approved_run() -> None:
-    # The real Episode 1 manifest: [2,6,4,5,5,4,4] seconds. The 2s opener rides
-    # with its neighbours exactly like the verified 20 August merged clip.
+def test_batching_targets_the_drift_safe_window() -> None:
+    # The real Episode 1 coverage durations. Batches stay at or under 8s (the
+    # size that held identity in the 20-22 August reviews), like the verified
+    # merged clip (2s+6s).
     durations = [2, 6, 4, 5, 5, 4, 4]
     shots = [shot(1, f"c{i}", sum(durations[:i]) * 2 + 7, d) for i, d in enumerate(durations)]
     batches = batch_shots(shots)
     assert [[s.clip for s in batch] for batch in batches] == [
-        ["c0", "c1", "c2"],
-        ["c3", "c4", "c5"],
-        ["c6"],
+        ["c0", "c1"],
+        ["c2"],
+        ["c3"],
+        ["c4"],
+        ["c5", "c6"],
     ]
-    assert all(4 <= sum(s.duration for s in batch) <= 15 for batch in batches)
+    assert all(4 <= sum(s.duration for s in batch) <= 8 for batch in batches)
 
 
 def test_batching_repairs_a_short_final_batch() -> None:
@@ -220,3 +223,96 @@ def test_render_first_look_produces_a_frame(tmp_path: Path) -> None:
     )
     assert frame.is_file()
     assert frame.stat().st_size > 1000
+
+
+def accept_all_embedder(image_path: Path) -> list[tuple[list[float], float]]:
+    """Every face is the reference face (embedding [1,0], full-frame)."""
+    return [([1.0, 0.0], 0.5)]
+
+
+def test_assembly_face_qa_rerolls_until_pass(tmp_path: Path) -> None:
+    from starme.episode_assembly import _swap_batch_verified
+
+    master = tmp_path / "episode-1.mp4"
+    _make_master(master, 12)
+    rolls: list[int] = []
+
+    def flaky_render(spec_data: dict[str, object], settings: Settings) -> dict[str, object]:
+        rolls.append(1)
+        return fake_render(spec_data, settings)
+
+    calls = {"n": 0}
+
+    def flaky_embedder(image_path: Path) -> list[tuple[list[float], float]]:
+        # First roll's frames read as the WRONG identity; later rolls pass.
+        calls["n"] += 1
+        if len(rolls) < 2:
+            return [([-1.0, 0.0], 0.5)]
+        return [([1.0, 0.0], 0.5)]
+
+    pieces, report = _swap_batch_verified(
+        master=master,
+        batch=[shot(1, "s1", 2, 2), shot(1, "s2", 6, 3)],
+        work_dir=tmp_path / "work",
+        reference="order-x-batch00",
+        face_asset_uri="asset://face-1",
+        subject_video_desc="the designated lead",
+        extra_notes="",
+        settings=Settings(environment="test"),
+        render=flaky_render,
+        piece_width=720,
+        piece_height=1280,
+        reference_face=[1.0, 0.0],
+        embedder=flaky_embedder,
+        max_rolls=3,
+    )
+    assert len(rolls) == 2
+    assert report["rolls_used"] == 2
+    assert set(pieces) == {"s1", "s2"}
+    # Cached: a rerun does not re-render.
+    pieces2, _ = _swap_batch_verified(
+        master=master,
+        batch=[shot(1, "s1", 2, 2), shot(1, "s2", 6, 3)],
+        work_dir=tmp_path / "work",
+        reference="order-x-batch00",
+        face_asset_uri="asset://face-1",
+        subject_video_desc="the designated lead",
+        extra_notes="",
+        settings=Settings(environment="test"),
+        render=flaky_render,
+        piece_width=720,
+        piece_height=1280,
+        reference_face=[1.0, 0.0],
+        embedder=flaky_embedder,
+        max_rolls=3,
+    )
+    assert len(rolls) == 2
+    assert pieces2 == pieces
+
+
+def test_assembly_fails_closed_when_qa_never_passes(tmp_path: Path) -> None:
+    from starme.episode_assembly import _swap_batch_verified
+
+    master = tmp_path / "episode-1.mp4"
+    _make_master(master, 12)
+
+    def wrong_face_embedder(image_path: Path) -> list[tuple[list[float], float]]:
+        return [([-1.0, 0.0], 0.5)]
+
+    with pytest.raises(EpisodeAssemblyError, match="failed face QA after 2 rolls"):
+        _swap_batch_verified(
+            master=master,
+            batch=[shot(1, "s1", 2, 2), shot(1, "s2", 6, 3)],
+            work_dir=tmp_path / "work2",
+            reference="order-y-batch00",
+            face_asset_uri="asset://face-1",
+            subject_video_desc="the designated lead",
+            extra_notes="",
+            settings=Settings(environment="test"),
+            render=fake_render,
+            piece_width=720,
+            piece_height=1280,
+            reference_face=[1.0, 0.0],
+            embedder=wrong_face_embedder,
+            max_rolls=2,
+        )

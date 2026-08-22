@@ -89,6 +89,18 @@ def _seedance_order_inputs(
     return shell, media_root, load_shot_manifest(manifest_path), face_uri
 
 
+def _reference_portrait(order: Order, settings: Settings) -> Path | None:
+    """The subscriber's reference portrait for face QA, stored by the operator
+    at media_dir/faces/{tester_reference}.(png|jpg|jpeg)."""
+    if not settings.media_dir:
+        return None
+    for suffix in ("png", "jpg", "jpeg"):
+        candidate = Path(settings.media_dir) / "faces" / f"{order.tester_reference}.{suffix}"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def _fail_job(session: Session, job: RenderJob, order: Order, reason: str) -> None:
     job.status = JobState.FAILED
     job.completed_at = datetime.now(UTC)
@@ -135,6 +147,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
                 extra_notes=shell.role_render_notes,
                 reference=f"{order.id}-first-look",
                 settings=settings,
+                reference_portrait=_reference_portrait(order, settings),
             )
         except Exception as exc:  # noqa: BLE001 - report honestly, never fake readiness
             _fail_job(session, job, order, str(exc))
@@ -186,6 +199,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
                     extra_notes=shell.role_render_notes,
                     reference_prefix=f"{order.id}-ep{number}",
                     settings=settings,
+                    reference_portrait=_reference_portrait(order, settings),
                 )
                 session.add(
                     EpisodeOutput(

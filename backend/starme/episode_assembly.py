@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from starme.config import Settings
+from starme.face_qa import EmbedFn, WindowVerdict, judge_window, reference_embedding
 from starme.media_pipeline import probe_media, remux_original_audio, structural_quality_report
 from starme.render_pipeline import SeedanceRenderSpec, execute_seedance_render
 
@@ -18,6 +19,9 @@ _FPS = 24
 # (verified against the live API on 21 August 2026).
 MIN_PROVIDER_SECONDS = 4.0
 MAX_PROVIDER_SECONDS = 15.0
+# Windows longer than ~8s exhibited within-window identity drift in the
+# 21-22 August product reviews; batches target this size.
+BATCH_TARGET_SECONDS = 8.0
 # The proven Seedance render tier; provider inputs are cut to this size so the
 # render pipeline's structural gate compares source and output like for like.
 PROVIDER_WIDTH, PROVIDER_HEIGHT = 720, 1280
@@ -100,14 +104,13 @@ def batch_shots(
     shots: list[Shot],
     *,
     min_seconds: float = MIN_PROVIDER_SECONDS,
-    max_seconds: float = MAX_PROVIDER_SECONDS,
+    max_seconds: float = BATCH_TARGET_SECONDS,
 ) -> list[list[Shot]]:
     """Group designated shots into provider-sized batches.
 
-    This reproduces the mechanism of the product-approved 20 August run: only
-    designated footage is ever sent to the provider, and short shots ride in
-    the same clip as their neighbours (a hard cut between shots, which the
-    edit model handles) instead of dragging in non-designated frames.
+    This reproduces the approved 20 August mechanism: only designated footage
+    is ever sent to the provider, short shots ride with their neighbours as
+    hard cuts, and batches stay small because long windows drift.
     """
     if not shots:
         return []
@@ -115,10 +118,10 @@ def batch_shots(
     current: list[Shot] = []
     current_duration = 0.0
     for shot in shots:
-        if shot.duration > max_seconds:
+        if shot.duration > MAX_PROVIDER_SECONDS:
             raise EpisodeAssemblyError(
                 f"Shot {shot.clip} is {shot.duration:.1f}s; the provider accepts at most "
-                f"{max_seconds:.0f}s - split it in the manifest"
+                f"{MAX_PROVIDER_SECONDS:.0f}s - split it in the manifest"
             )
         if current and current_duration + shot.duration > max_seconds:
             batches.append(current)
@@ -133,7 +136,7 @@ def batch_shots(
                 f"Designated footage totals {last_duration:.1f}s; the provider needs at least "
                 f"{min_seconds:.0f}s"
             )
-        if sum(shot.duration for shot in batches[-2]) + last_duration <= max_seconds:
+        if sum(shot.duration for shot in batches[-2]) + last_duration <= MAX_PROVIDER_SECONDS:
             batches[-2].extend(batches.pop())
         else:
             batches[-1].insert(0, batches[-2].pop())
@@ -256,7 +259,20 @@ def _extract_frame(video: Path, at_seconds: float, destination: Path) -> Path:
     return destination
 
 
-def _swap_batch(
+def _render_with_retry(
+    render: RenderFn, spec_data: dict[str, Any], settings: Settings, attempts: int = 2
+) -> dict[str, Any]:
+    """Provider output moderation is stochastic; one retry often clears it."""
+    last: Exception | None = None
+    for _ in range(attempts):
+        try:
+            return render(spec_data, settings)
+        except Exception as exc:  # noqa: BLE001 - retried, then surfaced to the caller
+            last = exc
+    raise last if last else RuntimeError("render failed")
+
+
+def _swap_batch_once(
     *,
     master: Path,
     batch: list[Shot],
@@ -270,12 +286,7 @@ def _swap_batch(
     piece_width: int,
     piece_height: int,
 ) -> dict[str, Path]:
-    """Swap one batch of designated shots and split it back into exact pieces.
-
-    Mirrors the approved 20 August run: the provider receives a single clip
-    made only of designated footage (hard cuts between shots), and the swapped
-    result is split at the known shot boundaries afterwards.
-    """
+    """One provider roll: swap a batch of designated shots and split it back."""
     parts = [
         _cut_av(
             master,
@@ -306,35 +317,7 @@ def _swap_batch(
         subject_video_desc=subject_video_desc,
         extra_notes=extra_notes,
     )
-    try:
-        result = _render_with_retry(render, asdict(spec), settings)
-    except Exception:
-        if len(batch) > 1:
-            # Isolate the offending shot: render each one alone. Shots below
-            # the provider minimum cannot stand alone and fall back unswapped.
-            pieces: dict[str, Path] = {}
-            for shot in batch:
-                if shot.duration >= MIN_PROVIDER_SECONDS:
-                    pieces.update(
-                        _swap_batch(
-                            master=master,
-                            batch=[shot],
-                            work_dir=work_dir,
-                            reference=f"{reference}-{shot.clip}",
-                            face_asset_uri=face_asset_uri,
-                            subject_video_desc=subject_video_desc,
-                            extra_notes=extra_notes,
-                            settings=settings,
-                            render=render,
-                            piece_width=piece_width,
-                            piece_height=piece_height,
-                        )
-                    )
-            return pieces
-        # A single shot the provider keeps refusing: fall back to the
-        # original footage rather than failing the whole episode. The
-        # assembler records the compromise for QA.
-        return {}
+    result = _render_with_retry(render, asdict(spec), settings)
     generated = Path(str(result["generated_video_path"]))
     swapped: dict[str, Path] = {}
     offset = 0.0
@@ -351,17 +334,89 @@ def _swap_batch(
     return swapped
 
 
-def _render_with_retry(
-    render: RenderFn, spec_data: dict[str, Any], settings: Settings, attempts: int = 2
-) -> dict[str, Any]:
-    """Provider output moderation is stochastic; one retry often clears it."""
-    last: Exception | None = None
-    for _ in range(attempts):
+def _judge_pieces(
+    pieces: dict[str, Path],
+    reference_face: list[float] | None,
+    embedder: EmbedFn | None,
+) -> tuple[bool, dict[str, WindowVerdict]]:
+    if reference_face is None:
+        return True, {}
+    verdicts = {
+        clip: judge_window(path, reference_face, embedder=embedder) for clip, path in pieces.items()
+    }
+    return all(verdict.passed for verdict in verdicts.values()), verdicts
+
+
+def _swap_batch_verified(
+    *,
+    master: Path,
+    batch: list[Shot],
+    work_dir: Path,
+    reference: str,
+    face_asset_uri: str,
+    subject_video_desc: str,
+    extra_notes: str,
+    settings: Settings,
+    render: RenderFn,
+    piece_width: int,
+    piece_height: int,
+    reference_face: list[float] | None,
+    embedder: EmbedFn | None,
+    max_rolls: int,
+) -> tuple[dict[str, Path], dict[str, Any]]:
+    """Roll a batch up to max_rolls until every piece passes face QA.
+
+    Automates the 21-22 August manual loop: render, judge every piece against
+    the subscriber reference, and re-roll on wrong-identity or double-swap
+    verdicts. Fails closed when no roll passes - never ship the wrong face.
+    """
+    cache_file = work_dir / f"{reference}-verified.json"
+    if cache_file.is_file():
+        cached = json.loads(cache_file.read_text())
+        paths = {clip: Path(p) for clip, p in cached["pieces"].items()}
+        if all(path.is_file() for path in paths.values()):
+            return paths, cached["report"]
+    last_error: str = ""
+    for roll in range(max_rolls):
+        roll_dir = work_dir / f"{reference}-roll{roll}"
+        roll_dir.mkdir(parents=True, exist_ok=True)
         try:
-            return render(spec_data, settings)
-        except Exception as exc:  # noqa: BLE001 - retried, then surfaced to the caller
-            last = exc
-    raise last if last else RuntimeError("render failed")
+            pieces = _swap_batch_once(
+                master=master,
+                batch=batch,
+                work_dir=roll_dir,
+                reference=f"{reference}-r{roll}",
+                face_asset_uri=face_asset_uri,
+                subject_video_desc=subject_video_desc,
+                extra_notes=extra_notes,
+                settings=settings,
+                render=render,
+                piece_width=piece_width,
+                piece_height=piece_height,
+            )
+        except Exception as exc:  # noqa: BLE001 - roll again; surfaced when rolls run out
+            last_error = str(exc)
+            continue
+        passed, verdicts = _judge_pieces(pieces, reference_face, embedder)
+        report = {
+            "rolls_used": roll + 1,
+            "face_qa": {clip: asdict(verdict) for clip, verdict in verdicts.items()},
+        }
+        if passed:
+            cache_file.write_text(
+                json.dumps(
+                    {"pieces": {clip: str(p) for clip, p in pieces.items()}, "report": report}
+                )
+            )
+            return pieces, report
+        last_error = "; ".join(
+            f"{clip}: {'; '.join(verdict.notes)}"
+            for clip, verdict in verdicts.items()
+            if not verdict.passed
+        )
+    raise EpisodeAssemblyError(
+        f"Batch {reference} failed face QA after {max_rolls} rolls: {last_error}"
+    )
 
 
 def assemble_episode(
@@ -376,13 +431,17 @@ def assemble_episode(
     reference_prefix: str,
     settings: Settings,
     render: RenderFn = execute_seedance_render,
+    reference_portrait: Path | None = None,
+    embedder: EmbedFn | None = None,
 ) -> dict[str, Any]:
     """Swap the designated role's shots and rebuild the full episode.
 
-    Only designated footage reaches the provider (batched exactly like the
-    approved 20 August run); untouched footage is preserved verbatim at the
-    master's resolution; the final stitch is a single re-encode; and the
-    complete original episode audio is remuxed on so dialogue never drifts.
+    Only designated footage reaches the provider (batched like the approved
+    20 August run, capped at the drift-safe window size); every swapped piece
+    must pass face-identity QA against the subscriber's reference portrait
+    (with re-rolls) before it may enter the timeline; untouched footage is
+    preserved at the master's resolution; the final stitch is one re-encode;
+    and the complete original episode audio is remuxed on.
     """
     if not shots:
         raise EpisodeAssemblyError("No designated shots for this episode")
@@ -391,34 +450,37 @@ def assemble_episode(
     width, height = master_probe.width, master_probe.height
     segments = plan_segments(master_probe.duration_seconds, shots)
 
+    reference_face = None
+    if reference_portrait is not None and settings.face_qa_enabled:
+        reference_face = reference_embedding(reference_portrait, embedder)
+
     pieces: dict[str, Path] = {}
+    qa_reports: dict[str, Any] = {}
     for index, batch in enumerate(batch_shots(shots)):
-        pieces.update(
-            _swap_batch(
-                master=master,
-                batch=batch,
-                work_dir=work_dir,
-                reference=f"{reference_prefix}-batch{index:02d}",
-                face_asset_uri=face_asset_uri,
-                subject_video_desc=subject_video_desc,
-                extra_notes=extra_notes,
-                settings=settings,
-                render=render,
-                piece_width=width,
-                piece_height=height,
-            )
+        batch_pieces, batch_report = _swap_batch_verified(
+            master=master,
+            batch=batch,
+            work_dir=work_dir,
+            reference=f"{reference_prefix}-batch{index:02d}",
+            face_asset_uri=face_asset_uri,
+            subject_video_desc=subject_video_desc,
+            extra_notes=extra_notes,
+            settings=settings,
+            render=render,
+            piece_width=width,
+            piece_height=height,
+            reference_face=reference_face,
+            embedder=embedder,
+            max_rolls=settings.render_max_rolls,
         )
+        pieces.update(batch_pieces)
+        qa_reports[f"batch{index:02d}"] = batch_report
 
     timeline: list[Path] = []
-    unswapped: list[str] = []
     for index, segment in enumerate(segments):
-        if segment.kind == "swap" and segment.clip in pieces:
+        if segment.kind == "swap":
             timeline.append(pieces[segment.clip])
             continue
-        if segment.kind == "swap":
-            # Provider refused this shot even alone; keep the original
-            # footage rather than failing the whole episode.
-            unswapped.append(segment.clip)
         timeline.append(
             _cut_video(
                 master,
@@ -446,7 +508,8 @@ def assemble_episode(
         "segments": len(segments),
         "swapped_segments": sum(1 for segment in segments if segment.kind == "swap"),
         "provider_batches": len(batch_shots(shots)),
-        "unswapped_clips": unswapped,
+        "face_qa_enabled": reference_face is not None,
+        "face_qa": qa_reports,
         "quality_checks": report.checks,
     }
 
@@ -463,12 +526,18 @@ def render_first_look(
     reference: str,
     settings: Settings,
     render: RenderFn = execute_seedance_render,
+    reference_portrait: Path | None = None,
+    embedder: EmbedFn | None = None,
 ) -> Path:
-    """Swap the first provider batch and deliver the first shot's midpoint frame."""
+    """Swap the first provider batch (QA-verified) and deliver its midpoint frame."""
     if not shots:
         raise EpisodeAssemblyError("No designated shots for the first look")
+    work_dir.mkdir(parents=True, exist_ok=True)
+    reference_face = None
+    if reference_portrait is not None and settings.face_qa_enabled:
+        reference_face = reference_embedding(reference_portrait, embedder)
     first_batch = batch_shots(shots)[0]
-    pieces = _swap_batch(
+    pieces, _ = _swap_batch_verified(
         master=master,
         batch=first_batch,
         work_dir=work_dir,
@@ -480,6 +549,9 @@ def render_first_look(
         render=render,
         piece_width=PROVIDER_WIDTH,
         piece_height=PROVIDER_HEIGHT,
+        reference_face=reference_face,
+        embedder=embedder,
+        max_rolls=settings.render_max_rolls,
     )
     first = first_batch[0]
     return _extract_frame(pieces[first.clip], first.duration / 2, destination)
