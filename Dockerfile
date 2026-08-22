@@ -15,7 +15,12 @@ RUN mkdir /renders && chown starme:starme /renders
 WORKDIR /app
 COPY pyproject.toml README.md alembic.ini ./
 COPY backend ./backend
-RUN python -m pip install --upgrade pip && python -m pip install .
+# insightface compiles a C++ extension; the toolchain is purged after install.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends g++ \
+    && python -m pip install --upgrade pip && python -m pip install . \
+    && apt-get purge --yes g++ && apt-get autoremove --yes \
+    && rm -rf /var/lib/apt/lists/*
 
 # Bake the face-QA model so workers never download at render time.
 ENV INSIGHTFACE_HOME=/opt/insightface
