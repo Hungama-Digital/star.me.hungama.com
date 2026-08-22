@@ -1856,3 +1856,28 @@ original audio, all seven Arjun shots carrying the tester's face - served READY 
 order status only commits at job completion, so the app shows a stale state during long renders -
 add mid-job commits in a follow-up. Remaining external gates (final Legal wording, real billing,
 liveness/age service, device-matrix acceptance) are unchanged.
+
+### 22 August 2026 - Episode 1 shipped; verified loop productized with automated face QA
+
+Episode 1 was delivered to product acceptance after four user-caught defect cycles (corrupted
+stitch, non-designated footage sent to the provider, incomplete coverage manifest, within-window
+identity drift, an unswapped short shot, and a masculinized non-target). Each produced a permanent
+rule now encoded in the backend (commit 697afdb, deployed to staging):
+
+- provider batches cap at 8 seconds (identity drifts in longer windows);
+- every swapped window passes automated face-identity QA before entering the timeline: frames are
+  sampled at half-second grain, faces embedded with insightface (buffalo_s, CPU, baked into the
+  image at /opt/insightface), and compared against the subscriber's reference portrait stored at
+  media_dir/faces/{tester_reference}.*; wrong-identity, unswapped and double-swap (non-target
+  replaced) classes all fail the window;
+- failing windows re-roll automatically up to STARME_RENDER_MAX_ROLLS (default 3) and the job
+  fails closed with the QA reason rather than shipping a wrong face;
+- passing pieces are cached per window in the renders volume, so retries re-pay nothing;
+- QA verdicts (rolls used, per-clip similarity summaries) are recorded in the assembly result.
+
+Onboarding a new named tester (for example the Director) is a two-step operator action: register
+the portrait (`starme-seedance register-face --file portrait.jpg --name <tester_reference>`, then
+add the printed mapping to STARME_TESTER_FACE_ASSETS in the server .env) and copy the same
+portrait to media/faces/<tester_reference>.jpg for the QA gate. The manual grid-sweep review
+(all half-second grabs at >=280px, 15 seconds per grid) remains the recommended human polish gate
+before Director-facing showings. Episodes 2-3 still need full coverage manifests before rendering.
