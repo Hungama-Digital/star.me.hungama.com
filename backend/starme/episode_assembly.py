@@ -129,17 +129,34 @@ def batch_shots(
         current.append(shot)
         current_duration += shot.duration
     batches.append(current)
-    last_duration = sum(shot.duration for shot in batches[-1])
-    if last_duration < min_seconds:
+
+    def duration(batch: list[Shot]) -> float:
+        return sum(shot.duration for shot in batch)
+
+    # Repair pass: no batch may sit under the provider minimum, wherever it
+    # falls in the sequence. Merge with a neighbour when the result stays
+    # within the hard provider ceiling, otherwise borrow a neighbouring shot.
+    index = 0
+    while index < len(batches):
+        if duration(batches[index]) >= min_seconds:
+            index += 1
+            continue
         if len(batches) == 1:
             raise EpisodeAssemblyError(
-                f"Designated footage totals {last_duration:.1f}s; the provider needs at least "
-                f"{min_seconds:.0f}s"
+                f"Designated footage totals {duration(batches[0]):.1f}s; the provider "
+                f"needs at least {min_seconds:.0f}s"
             )
-        if sum(shot.duration for shot in batches[-2]) + last_duration <= MAX_PROVIDER_SECONDS:
-            batches[-2].extend(batches.pop())
+        neighbour = index + 1 if index + 1 < len(batches) else index - 1
+        if duration(batches[neighbour]) + duration(batches[index]) <= MAX_PROVIDER_SECONDS:
+            if neighbour > index:
+                batches[index].extend(batches.pop(neighbour))
+            else:
+                batches[neighbour].extend(batches.pop(index))
+                index = neighbour
+        elif neighbour > index:
+            batches[index].append(batches[neighbour].pop(0))
         else:
-            batches[-1].insert(0, batches[-2].pop())
+            batches[index].insert(0, batches[neighbour].pop())
     return batches
 
 

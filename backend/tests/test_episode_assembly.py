@@ -316,3 +316,12 @@ def test_assembly_fails_closed_when_qa_never_passes(tmp_path: Path) -> None:
             embedder=wrong_face_embedder,
             max_rolls=2,
         )
+
+
+def test_batching_repairs_a_short_first_batch() -> None:
+    # A 2s opener followed by a 9s shot: the opener cannot stand alone and the
+    # pair exceeds the target, so the repair merges them within the hard cap.
+    shots = [shot(1, "a", 7, 2), shot(1, "b", 11, 9)]
+    batches = batch_shots(shots)
+    assert [[s.clip for s in batch] for batch in batches] == [["a", "b"]]
+    assert sum(s.duration for s in batches[0]) == 11
