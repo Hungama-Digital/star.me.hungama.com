@@ -284,13 +284,57 @@ class StarViewModel(private val container: AppContainer) : ViewModel() {
                 verified = true,
                 verifyError = null,
                 identityAssetState = if (it.identityProviderEnabled) {
-                    IdentityAssetState.AWAITING_LIVENESS
+                    IdentityAssetState.UPLOADING
                 } else {
                     IdentityAssetState.STAGING_LOCAL_ONLY
                 },
             )
         }
         _events.send(StarEvent.Toast("Local photo checks passed"))
+        if (_state.value.identityProviderEnabled) registerFaceAsset()
+    }
+
+    /**
+     * Send the approved portrait to the engine and keep the id the order carries.
+     *
+     * Runs for the selfie and the gallery pick alike, because what matters is
+     * that a face reached the provider, not which button produced it. The local
+     * copy stays exactly where it was: this adds a hosted asset, it does not
+     * move or delete the photo on the device.
+     *
+     * Until this succeeds the order would fall back to the operator-maintained
+     * mapping, so a failure here is surfaced rather than swallowed, and
+     * canContinueCapture holds the writer on this step.
+     */
+    private suspend fun registerFaceAsset() {
+        val file = _state.value.photoFile ?: return
+        val token = container.session.accessTokenOnce()
+        if (token == null) {
+            _state.update { it.copy(identityAssetState = IdentityAssetState.FAILED) }
+            _events.send(StarEvent.Error("Your session expired. Redeem an access code and try again."))
+            return
+        }
+        runCatching { container.api.uploadFaceAsset(token, file) }
+            .onSuccess { dto ->
+                _state.update {
+                    it.copy(
+                        identityAssetId = dto.faceAssetId,
+                        identityAssetState = IdentityAssetState.ACTIVE,
+                    )
+                }
+                _events.send(StarEvent.Toast("Photo registered for casting"))
+            }
+            .onFailure { error ->
+                _state.update { it.copy(identityAssetState = IdentityAssetState.FAILED) }
+                // A 422 is the engine telling the user something they can fix
+                // (no clear face, file too large); anything else is ours.
+                val message = if (error is ApiException && error.statusCode == 422) {
+                    error.message ?: "That photo could not be used. Try another."
+                } else {
+                    "We could not register that photo. Check your connection and retry."
+                }
+                _events.send(StarEvent.Error(message))
+            }
     }
 
     private fun faceGuidance(faceCount: Int): String = when (faceCount) {

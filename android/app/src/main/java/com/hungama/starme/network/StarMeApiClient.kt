@@ -7,6 +7,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -74,6 +75,12 @@ data class OrderDto(
 )
 
 @Serializable
+data class FaceAssetDto(
+    @SerialName("face_asset_id") val faceAssetId: String,
+    @SerialName("tester_reference") val testerReference: String,
+)
+
+@Serializable
 data class FirstLookDecisionRequest(val decision: String)
 
 class ApiException(val statusCode: Int, message: String) : IllegalStateException(message)
@@ -104,6 +111,58 @@ class StarMeApiClient(
             json.encodeToString(FirstLookDecisionRequest(decision)),
             token,
         )
+
+    /**
+     * Register the portrait this device will be cast as.
+     *
+     * One call for both capture paths. The server cannot tell a selfie from a
+     * gallery pick and does not need to: either way it is an image that has to
+     * reach the provider before an order can carry a real face.
+     *
+     * Hand-rolled multipart over HttpURLConnection, matching the rest of this
+     * client, rather than adding a networking library for a single request.
+     */
+    suspend fun uploadFaceAsset(token: String, file: File): FaceAssetDto =
+        withContext(Dispatchers.IO) {
+            val boundary = "starme-${System.nanoTime()}"
+            val connection =
+                (URL("$baseUrl/v1/identity/face-assets").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 10_000
+                    // Registration returns only once the provider reports the
+                    // asset usable. Seconds in practice, but it is a round trip
+                    // we do not control, so this is not the 30s default.
+                    readTimeout = 120_000
+                    doOutput = true
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Authorization", "Bearer $token")
+                    setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+                }
+            try {
+                connection.outputStream.use { out ->
+                    out.write(
+                        (
+                            "--$boundary\r\n" +
+                                "Content-Disposition: form-data; name=\"image\"; " +
+                                "filename=\"${file.name}\"\r\n" +
+                                "Content-Type: application/octet-stream\r\n\r\n"
+                            ).toByteArray()
+                    )
+                    file.inputStream().use { it.copyTo(out) }
+                    out.write("\r\n--$boundary--\r\n".toByteArray())
+                }
+                val status = connection.responseCode
+                val stream =
+                    if (status in 200..299) connection.inputStream else connection.errorStream
+                val payload = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (status !in 200..299) {
+                    throw ApiException(status, payload.ifBlank { "Upload failed" })
+                }
+                json.decodeFromString<FaceAssetDto>(payload)
+            } finally {
+                connection.disconnect()
+            }
+        }
 
     suspend fun revokeConsent(token: String, reference: String) {
         callText("DELETE", "/v1/consents/$reference", token = token)
