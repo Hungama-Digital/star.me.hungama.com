@@ -11,6 +11,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /renders && chown starme:starme /renders
+# Subscriber portraits registered from the App. Created here so the named
+# volume inherits starme ownership on first mount; the API runs unprivileged.
+RUN mkdir /faces && chown starme:starme /faces
 
 WORKDIR /app
 COPY pyproject.toml README.md alembic.ini ./
