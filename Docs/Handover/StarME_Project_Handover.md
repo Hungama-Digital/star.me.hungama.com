@@ -1881,3 +1881,39 @@ add the printed mapping to STARME_TESTER_FACE_ASSETS in the server .env) and cop
 portrait to media/faces/<tester_reference>.jpg for the QA gate. The manual grid-sweep review
 (all half-second grabs at >=280px, 15 seconds per grid) remains the recommended human polish gate
 before Director-facing showings. Episodes 2-3 still need full coverage manifests before rendering.
+
+## 26 Aug 2026 - the manifest was the bug, and QA could not see it
+
+Built Episode 1 for a second tester (Prabhakar, a colleague of Amol's, with his
+consent). The swap itself was excellent; the co-star was destroyed in four
+places - her own close-ups at 51.5s and 67-69s, a two-shot at 32.5s, and
+18-20s where even her olive jacket became Arjun's denim shirt.
+
+Root cause is `shot-manifest.json`, not the prompt. It designated 48s of
+Episode 1 as Arjun's when only **26.8s** contains him; window 10 (67-69s) was
+labelled Arjun and is entirely Riya. Handed footage the lead is not in, the
+edit model applies the reference face to whoever is there. The same fault sits
+in the Amol Episode 1 delivered 22 Aug, in the shots nobody checked, and
+Episodes 2 and 3 remain **unaudited**.
+
+The automated gate passed all four defects. `judge_window` only asked "is the
+subscriber's face here?", which a co-star wearing that face answers perfectly.
+It now also takes the master window and a still of the ORIGINAL lead
+(`role-original.png`) and fails on two further classes: a non-lead person who
+stopped matching the master, and a frame whose master holds no lead yet whose
+output carries the subscriber. `lead_aware_qa` in the render report says which
+gate ran. Commit `e4785a1`; deployed to staging 26 Aug, verified in-container.
+
+Also corrected: the render notes named "the woman in the foreground", which
+described her in none of the damaged shots. She is now identified by
+appearance, the no-man-in-frame case is explicit, and a wardrobe clause stops
+the reference photo's own shirt being copied onto Arjun (one batch did exactly
+that across three segments).
+
+Standing QA rule: **compare against the master, never only against the
+subscriber's portrait.** Asking whether the output looks like the subscriber
+passes a co-star who has been replaced by them.
+
+Old manifest kept at `media/shells/ek-love-story-001/shot-manifest.v3-backup-20260826.json`.
+Coverage note for the product: the subscriber now appears in ~27s of Episode 1
+rather than an apparent 48s. The missing 21s was never his.
