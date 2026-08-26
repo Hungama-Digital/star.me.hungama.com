@@ -16,7 +16,10 @@ from starme.episode_assembly import (
     render_first_look,
     shots_for_episode,
 )
+from starme.face_qa import reference_embedding
+from starme.linode_storage import LinodeObjectStorage
 from starme.models import AuditEvent, EpisodeOutput, FirstLook, Order, RenderJob
+from starme.render_pipeline import _asset_client
 from starme.schemas import JobState, OrderState, SyntheticShell
 
 
@@ -92,13 +95,94 @@ def _seedance_order_inputs(
 def _reference_portrait(order: Order, settings: Settings) -> Path | None:
     """The subscriber's reference portrait for face QA, stored by the operator
     at media_dir/faces/{tester_reference}.(png|jpg|jpeg)."""
-    if not settings.media_dir:
-        return None
-    for suffix in ("png", "jpg", "jpeg"):
-        candidate = Path(settings.media_dir) / "faces" / f"{order.tester_reference}.{suffix}"
-        if candidate.is_file():
-            return candidate
+    roots = [Path(settings.faces_dir)] if settings.faces_dir else []
+    if settings.media_dir:
+        roots.append(Path(settings.media_dir) / "faces")
+    for root in roots:
+        for suffix in ("png", "jpg", "jpeg"):
+            candidate = root / f"{order.tester_reference}.{suffix}"
+            if candidate.is_file():
+                return candidate
     return None
+
+
+#: Largest portrait the App may register. Comfortably above a phone camera
+#: original, low enough that a mis-picked video file is refused rather than
+#: streamed into memory.
+MAX_PORTRAIT_BYTES = 15 * 1024 * 1024
+
+
+def _normalized_portrait(raw: bytes, destination: Path) -> Path:
+    """Bake EXIF rotation into the pixels and re-encode as PNG.
+
+    Learned the hard way on 25 August: the tester's photo arrived as a
+    4032x3024 landscape carrying EXIF orientation 5, so every consumer that
+    ignores the tag saw a face lying on its side. Phone galleries are full of
+    these, and a gallery upload is exactly what this endpoint receives.
+    ``cv2.imread`` applies the tag and writing it back out drops it, so what
+    downstream sees is upright with nothing left to misread.
+    """
+    import cv2  # type: ignore[import-not-found]
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    scratch = destination.with_suffix(".upload")
+    scratch.write_bytes(raw)
+    try:
+        image = cv2.imread(str(scratch))  # honours EXIF orientation
+        if image is None:
+            raise ValueError("That file is not an image we can read.")
+        cv2.imwrite(str(destination), image)
+    finally:
+        scratch.unlink(missing_ok=True)
+    return destination
+
+
+def register_face_asset(
+    *, raw: bytes, tester_reference: str, settings: Settings
+) -> str:
+    """Host a portrait, register it with the provider, and keep a QA copy.
+
+    The whole App-side identity path in one call: normalize, prove there is a
+    face to swap, publish where the provider can fetch it, register it as an
+    asset, and store the same pixels for the face-QA gate to compare renders
+    against. Returns the ``asset://`` URI the order will carry.
+    """
+    if len(raw) > MAX_PORTRAIT_BYTES:
+        raise ValueError("That photo is too large. Please choose one under 15 MB.")
+    storage = LinodeObjectStorage.from_settings(settings)
+    if storage is None:
+        raise RuntimeError("Object storage is not configured, so a face cannot be registered")
+    if not settings.byteplus_asset_group_id:
+        raise RuntimeError("No provider asset group is configured")
+
+    portrait = Path(settings.faces_dir) / f"{tester_reference}.png"
+    _normalized_portrait(raw, portrait)
+
+    # Fail here rather than three minutes into a paid render: the QA gate needs
+    # an embedding of this face, and a portrait it cannot read is a render that
+    # cannot be verified.
+    if settings.face_qa_enabled:
+        try:
+            reference_embedding(portrait)
+        except ValueError as exc:
+            portrait.unlink(missing_ok=True)
+            raise ValueError(
+                "We could not find a clear face in that photo. Use a front-facing "
+                "close-up in even light."
+            ) from exc
+
+    stored = storage.put(
+        storage.object_key(f"faces/{tester_reference}.png"),
+        portrait.read_bytes(),
+        "image/png",
+    )
+    asset = _asset_client(settings).ensure_active_asset(
+        group_id=settings.byteplus_asset_group_id,
+        source_url=storage.public_url(stored.key),
+        asset_type="Image",
+        name=f"starme-face-{tester_reference}",
+    )
+    return asset.uri
 
 
 def _lead_portrait(shell: SyntheticShell, media_root: Path) -> Path | None:

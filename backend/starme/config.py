@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     # (passthrough demo delivery); episodes/first-look map to shells/{shell_id}/... keys.
     # This is NOT the real render pipeline and does not enable sensitive processing.
     media_dir: str | None = None
+    # Where subscriber portraits land when the App registers a face. Kept
+    # apart from media_dir on purpose: show assets are a read-only
+    # passthrough, and this holds personal data the API must be able to
+    # write. Operator-placed portraits under media_dir/faces still work.
+    faces_dir: str = "/faces"
 
     @model_validator(mode="after")
     def reject_local_secrets_outside_development(self) -> "Settings":

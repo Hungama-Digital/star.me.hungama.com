@@ -4,7 +4,7 @@ import secrets
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
@@ -23,6 +23,7 @@ from starme.schemas import (
     ConsentCreateRequest,
     ConsentResponse,
     EpisodeResponse,
+    FaceAssetResponse,
     FirstLookDecision,
     FirstLookDecisionRequest,
     FirstLookResponse,
@@ -41,7 +42,7 @@ from starme.schemas import (
     SyntheticShell,
 )
 from starme.security import authenticate_token, issue_code, redeem_code, utcnow
-from starme.services import audit, cancel_active_jobs
+from starme.services import audit, cancel_active_jobs, register_face_asset
 
 router = APIRouter()
 bearer = HTTPBearer(auto_error=False)
@@ -301,6 +302,42 @@ def revoke_consent(
         canceled_jobs=canceled_jobs,
         deletion_requested_at=now,
     )
+
+
+@router.post("/v1/identity/face-assets", response_model=FaceAssetResponse, status_code=201)
+def register_face(
+    client: ClientDependency,
+    settings: SettingsDependency,
+    image: Annotated[UploadFile, File()],
+) -> FaceAssetResponse:
+    """Register the portrait this device will be cast as.
+
+    Serves both App paths - the selfie and the gallery pick - because they are
+    the same request: an image that has to reach the provider before an order
+    can carry a real face. The photo is normalized (EXIF rotation baked in),
+    checked for a findable face, hosted, registered as an asset, and kept for
+    the face-QA gate. Until this exists for a device, orders fall back to the
+    operator-maintained mapping.
+    """
+    if not settings.allow_sensitive_processing:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Sensitive processing is not enabled on this environment",
+        )
+    raw = image.file.read()
+    if not raw:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "That photo was empty.")
+    try:
+        uri = register_face_asset(
+            raw=raw, tester_reference=client.tester_reference, settings=settings
+        )
+    except ValueError as exc:  # the caller can fix these by choosing another photo
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - provider/storage failure, reported honestly
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, f"Could not register that photo: {exc}"
+        ) from exc
+    return FaceAssetResponse(face_asset_id=uri, tester_reference=client.tester_reference)
 
 
 @router.post("/v1/orders", response_model=OrderResponse, status_code=201)

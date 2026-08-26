@@ -70,3 +70,37 @@ def test_capabilities_publish_server_consent_configuration() -> None:
 
 def test_catalogue_requires_authentication() -> None:
     assert client.get("/v1/catalogue/shells").status_code == 401
+
+
+def _authorized_token(reference: str) -> str:
+    issue = client.post(
+        "/v1/operator/access-codes",
+        headers={"X-Operator-Key": "test-operator-key"},
+        json={"tester_reference": reference},
+    )
+    return client.post(
+        "/v1/access/redeem",
+        json={"code": issue.json()["code"], "device_id": "device-face-1"},
+    ).json()["access_token"]
+
+
+def test_face_registration_is_refused_until_sensitive_processing_is_enabled() -> None:
+    """Both App paths - selfie and gallery pick - hit this one endpoint, and
+    neither may send a real face to the provider on an environment that has
+    not switched sensitive processing on."""
+    token = _authorized_token("tester-face")
+    response = client.post(
+        "/v1/identity/face-assets",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"image": ("face.png", b"not-a-real-image", "image/png")},
+    )
+    assert response.status_code == 409
+    assert "Sensitive processing" in response.json()["detail"]
+
+
+def test_face_registration_requires_authentication() -> None:
+    response = client.post(
+        "/v1/identity/face-assets",
+        files={"image": ("face.png", b"x", "image/png")},
+    )
+    assert response.status_code in (401, 403)

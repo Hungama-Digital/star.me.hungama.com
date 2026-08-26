@@ -68,6 +68,13 @@ class SyntheticShell(BaseModel):
     role_original_portrait: str = ""
 
 
+class FaceAssetResponse(BaseModel):
+    """What the App stores after registering a portrait for this device."""
+
+    face_asset_id: str
+    tester_reference: str
+
+
 class IssueAccessCodeRequest(BaseModel):
     tester_reference: str = Field(min_length=2, max_length=100)
     expires_in_hours: int = Field(default=24, ge=1, le=168)

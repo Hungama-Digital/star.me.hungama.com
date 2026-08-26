@@ -44,6 +44,8 @@ services:
     volumes:
       # Read-only passthrough media (real show assets). Populated out of band, not in Git.
       - ./media:/media:ro
+      # Subscriber portraits, written here when a face is registered from the App.
+      - starme_faces:/faces
       # Personalized render outputs, written by the worker and served read-only
       # through /v1/media grants for orders/ keys.
       - starme_renders:/renders:ro
@@ -66,12 +68,14 @@ services:
     command: ["rq", "worker", "starme-first-look", "starme-full-render", "starme-seedance", "--url", "redis://redis:6379/0"]
     volumes:
       - ./media:/media:ro
+      - starme_faces:/faces:ro
       - starme_renders:/renders
     depends_on:
       api:
         condition: service_started
 
 volumes:
+  starme_faces:
   starme_postgres:
   starme_redis:
   starme_renders:
