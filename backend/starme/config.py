@@ -40,6 +40,20 @@ class Settings(BaseSettings):
     # Seedance 2.5 won the 20 August three-way proof (liveliness); its edit tasks
     # require ratio=adaptive and duration=-1, enforced in render_pipeline.
     byteplus_model: str = "dreamina-seedance-2-5-260628"
+    # Which swap method the render pipeline uses. "direct" is the single-call
+    # edit that shipped Episode 1 on 22-25 August. "masked" is the three-stage
+    # pipeline: white out the head, have an LLM write the fill prompt, then
+    # rebuild the head from the reference. Masked costs about twice as much and
+    # carries face SHAPE, hairline and eyewear rather than mapping features
+    # onto the original skull - the difference between a slimmer version of
+    # the subscriber and the subscriber.
+    render_method: str = "direct"
+    # Masked staging runs on Seedance 2.0, not 2.5. On 2.5 the mask stage draws
+    # a rigid axis-aligned rectangle and the fill stage prints a photo inside
+    # it, borders and all (measured 26 August). 2.0's mask follows the head and
+    # its fill reconstructs it.
+    byteplus_masked_model: str = "dreamina-seedance-2-0-260128"
+    byteplus_prompt_llm: str = "seed-2-0-pro-260328"
     byteplus_api_base_url: str = "https://ark.ap-southeast.bytepluses.com/api/v3"
     byteplus_project_name: str = "default"
     byteplus_region: str = "ap-southeast-1"

@@ -19,7 +19,7 @@ from starme.episode_assembly import (
 from starme.face_qa import crop_to_face, reference_embedding
 from starme.linode_storage import LinodeObjectStorage
 from starme.models import AuditEvent, EpisodeOutput, FirstLook, Order, RenderJob
-from starme.render_pipeline import _asset_client
+from starme.render_pipeline import _asset_client, render_fn_for
 from starme.schemas import JobState, OrderState, SyntheticShell
 
 
@@ -122,7 +122,7 @@ def _normalized_portrait(raw: bytes, destination: Path) -> Path:
     ``cv2.imread`` applies the tag and writing it back out drops it, so what
     downstream sees is upright with nothing left to misread.
     """
-    import cv2  # type: ignore[import-not-found]
+    import cv2
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     scratch = destination.with_suffix(".upload")
@@ -266,6 +266,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
                 settings=settings,
                 reference_portrait=_reference_portrait(order, settings),
                 lead_portrait=_lead_portrait(shell, media_root),
+                render=render_fn_for(settings),
             )
         except Exception as exc:  # noqa: BLE001 - report honestly, never fake readiness
             _fail_job(session, job, order, str(exc))
@@ -319,6 +320,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
                     settings=settings,
                     reference_portrait=_reference_portrait(order, settings),
                 lead_portrait=_lead_portrait(shell, media_root),
+                render=render_fn_for(settings),
                 )
                 session.add(
                     EpisodeOutput(

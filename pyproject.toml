@@ -62,3 +62,11 @@ strict = true
 packages = ["starme"]
 mypy_path = "backend"
 plugins = ["pydantic.mypy"]
+
+# Neither ships type stubs, and both are optional at import time - present in
+# the container, absent in a bare checkout. Declaring them here keeps the check
+# identical either way, instead of inline ignores that are "unused" wherever
+# the package happens to be installed.
+[[tool.mypy.overrides]]
+module = ["cv2", "cv2.*", "insightface", "insightface.*"]
+ignore_missing_imports = true

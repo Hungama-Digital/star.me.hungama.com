@@ -58,7 +58,7 @@ def _insightface_analyzer() -> Any:  # insightface ships no type stubs
         return _analyzer
     import os
 
-    from insightface.app import (  # type: ignore[import-not-found]
+    from insightface.app import (
         FaceAnalysis,
     )
 
@@ -77,7 +77,7 @@ def _insightface_embedder() -> EmbedFn:
     global _default_embedder
     if _default_embedder is not None:
         return _default_embedder
-    import cv2  # type: ignore[import-not-found]
+    import cv2
 
     analyzer = _insightface_analyzer()
 

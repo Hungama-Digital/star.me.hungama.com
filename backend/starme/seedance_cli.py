@@ -28,6 +28,27 @@ def _parser() -> argparse.ArgumentParser:
     extract.add_argument("--video", type=Path, required=True)
     extract.add_argument("--audio", type=Path, required=True)
 
+    scan = commands.add_parser(
+        "scan-shots",
+        help="Derive the swap manifest from the master by finding the original lead",
+    )
+    scan.add_argument("master", type=Path, help="Episode master video")
+    scan.add_argument(
+        "--lead-portrait", type=Path, required=True,
+        help="Still of the ORIGINAL lead actor, e.g. media/shells/<id>/role-original.png",
+    )
+    scan.add_argument("--episode", type=int, required=True)
+    scan.add_argument("--role", default="Arjun", help="Manifest character name of the lead")
+    scan.add_argument("--co-stars", default="", help="Other names for the characters field")
+    scan.add_argument(
+        "--out", type=Path, default=None,
+        help="Write the manifest here. Without it, only the report is printed.",
+    )
+    scan.add_argument(
+        "--merge-into", type=Path, default=None,
+        help="Existing manifest to merge into, replacing only this episode's entries",
+    )
+
     quality = commands.add_parser("quality", help="Run structural output quality gates")
     quality.add_argument("source", type=Path)
     quality.add_argument("output", type=Path)
@@ -196,6 +217,32 @@ def main() -> None:
         )
         print(json.dumps({"video": str(video), "audio": str(audio)}, indent=2))
         return
+    if args.command == "scan-shots":
+        from starme.media_pipeline import probe_media
+        from starme.shotscan import manifest_entries, scan, write_manifest
+        from starme.shotscan import report as scan_report
+
+        duration = probe_media(args.master).duration_seconds
+        shots = scan(args.master, args.lead_portrait, duration=duration)
+        print(scan_report(shots))
+        entries = manifest_entries(
+            shots, episode=args.episode, role_character=args.role, co_stars=args.co_stars
+        )
+        print(f"\n{len(entries)} designated windows for episode {args.episode}")
+        if args.merge_into and args.merge_into.is_file():
+            # Only this episode's entries are replaced; the others are content
+            # data for episodes this scan says nothing about.
+            existing = json.loads(args.merge_into.read_text())
+            kept = [e for e in existing if int(e.get("episode", 0)) != args.episode]
+            entries = entries + kept
+            print(f"merged with {len(kept)} entries from other episodes")
+        if args.out:
+            write_manifest(entries, args.out)
+            print(f"written to {args.out}")
+        else:
+            print(json.dumps(entries, indent=1))
+        return
+
     if args.command == "quality":
         report = structural_quality_report(args.source, args.output)
         print(json.dumps(asdict(report), indent=2, sort_keys=True))

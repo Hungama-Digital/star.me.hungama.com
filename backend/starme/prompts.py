@@ -52,6 +52,75 @@ def face_swap_prompt(
     return SubjectReplacementPrompt(text=text, variant="face_swap_direct_v2")
 
 
+def mask_prompt(*, subject_video_desc: str) -> SubjectReplacementPrompt:
+    """Stage 1 of the masked pipeline: white out the designated head.
+
+    Verbatim port of Face Swap Studio's build_mask_prompt. The mask is what
+    makes stage 3 a reconstruction rather than an edit: with the head gone,
+    the model has to build a new one from the reference, so face shape,
+    hairline and eyewear travel with the identity. A direct edit keeps the
+    original skull and only repaints the features.
+
+    The wording asks for a rectangle covering all hair. Seedance 2.0 renders
+    something head-shaped that tracks the head, which is what is wanted;
+    2.5 renders a literal rectangle and stage 3 then fills the rectangle
+    instead of the head, which is why the masked method is pinned to 2.0.
+    """
+    if not subject_video_desc:
+        raise ValueError("subject_video_desc is required")
+    text = (
+        f"Define {subject_video_desc} in @Video 1 as <Subject 1>. Strictly edit "
+        f"@Video 1: cover the entire head of <Subject 1> with a solid opaque "
+        f"white rectangle. The white rectangle must fully cover the whole face "
+        f"and all visible hair of <Subject 1> - forehead, hairline, the full "
+        f"hairstyle, ears, chin and jaw - leaving no facial feature or strand of "
+        f"hair visible. Render it as flat, solid white with no transparency, no "
+        f"texture and no blur, in every frame of the output, tracking the head "
+        f"position, size and orientation throughout so the rectangle always "
+        f"covers the head completely. Everything else must remain completely "
+        f"unchanged from @Video 1: all body movements and actions, clothing, "
+        f"scene layout, background, lighting effects, original audio, video "
+        f"duration, and camera movement. Only the head of <Subject 1> is "
+        f"covered. Do not add, remove, or alter any other element."
+    )
+    return SubjectReplacementPrompt(text=text, variant="face_swap_mask_v1")
+
+
+def masked_swap_prompt(
+    *,
+    subject_video_desc: str,
+    image_desc: str = "",
+    extra_notes: str = "",
+) -> SubjectReplacementPrompt:
+    """Stage 3 base prompt: fill the white mask from the reference.
+
+    Port of build_base_swap_prompt. This is the text the prompt LLM rewrites
+    in stage 2; it is also the fallback when the LLM is unavailable or returns
+    something unusable, so it has to stand on its own.
+    """
+    if not subject_video_desc:
+        raise ValueError("subject_video_desc is required")
+    img_hint = f" ({image_desc})" if image_desc else ""
+    text = (
+        f"Define {subject_video_desc} in @Video 1 as <Subject 1>; the face to "
+        f"apply to <Subject 1> is the face in @Image 1{img_hint}. Strictly edit "
+        f"@Video 1: the white rectangle in @Video 1 marks where <Subject 1>'s "
+        f"head must be replaced. Replace the white rectangle with the face, hair "
+        f"and hairstyle from @Image 1, so the head is fully reconstructed with "
+        f"the reference identity - face, hairline and hairstyle - and no white "
+        f"area remains anywhere in the output. Render it in every frame, "
+        f"precisely tracking that subject's head position, size, orientation and "
+        f"motion from @Video 1, and blend it naturally with the neck, skin tone "
+        f"and lighting of the scene. {_PROPORTION_CLAUSE} Do not modify any "
+        f"other person in @Video 1. Everything else must remain completely "
+        f"unchanged from @Video 1: all body movements and actions, clothing, "
+        f"scene layout, background, lighting effects, original audio, video "
+        f"duration, and camera movement. Do not add, remove, or alter any other "
+        f"element." + (f" {extra_notes}" if extra_notes else "")
+    )
+    return SubjectReplacementPrompt(text=text, variant="face_swap_masked_v1")
+
+
 def subject_replacement_prompt(*, variant: str = "identity_lock") -> SubjectReplacementPrompt:
     """Prompt for replacing only the designated lead in Video 1.
 

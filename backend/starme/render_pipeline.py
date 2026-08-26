@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,13 @@ from starme.byteplus_assets import BytePlusAssetClient
 from starme.config import Settings, get_settings
 from starme.linode_storage import LinodeObjectStorage
 from starme.media_pipeline import remux_original_audio, structural_quality_report
-from starme.prompts import face_swap_prompt, subject_replacement_prompt
+from starme.promptllm import refine_prompt
+from starme.prompts import (
+    face_swap_prompt,
+    mask_prompt,
+    masked_swap_prompt,
+    subject_replacement_prompt,
+)
 from starme.seedance import SeedanceClient, SeedanceGenerationRequest
 
 
@@ -195,6 +202,150 @@ def execute_seedance_render(
     if not report.passed:
         raise RuntimeError(f"Seedance output failed structural quality gates: {report.checks}")
     return asdict(result)
+
+
+def _submit_and_download(
+    *,
+    settings: Settings,
+    source_video_url: str,
+    reference_asset_uris: tuple[str, ...],
+    prompt: str,
+    model: str,
+    duration: int | None,
+    destination: Path,
+) -> str:
+    """One provider generation, start to downloaded file. Returns the task id."""
+    is_v25 = "seedance-2-5" in model
+    request = SeedanceGenerationRequest(
+        source_video_url=source_video_url,
+        reference_asset_uris=reference_asset_uris,
+        prompt=prompt,
+        model=model,
+        ratio="adaptive",
+        # 2.5 infers the output length from the input and requires -1; 2.0
+        # takes an explicit integer and, asked for more seconds than the input
+        # holds, invents the difference. The caller pads its input to a whole
+        # second so the number passed here is always covered by real footage.
+        duration=-1 if is_v25 else duration,
+        generate_audio=False,
+        watermark=False,
+    )
+    with _client(settings) as client:
+        submitted = client.submit(request)
+        completed = client.wait(
+            submitted.id,
+            timeout_seconds=settings.byteplus_task_timeout_seconds,
+            poll_interval_seconds=settings.byteplus_poll_interval_seconds,
+        )
+        assert completed.output_url is not None
+        client.download(completed.output_url, destination)
+    return completed.id
+
+
+def execute_masked_render(
+    spec_data: dict[str, Any], settings: Settings | None = None
+) -> dict[str, Any]:
+    """The masked pipeline: white out the head, write the prompt, rebuild it.
+
+    Same signature and return shape as :func:`execute_seedance_render`, so the
+    assembly layer picks one or the other and knows nothing else about the
+    difference.
+
+    Why it exists: a direct edit repaints features inside the original head, so
+    the subscriber comes out with the actor's face shape. Masking the head
+    forces a reconstruction, which carries shape, hairline and eyewear. Proven
+    against Method 1 on the same clip and photo on 26 August.
+
+    Pinned to Seedance 2.0 (``byteplus_masked_model``). On 2.5 the mask stage
+    draws a rigid rectangle and the fill stage prints a bordered photo inside
+    it - measured, and unusable.
+    """
+    settings = settings or get_settings()
+    spec = stage_inputs(SeedanceRenderSpec.from_dict(spec_data), settings)
+    work_dir = Path(settings.render_work_dir).resolve() / spec.reference
+    work_dir.mkdir(parents=True, exist_ok=True)
+    masked = work_dir / "stage1-masked.mp4"
+    generated = work_dir / "generated-silent.mp4"
+    final = work_dir / "final-with-original-audio.mp4"
+    report_path = work_dir / "quality-report.json"
+    model = settings.byteplus_masked_model
+
+    # Stage 1: the head goes white. No reference image - this stage only needs
+    # to know who to cover.
+    mask_task = _submit_and_download(
+        settings=settings,
+        source_video_url=spec.source_video_url,
+        reference_asset_uris=(),
+        prompt=mask_prompt(subject_video_desc=spec.subject_video_desc).text,
+        model=model,
+        duration=spec.duration,
+        destination=masked,
+    )
+
+    # Stage 2: tighten the fill prompt. Falls back to the base text silently.
+    base = masked_swap_prompt(
+        subject_video_desc=spec.subject_video_desc,
+        image_desc=spec.image_desc,
+        extra_notes=spec.extra_notes,
+    ).text
+    prompt, refined = refine_prompt(
+        base_prompt=base,
+        subject_video_desc=spec.subject_video_desc,
+        image_desc=spec.image_desc,
+        extra_notes=spec.extra_notes,
+        settings=settings,
+    )
+
+    # Stage 3: the masked video becomes the input, and the reference fills it.
+    # It has to be hosted and registered like any other provider input.
+    staged = stage_inputs(
+        replace(
+            spec,
+            reference=f"{spec.reference}-masked",
+            source_video_url="",
+            source_video_path=str(masked),
+        ),
+        settings,
+    )
+    swap_task = _submit_and_download(
+        settings=settings,
+        source_video_url=staged.source_video_url,
+        reference_asset_uris=staged.reference_asset_uris,
+        prompt=prompt,
+        model=model,
+        duration=spec.duration,
+        destination=generated,
+    )
+
+    remux_original_audio(generated, Path(spec.original_audio_path), final)
+    report = structural_quality_report(Path(spec.source_video_path), final)
+    report_path.write_text(json.dumps(asdict(report), indent=2, sort_keys=True) + "\n")
+    result = SeedanceRenderResult(
+        reference=spec.reference,
+        provider_task_id=f"{mask_task}+{swap_task}",
+        generated_video_path=str(generated),
+        final_video_path=str(final),
+        quality_report_path=str(report_path),
+        quality_passed=report.passed,
+    )
+    payload = asdict(result)
+    # The mask is the only window into which stage failed, and prompt_refined
+    # says whether stage 2 actually ran - both matter when a render looks wrong.
+    payload["masked_video_path"] = str(masked)
+    payload["prompt_refined"] = refined
+    if not report.passed:
+        raise RuntimeError(f"Seedance output failed structural quality gates: {report.checks}")
+    return payload
+
+
+RenderFn = Callable[[dict[str, Any], Settings], dict[str, Any]]
+
+
+def render_fn_for(settings: Settings) -> RenderFn:
+    """The render callable this environment is configured to use."""
+    if settings.render_method == "masked":
+        return execute_masked_render
+    return execute_seedance_render
 
 
 def enqueue_seedance_render(spec: SeedanceRenderSpec, settings: Settings | None = None) -> str:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
+import tempfile
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -22,6 +24,10 @@ MAX_PROVIDER_SECONDS = 15.0
 # Windows longer than ~8s exhibited within-window identity drift in the
 # 21-22 August product reviews; batches target this size.
 BATCH_TARGET_SECONDS = 8.0
+# Above this share of a frame left flat white, the fill stage did not cover
+# the mask and the roll is rejected. Measured leaks were 7%; scenes with real
+# highlights sit near 1%.
+MAX_UNFILLED_MASK_PERCENT = 1.5
 # The proven Seedance render tier; provider inputs are cut to this size so the
 # render pipeline's structural gate compares source and output like for like.
 PROVIDER_WIDTH, PROVIDER_HEIGHT = 720, 1280
@@ -237,6 +243,79 @@ def _cut_piece_exact(
     return destination
 
 
+def _pad_to_whole_second(source: Path, destination: Path, seconds: float) -> int:
+    """Hold the last frame out to the next whole second. Returns that second.
+
+    Only the masked pipeline needs this, and only because Seedance 2.0 takes an
+    explicit integer duration: asked for 8 seconds against 7.64 of footage it
+    returned 8.04, the extra four tenths invented outright. Padding means every
+    second asked for is covered by real material, and the caller trims the hold
+    back off afterwards. Seedance 2.5 infers duration and needs none of this.
+    """
+    whole = max(int(MIN_PROVIDER_SECONDS), int(math.ceil(seconds - 0.001)))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        ["ffmpeg", "-y", "-i", str(source)]
+        + ["-vf", f"tpad=stop_mode=clone:stop_duration={whole},fps={_FPS},"
+                  f"scale={PROVIDER_WIDTH}:{PROVIDER_HEIGHT}"]
+        + ["-t", str(whole), "-an"]
+        + _ENCODE
+        + ["-movflags", "+faststart", str(destination)]
+    )
+    return whole
+
+
+def _trim_to(source: Path, destination: Path, seconds: float) -> Path:
+    """Cut a padded render back to the footage it was built from."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        ["ffmpeg", "-y", "-i", str(source), "-t", f"{seconds:.3f}", "-an"]
+        + _ENCODE
+        + ["-movflags", "+faststart", str(destination)]
+    )
+    return destination
+
+
+def unfilled_mask_percentage(swapped: Path, source: Path, *, interval: float = 0.25) -> float:
+    """Worst share of a frame the fill stage left flat white.
+
+    The masked pipeline's own failure mode, impossible in a direct edit: stage
+    three sometimes does not paint over the whole mask and the white patch from
+    stage one sits on the face. It happened for half a second at the head of one
+    batch on 26 August and only a frame-level look caught it.
+
+    Measured as white in the output where the source is not white, so a scene
+    with real bright highlights does not read as a leak.
+    """
+    import cv2  # noqa: PLC0415
+
+    worst = 0.0
+    with tempfile.TemporaryDirectory() as scratch:
+        out_dir, src_dir = Path(scratch) / "out", Path(scratch) / "src"
+        for folder, video in ((out_dir, swapped), (src_dir, source)):
+            folder.mkdir(parents=True, exist_ok=True)
+            _run(
+                ["ffmpeg", "-y", "-i", str(video), "-vf", f"fps=1/{interval}"]
+                + ["-q:v", "3", str(folder / "f%04d.jpg")]
+            )
+        for out_frame, src_frame in zip(
+            sorted(out_dir.glob("*.jpg")), sorted(src_dir.glob("*.jpg")), strict=False
+        ):
+            out = cv2.imread(str(out_frame), cv2.IMREAD_GRAYSCALE)
+            src = cv2.imread(str(src_frame), cv2.IMREAD_GRAYSCALE)
+            if out is None or src is None:
+                continue
+            src = cv2.resize(src, (out.shape[1], out.shape[0]))
+            # Thresholds rather than numpy maths: cv2 is already a
+            # dependency and this keeps the module import-light.
+            white = cv2.threshold(out, 235, 255, cv2.THRESH_BINARY)[1]
+            dark_in_source = cv2.threshold(src, 199, 255, cv2.THRESH_BINARY_INV)[1]
+            leaked = cv2.bitwise_and(white, dark_in_source)
+            pixels = out.shape[0] * out.shape[1]
+            worst = max(worst, cv2.countNonZero(leaked) / pixels * 100)
+    return worst
+
+
 def _concat_encode(parts: list[Path], destination: Path, *, width: int, height: int) -> Path:
     """Concatenate parts with a re-encode.
 
@@ -325,17 +404,38 @@ def _swap_batch_once(
             height=PROVIDER_HEIGHT,
         )
     batch_audio = _extract_audio(batch_input, work_dir / f"{reference}-audio.m4a")
+    true_span = probe_media(batch_input).duration_seconds
+    # The masked pipeline runs on Seedance 2.0, which takes an explicit integer
+    # duration and invents footage for any second the input does not cover. Pad
+    # to a whole second, ask for exactly that, trim the hold back off. The
+    # direct path runs on 2.5, which infers duration, so it sends the cut as-is.
+    masked = settings.render_method == "masked"
+    provider_input = batch_input
+    asked: int | None = None
+    if masked:
+        padded = work_dir / f"{reference}-padded.mp4"
+        asked = _pad_to_whole_second(batch_input, padded, true_span)
+        provider_input = padded
     spec = SeedanceRenderSpec(
         reference=reference,
         source_video_url="",
-        source_video_path=str(batch_input),
+        source_video_path=str(provider_input),
         original_audio_path=str(batch_audio),
         reference_asset_uris=(face_asset_uri,),
         subject_video_desc=subject_video_desc,
         extra_notes=extra_notes,
+        duration=asked,
     )
     result = _render_with_retry(render, asdict(spec), settings)
     generated = Path(str(result["generated_video_path"]))
+    if masked:
+        leak = unfilled_mask_percentage(generated, provider_input)
+        if leak > MAX_UNFILLED_MASK_PERCENT:
+            raise EpisodeAssemblyError(
+                f"Batch {reference}: the fill stage left {leak:.1f}% of a frame as "
+                "unfilled white mask"
+            )
+        generated = _trim_to(generated, work_dir / f"{reference}-trimmed.mp4", true_span)
     swapped: dict[str, Path] = {}
     offset = 0.0
     for index, shot in enumerate(batch):
