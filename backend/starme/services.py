@@ -16,7 +16,7 @@ from starme.episode_assembly import (
     render_first_look,
     shots_for_episode,
 )
-from starme.face_qa import reference_embedding
+from starme.face_qa import crop_to_face, reference_embedding
 from starme.linode_storage import LinodeObjectStorage
 from starme.models import AuditEvent, EpisodeOutput, FirstLook, Order, RenderJob
 from starme.render_pipeline import _asset_client
@@ -164,6 +164,11 @@ def register_face_asset(
     staged = portrait.with_name(f"{tester_reference}.incoming.png")
     _normalized_portrait(raw, staged)
     try:
+        # Reframe to head-and-shoulders. Best effort on purpose: a portrait the
+        # detector cannot frame still goes through as the user sent it, and the
+        # face check below is what decides whether it is usable at all.
+        if settings.face_qa_enabled:
+            crop_to_face(staged, staged)
         # Fail here rather than three minutes into a paid render: the QA gate
         # needs an embedding of this face, and a portrait it cannot read is a
         # render that cannot be verified.

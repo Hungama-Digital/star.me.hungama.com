@@ -1,3 +1,5 @@
+import contextlib
+
 from fastapi.testclient import TestClient
 
 from starme.main import app
@@ -122,10 +124,8 @@ def test_a_failed_registration_keeps_the_previous_portrait(tmp_path) -> None:
     settings = Settings(faces_dir=str(faces), face_qa_enabled=True)
     # No storage or provider configured, so registration fails before any
     # promotion - exactly the window where the old file used to be lost.
-    try:
+    with contextlib.suppress(ValueError, RuntimeError):
         register_face_asset(raw=b"not-an-image", tester_reference="keep-me", settings=settings)
-    except (ValueError, RuntimeError):
-        pass
 
     assert good.read_bytes() == b"the portrait already working for this device"
     assert not (faces / "keep-me.incoming.png").exists()

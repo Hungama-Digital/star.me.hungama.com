@@ -5,6 +5,7 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 # Face-identity QA for swapped windows.
 #
@@ -47,14 +48,16 @@ class WindowVerdict:
 _default_embedder: EmbedFn | None = None
 
 
-def _insightface_embedder() -> EmbedFn:
-    """Lazy singleton around insightface; imported only when QA is enabled."""
-    global _default_embedder
-    if _default_embedder is not None:
-        return _default_embedder
+_analyzer: Any = None
+
+
+def _insightface_analyzer() -> Any:  # insightface ships no type stubs
+    """The detector, loaded once and shared by QA and the portrait cropper."""
+    global _analyzer
+    if _analyzer is not None:
+        return _analyzer
     import os
 
-    import cv2  # type: ignore[import-not-found]
     from insightface.app import (  # type: ignore[import-not-found]
         FaceAnalysis,
     )
@@ -65,6 +68,18 @@ def _insightface_embedder() -> EmbedFn:
         providers=["CPUExecutionProvider"],
     )
     analyzer.prepare(ctx_id=-1, det_size=(640, 640))
+    _analyzer = analyzer
+    return analyzer
+
+
+def _insightface_embedder() -> EmbedFn:
+    """Lazy singleton around insightface; imported only when QA is enabled."""
+    global _default_embedder
+    if _default_embedder is not None:
+        return _default_embedder
+    import cv2  # type: ignore[import-not-found]
+
+    analyzer = _insightface_analyzer()
 
     def embed(image_path: Path) -> list[tuple[list[float], float]]:
         image = cv2.imread(str(image_path))
@@ -89,6 +104,50 @@ def _cosine(a: list[float], b: list[float]) -> float:
     if norm_a == 0 or norm_b == 0:
         return 0.0
     return float(dot / (norm_a * norm_b))
+
+
+#: How much of the head-and-shoulders to keep around the detected face box,
+#: as a multiple of the box itself. 1.9 lands close to the hand-cropped
+#: reference that produced the 25 August result: hair and chin inside the
+#: frame, some neck and collar, no more.
+FACE_CROP_MARGIN = 1.9
+
+
+def crop_to_face(source: Path, destination: Path) -> bool:
+    """Reframe a portrait around its largest face. False when none is found.
+
+    A phone gallery upload is usually a whole person in a room, and the swap
+    is only ever conditioned on the face: a 280px head inside an 875px frame
+    carries a fraction of the detail of the same head filling it. This is the
+    difference between what a careful operator crops by hand and what a user
+    actually picks, and it is the one variable users control worst.
+
+    Uses the same detector the QA gate does, so a portrait this cannot frame
+    is one QA could not have judged either.
+    """
+    import cv2
+
+    image = cv2.imread(str(source))
+    if image is None:
+        return False
+    height, width = image.shape[:2]
+    faces = _insightface_analyzer().get(image)
+    if not faces:
+        return False
+    box = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])).bbox
+    x1, y1, x2, y2 = (float(v) for v in box)
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    half = max(x2 - x1, y2 - y1) * FACE_CROP_MARGIN / 2
+    # Shifted down a little: a face box stops at the chin, and a portrait that
+    # keeps the collar reads better than one that keeps the same air above the
+    # hair.
+    cy += half * 0.12
+    left, top = max(0, int(cx - half)), max(0, int(cy - half))
+    right, bottom = min(width, int(cx + half)), min(height, int(cy + half))
+    if right - left < 64 or bottom - top < 64:
+        return False
+    cv2.imwrite(str(destination), image[top:bottom, left:right])
+    return True
 
 
 def reference_embedding(portrait: Path, embedder: EmbedFn | None = None) -> list[float]:
