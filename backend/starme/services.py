@@ -101,6 +101,19 @@ def _reference_portrait(order: Order, settings: Settings) -> Path | None:
     return None
 
 
+def _lead_portrait(shell: SyntheticShell, media_root: Path) -> Path | None:
+    """The still of the ORIGINAL lead, beside the shell's own media.
+
+    Content-owner material, named by the catalogue rather than discovered, and
+    optional: a shell that has not supplied one still renders, with the weaker
+    subscriber-only QA and a note to that effect in the report.
+    """
+    if not shell.role_original_portrait:
+        return None
+    candidate = media_root / "shells" / shell.id / shell.role_original_portrait
+    return candidate if candidate.is_file() else None
+
+
 def _fail_job(session: Session, job: RenderJob, order: Order, reason: str) -> None:
     job.status = JobState.FAILED
     job.completed_at = datetime.now(UTC)
@@ -148,6 +161,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
                 reference=f"{order.id}-first-look",
                 settings=settings,
                 reference_portrait=_reference_portrait(order, settings),
+                lead_portrait=_lead_portrait(shell, media_root),
             )
         except Exception as exc:  # noqa: BLE001 - report honestly, never fake readiness
             _fail_job(session, job, order, str(exc))
@@ -200,6 +214,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
                     reference_prefix=f"{order.id}-ep{number}",
                     settings=settings,
                     reference_portrait=_reference_portrait(order, settings),
+                lead_portrait=_lead_portrait(shell, media_root),
                 )
                 session.add(
                     EpisodeOutput(

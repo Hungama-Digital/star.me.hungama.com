@@ -62,6 +62,10 @@ class SyntheticShell(BaseModel):
     role_character: str = ""
     role_video_desc: str = ""
     role_render_notes: str = ""
+    # Filename, under the shell's media directory, of a still showing the
+    # ORIGINAL lead actor. Without it the QA gate can only ask "is the
+    # subscriber here?", which passes a co-star who was wrongly replaced.
+    role_original_portrait: str = ""
 
 
 class IssueAccessCodeRequest(BaseModel):

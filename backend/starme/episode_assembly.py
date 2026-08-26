@@ -355,13 +355,41 @@ def _judge_pieces(
     pieces: dict[str, Path],
     reference_face: list[float] | None,
     embedder: EmbedFn | None,
+    *,
+    masters: dict[str, Path] | None = None,
+    lead_reference: list[float] | None = None,
 ) -> tuple[bool, dict[str, WindowVerdict]]:
     if reference_face is None:
         return True, {}
+    masters = masters or {}
     verdicts = {
-        clip: judge_window(path, reference_face, embedder=embedder) for clip, path in pieces.items()
+        clip: judge_window(
+            path,
+            reference_face,
+            master=masters.get(clip),
+            lead_reference=lead_reference,
+            embedder=embedder,
+        )
+        for clip, path in pieces.items()
     }
     return all(verdict.passed for verdict in verdicts.values()), verdicts
+
+
+def _master_pieces(
+    master: Path, batch: list[Shot], work_dir: Path, reference: str, *, width: int, height: int
+) -> dict[str, Path]:
+    """The same windows cut from the untouched master, for QA to compare against."""
+    return {
+        shot.clip: _cut_video(
+            master,
+            shot.start,
+            shot.duration,
+            work_dir / f"{reference}-src{index:02d}.mp4",
+            width=width,
+            height=height,
+        )
+        for index, shot in enumerate(batch)
+    }
 
 
 def _swap_batch_verified(
@@ -380,6 +408,7 @@ def _swap_batch_verified(
     reference_face: list[float] | None,
     embedder: EmbedFn | None,
     max_rolls: int,
+    lead_reference: list[float] | None = None,
 ) -> tuple[dict[str, Path], dict[str, Any]]:
     """Roll a batch up to max_rolls until every piece passes face QA.
 
@@ -414,7 +443,20 @@ def _swap_batch_verified(
         except Exception as exc:  # noqa: BLE001 - roll again; surfaced when rolls run out
             last_error = str(exc)
             continue
-        passed, verdicts = _judge_pieces(pieces, reference_face, embedder)
+        masters = (
+            _master_pieces(
+                master, batch, roll_dir, reference, width=piece_width, height=piece_height
+            )
+            if reference_face is not None and lead_reference is not None
+            else None
+        )
+        passed, verdicts = _judge_pieces(
+            pieces,
+            reference_face,
+            embedder,
+            masters=masters,
+            lead_reference=lead_reference,
+        )
         report = {
             "rolls_used": roll + 1,
             "face_qa": {clip: asdict(verdict) for clip, verdict in verdicts.items()},
@@ -449,6 +491,7 @@ def assemble_episode(
     settings: Settings,
     render: RenderFn = execute_seedance_render,
     reference_portrait: Path | None = None,
+    lead_portrait: Path | None = None,
     embedder: EmbedFn | None = None,
 ) -> dict[str, Any]:
     """Swap the designated role's shots and rebuild the full episode.
@@ -468,8 +511,15 @@ def assemble_episode(
     segments = plan_segments(master_probe.duration_seconds, shots)
 
     reference_face = None
+    lead_face = None
     if reference_portrait is not None and settings.face_qa_enabled:
         reference_face = reference_embedding(reference_portrait, embedder)
+        # Optional, and the gate is materially weaker without it: with no
+        # picture of the original lead, QA can only ask whether the
+        # subscriber's face is present, which a wrongly replaced co-star
+        # answers correctly.
+        if lead_portrait is not None and lead_portrait.is_file():
+            lead_face = reference_embedding(lead_portrait, embedder)
 
     pieces: dict[str, Path] = {}
     qa_reports: dict[str, Any] = {}
@@ -489,6 +539,7 @@ def assemble_episode(
             reference_face=reference_face,
             embedder=embedder,
             max_rolls=settings.render_max_rolls,
+            lead_reference=lead_face,
         )
         pieces.update(batch_pieces)
         qa_reports[f"batch{index:02d}"] = batch_report
@@ -526,6 +577,7 @@ def assemble_episode(
         "swapped_segments": sum(1 for segment in segments if segment.kind == "swap"),
         "provider_batches": len(batch_shots(shots)),
         "face_qa_enabled": reference_face is not None,
+        "lead_aware_qa": lead_face is not None,
         "face_qa": qa_reports,
         "quality_checks": report.checks,
     }
@@ -544,6 +596,7 @@ def render_first_look(
     settings: Settings,
     render: RenderFn = execute_seedance_render,
     reference_portrait: Path | None = None,
+    lead_portrait: Path | None = None,
     embedder: EmbedFn | None = None,
 ) -> Path:
     """Swap the first provider batch (QA-verified) and deliver its midpoint frame."""
@@ -551,8 +604,15 @@ def render_first_look(
         raise EpisodeAssemblyError("No designated shots for the first look")
     work_dir.mkdir(parents=True, exist_ok=True)
     reference_face = None
+    lead_face = None
     if reference_portrait is not None and settings.face_qa_enabled:
         reference_face = reference_embedding(reference_portrait, embedder)
+        # Optional, and the gate is materially weaker without it: with no
+        # picture of the original lead, QA can only ask whether the
+        # subscriber's face is present, which a wrongly replaced co-star
+        # answers correctly.
+        if lead_portrait is not None and lead_portrait.is_file():
+            lead_face = reference_embedding(lead_portrait, embedder)
     first_batch = batch_shots(shots)[0]
     pieces, _ = _swap_batch_verified(
         master=master,
@@ -569,6 +629,7 @@ def render_first_look(
         reference_face=reference_face,
         embedder=embedder,
         max_rolls=settings.render_max_rolls,
+        lead_reference=lead_face,
     )
     first = first_batch[0]
     return _extract_frame(pieces[first.clip], first.duration / 2, destination)

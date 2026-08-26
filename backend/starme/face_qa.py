@@ -34,6 +34,13 @@ class WindowVerdict:
     min_target_similarity: float | None = None
     wrong_identity_frames: int = 0
     double_match_frames: int = 0
+    #: Frames where somebody who is NOT the lead stopped looking like
+    #: themselves. Needs the master to detect, because the subscriber's own
+    #: face on a co-star matches the reference perfectly and scores clean.
+    altered_bystander_frames: int = 0
+    #: Frames whose master shows no lead at all, yet the output carries the
+    #: subscriber's face - the manifest sent footage the lead is not in.
+    orphan_swap_frames: int = 0
     notes: list[str] = field(default_factory=list)
 
 
@@ -116,27 +123,44 @@ def judge_window(
     video: Path,
     reference: list[float],
     *,
+    master: Path | None = None,
+    lead_reference: list[float] | None = None,
     interval: float = 0.5,
     embedder: EmbedFn | None = None,
 ) -> WindowVerdict:
-    """Judge one swapped window against the subscriber reference embedding.
+    """Judge one swapped window, against the subscriber and against the master.
+
+    Two questions, and the second is the one that matters. Comparing only with
+    the subscriber's portrait asks "is the subscriber's face here?", which a
+    co-star wrongly wearing that face answers perfectly - on 25 August a
+    Riya-only close-up was replaced end to end and would have scored a clean
+    pass. Given the master and a still of the ORIGINAL lead, this also asks
+    "is everybody else still themselves?", which is the question that catches
+    a mis-designated window.
 
     Frames without a judgeable face (backs, wides, scenery) are ignored. A
     window fails when clearly visible faces repeatedly fail to match the
-    reference (wrong identity or unswapped), or when two faces in one frame
-    both match it (the double-swap class).
+    reference (wrong identity or unswapped), when two faces in one frame both
+    match it (the double-swap class), when a non-lead person stops looking
+    like themselves, or when a frame containing no lead comes back carrying
+    the subscriber's face.
     """
     embedder = embedder or _insightface_embedder()
     verdict = WindowVerdict(passed=True)
+    compare_master = master is not None and lead_reference is not None
     with tempfile.TemporaryDirectory() as scratch:
-        frames = _sample_frames(video, Path(scratch), interval)
+        frames = _sample_frames(video, Path(scratch) / "out", interval)
+        master_frames: list[Path] = []
+        if compare_master:
+            master_frames = _sample_frames(master, Path(scratch) / "src", interval)  # type: ignore[arg-type]
         verdict.frames_checked = len(frames)
-        for frame in frames:
+        for index, frame in enumerate(frames):
             faces = [(emb, area) for emb, area in embedder(frame) if area >= MIN_FACE_AREA]
             if not faces:
                 continue
             verdict.judged_frames += 1
-            similarities = sorted((_cosine(reference, emb) for emb, _ in faces), reverse=True)
+            embeddings = [emb for emb, _ in faces]
+            similarities = sorted((_cosine(reference, emb) for emb in embeddings), reverse=True)
             best = similarities[0]
             if verdict.min_target_similarity is None or best < verdict.min_target_similarity:
                 verdict.min_target_similarity = best
@@ -144,6 +168,31 @@ def judge_window(
                 verdict.wrong_identity_frames += 1
             if len(similarities) > 1 and similarities[1] >= PASS_SIMILARITY:
                 verdict.double_match_frames += 1
+
+            if not compare_master or index >= len(master_frames):
+                continue
+            source = [
+                emb
+                for emb, area in embedder(master_frames[index])
+                if area >= MIN_FACE_AREA
+            ]
+            if not source:
+                continue
+            lead_present = any(
+                _cosine(lead_reference, emb) >= PASS_SIMILARITY for emb in source  # type: ignore[arg-type]
+            )
+            carries_subscriber = any(
+                _cosine(reference, emb) >= PASS_SIMILARITY for emb in embeddings
+            )
+            if not lead_present and carries_subscriber:
+                verdict.orphan_swap_frames += 1
+            for original in source:
+                if _cosine(lead_reference, original) >= PASS_SIMILARITY:  # type: ignore[arg-type]
+                    continue  # the lead is meant to change
+                if not any(_cosine(original, emb) >= PASS_SIMILARITY for emb in embeddings):
+                    verdict.altered_bystander_frames += 1
+                    break
+
     if verdict.wrong_identity_frames >= 2:
         verdict.passed = False
         verdict.notes.append(
@@ -155,5 +204,17 @@ def judge_window(
         verdict.notes.append(
             f"{verdict.double_match_frames} frames show a second face matching the "
             "reference (non-target person was replaced)"
+        )
+    if verdict.altered_bystander_frames >= 2:
+        verdict.passed = False
+        verdict.notes.append(
+            f"{verdict.altered_bystander_frames} frames show someone other than the "
+            "lead no longer matching the master (a co-star was altered)"
+        )
+    if verdict.orphan_swap_frames >= 2:
+        verdict.passed = False
+        verdict.notes.append(
+            f"{verdict.orphan_swap_frames} frames carry the subscriber's face although "
+            "the master has no lead in them (this window is not the lead's footage)"
         )
     return verdict
