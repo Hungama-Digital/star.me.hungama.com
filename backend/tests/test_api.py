@@ -104,3 +104,28 @@ def test_face_registration_requires_authentication() -> None:
         files={"image": ("face.png", b"x", "image/png")},
     )
     assert response.status_code in (401, 403)
+
+
+def test_a_failed_registration_keeps_the_previous_portrait(tmp_path) -> None:
+    """A second photo that cannot be used must not take down the one already
+    working for this device. Found by refusing a faceless photo under a
+    reference that already had a good portrait: the good one went with it,
+    which silently breaks the render that reads it."""
+    from starme.config import Settings
+    from starme.services import register_face_asset
+
+    faces = tmp_path / "faces"
+    faces.mkdir()
+    good = faces / "keep-me.png"
+    good.write_bytes(b"the portrait already working for this device")
+
+    settings = Settings(faces_dir=str(faces), face_qa_enabled=True)
+    # No storage or provider configured, so registration fails before any
+    # promotion - exactly the window where the old file used to be lost.
+    try:
+        register_face_asset(raw=b"not-an-image", tester_reference="keep-me", settings=settings)
+    except (ValueError, RuntimeError):
+        pass
+
+    assert good.read_bytes() == b"the portrait already working for this device"
+    assert not (faces / "keep-me.incoming.png").exists()

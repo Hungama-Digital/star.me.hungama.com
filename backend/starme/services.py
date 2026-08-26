@@ -155,33 +155,48 @@ def register_face_asset(
     if not settings.byteplus_asset_group_id:
         raise RuntimeError("No provider asset group is configured")
 
+    # Staged, not written straight to the live path. A second attempt that
+    # fails must not destroy the portrait already working for this device -
+    # found the hard way, by refusing a faceless photo under a reference that
+    # already had a good one and taking the good one down with it. The QA gate
+    # reads this file at render time, so losing it silently breaks the render.
     portrait = Path(settings.faces_dir) / f"{tester_reference}.png"
-    _normalized_portrait(raw, portrait)
+    staged = portrait.with_name(f"{tester_reference}.incoming.png")
+    _normalized_portrait(raw, staged)
+    try:
+        # Fail here rather than three minutes into a paid render: the QA gate
+        # needs an embedding of this face, and a portrait it cannot read is a
+        # render that cannot be verified.
+        if settings.face_qa_enabled:
+            try:
+                reference_embedding(staged)
+            except ValueError as exc:
+                raise ValueError(
+                    "We could not find a clear face in that photo. Use a front-facing "
+                    "close-up in even light."
+                ) from exc
 
-    # Fail here rather than three minutes into a paid render: the QA gate needs
-    # an embedding of this face, and a portrait it cannot read is a render that
-    # cannot be verified.
-    if settings.face_qa_enabled:
-        try:
-            reference_embedding(portrait)
-        except ValueError as exc:
-            portrait.unlink(missing_ok=True)
-            raise ValueError(
-                "We could not find a clear face in that photo. Use a front-facing "
-                "close-up in even light."
-            ) from exc
-
-    stored = storage.put(
-        storage.object_key(f"faces/{tester_reference}.png"),
-        portrait.read_bytes(),
-        "image/png",
-    )
-    asset = _asset_client(settings).ensure_active_asset(
-        group_id=settings.byteplus_asset_group_id,
-        source_url=storage.public_url(stored.key),
-        asset_type="Image",
-        name=f"starme-face-{tester_reference}",
-    )
+        stored = storage.put(
+            storage.object_key(f"faces/{tester_reference}.png"),
+            staged.read_bytes(),
+            "image/png",
+        )
+    except BaseException:
+        staged.unlink(missing_ok=True)
+        raise
+    try:
+        asset = _asset_client(settings).ensure_active_asset(
+            group_id=settings.byteplus_asset_group_id,
+            source_url=storage.public_url(stored.key),
+            asset_type="Image",
+            name=f"starme-face-{tester_reference}",
+        )
+    except BaseException:
+        staged.unlink(missing_ok=True)
+        raise
+    # Promoted only once the provider has the face: until this line the device's
+    # previous portrait is still the one on disk.
+    staged.replace(portrait)
     return asset.uri
 
 
