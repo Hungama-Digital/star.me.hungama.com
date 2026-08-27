@@ -223,10 +223,10 @@ def main() -> None:
         from starme.shotscan import report as scan_report
 
         duration = probe_media(args.master).duration_seconds
-        shots = scan(args.master, args.lead_portrait, duration=duration)
-        print(scan_report(shots))
+        verdicts, found = scan(args.master, args.lead_portrait, duration=duration)
+        print(scan_report(verdicts, found))
         entries = manifest_entries(
-            shots, episode=args.episode, role_character=args.role, co_stars=args.co_stars
+            found, episode=args.episode, role_character=args.role, co_stars=args.co_stars
         )
         print(f"\n{len(entries)} designated windows for episode {args.episode}")
         if args.merge_into and args.merge_into.is_file():

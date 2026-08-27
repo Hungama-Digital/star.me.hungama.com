@@ -2,23 +2,31 @@
 
 Every wrong face this product has shipped came from a hand-written list of
 where the lead appears. The content team's list designated 48s of Episode 1
-when only ~28s contains him, which is how the co-star's own close-up came back
-wearing a subscriber's face. My replacement list was better and still missed a
-bus-aisle shot, because I judged each shot from a single midpoint frame and he
-was standing behind her.
+when about 28s contains him, which is how the co-star's own close-up came back
+wearing a subscriber's face. A hand-made replacement was better and still
+missed a bus-aisle shot, judged from one frame with the lead standing behind
+her.
 
-A list is the wrong artefact. What the pipeline actually needs is the answer to
-one question, per shot: is the ORIGINAL lead's face on screen here? That is
-answerable from the master and a still of the lead, and answering it the same
-way every time removes the entire class of error - including for Episodes 2 and
-3, whose lists have never been checked at all.
+So the question is asked of the footage, frame by frame: is the ORIGINAL lead
+on screen here? Frame level rather than shot level, because a single "shot" in
+Episode 1 runs the co-star's extreme close-up straight into a two-shot with no
+detectable cut between them - designating that whole shot would send her face
+to the provider, which is the exact failure this exists to prevent.
 
-Deliberately conservative in the direction that matters. A shot wrongly
-designated sends footage the lead is not in, which is what puts his face on
-somebody else; a shot wrongly skipped merely leaves the original actor there.
-So a single frame's match is not enough, and the presence threshold is small
-rather than generous: the aisle face nobody swapped was under a fifth of one
-percent of frame area, and it was noticed.
+THE RULE, and why it is shaped this way. Measured on Episode 1:
+
+  * The co-star's close-ups fill 19% to 64% of frame and score 0.15 to 0.28
+    against the lead. Big face, low score: confidently not him, excluded.
+  * The lead scores 0.40 to 0.94 wherever his face is reasonably sized.
+  * In the bus aisle every face is 0.15% to 0.77% of frame and scores 0.05 to
+    0.36 - noise. Nothing that small can be identified by embedding at all.
+
+Judging a face too small to judge is how the aisle shot was missed. So a face
+big enough to identify is trusted, and a face too small to identify is counted
+as present, because it cannot be ruled out. That errs toward swapping a tiny
+unidentifiable face rather than leaving the lead unswapped - and every
+catastrophic mis-swap so far involved a LARGE face, which this rule excludes
+confidently.
 """
 
 from __future__ import annotations
@@ -38,56 +46,53 @@ from starme.face_qa import (
     reference_embedding,
 )
 
-#: Scene-change sensitivity. 0.12 found every cut in Episode 1 that a
-#: frame-by-frame read of the master also found; 0.30 missed several.
-SCENE_THRESHOLD = 0.12
-#: How often to look inside a shot. Fine enough that a shot barely over a
-#: second still yields several samples.
+#: How often the master is examined. Fine enough that a window boundary lands
+#: within a couple of frames of the real one.
 SAMPLE_INTERVAL = 0.25
-#: Smallest share of the frame a face can occupy and still be worth swapping.
-#: The unswapped aisle face measured about 0.17%, so this sits below that.
-MIN_FACE_AREA = 0.001
-#: Frames that must match the lead before a shot is designated. One is not
-#: enough: a single false match would send footage he is absent from.
-MIN_MATCHING_FRAMES = 2
-#: Shots shorter than this are not worth a provider call on their own; they
-#: still ride along inside a batch (see episode_assembly.batch_shots).
-MIN_SHOT_SECONDS = 0.2
+#: Below this share of the frame a face carries too few pixels for the
+#: embedding to mean anything. Measured: the co-star's smallest confidently
+#: judged face was 2.66%, and every aisle face was under 0.8%.
+IDENTIFIABLE_FACE_AREA = 0.015
+#: Faces smaller than this are detector noise rather than people.
+MIN_FACE_AREA = 0.0005
+#: A designated run must last at least this long, so one stray frame does not
+#: become a provider call.
+MIN_RUN_SECONDS = 0.4
+#: Designated runs closer together than this are joined. Cheaper as one call,
+#: and it avoids a seam in the timeline for the sake of a few frames.
+MERGE_GAP_SECONDS = 0.6
+#: Scene-change sensitivity, used only to tidy window edges onto real cuts.
+SCENE_THRESHOLD = 0.12
+#: How far a window edge may move to land on a cut.
+SNAP_SECONDS = 0.35
 
 
 @dataclass(frozen=True)
-class ScannedShot:
-    start: float
-    duration: float
-    frames_sampled: int
-    frames_matching_lead: int
+class FrameVerdict:
+    at: float
+    designated: bool
+    reason: str
     best_similarity: float
     largest_face_area: float
+
+
+@dataclass(frozen=True)
+class Window:
+    start: float
+    duration: float
 
     @property
     def end(self) -> float:
         return self.start + self.duration
-
-    @property
-    def has_lead(self) -> bool:
-        return self.frames_matching_lead >= MIN_MATCHING_FRAMES
 
 
 def scene_cuts(video: Path, *, threshold: float = SCENE_THRESHOLD) -> list[float]:
     """Timestamps where the picture changes enough to be a different shot."""
     completed = subprocess.run(  # noqa: S603
         [  # noqa: S607 - ffmpeg is this package's standing media dependency
-            "ffmpeg",
-            "-v",
-            "error",
-            "-i",
-            str(video),
-            "-vf",
-            f"select='gt(scene,{threshold})',metadata=print:file=-",
-            "-an",
-            "-f",
-            "null",
-            "-",
+            "ffmpeg", "-v", "error", "-i", str(video),
+            "-vf", f"select='gt(scene,{threshold})',metadata=print:file=-",
+            "-an", "-f", "null", "-",
         ],
         capture_output=True,
         text=True,
@@ -98,43 +103,104 @@ def scene_cuts(video: Path, *, threshold: float = SCENE_THRESHOLD) -> list[float
     )
 
 
-def shot_boundaries(
-    video: Path, duration: float, *, threshold: float = SCENE_THRESHOLD
-) -> list[tuple[float, float]]:
-    """The video as a list of (start, duration) shots."""
-    inside = [c for c in scene_cuts(video, threshold=threshold) if 0 < c < duration]
-    marks = [0.0, *inside, duration]
-    return [
-        (start, round(end - start, 3))
-        for start, end in zip(marks, marks[1:], strict=False)
-        if end - start >= MIN_SHOT_SECONDS
-    ]
-
-
-def _sample(video: Path, start: float, duration: float, out_dir: Path) -> list[Path]:
+def _sample_all(video: Path, out_dir: Path, interval: float) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(  # noqa: S603
         [  # noqa: S607
-            "ffmpeg",
-            "-y",
-            "-v",
-            "error",
-            "-ss",
-            str(start),
-            "-i",
-            str(video),
-            "-t",
-            str(duration),
-            "-vf",
-            f"fps=1/{SAMPLE_INTERVAL}",
-            "-q:v",
-            "3",
-            str(out_dir / "s%04d.jpg"),
+            "ffmpeg", "-y", "-v", "error", "-i", str(video),
+            "-vf", f"fps=1/{interval}", "-q:v", "3", str(out_dir / "f%05d.jpg"),
         ],
         check=True,
         capture_output=True,
     )
-    return sorted(out_dir.glob("s*.jpg"))
+    return sorted(out_dir.glob("f*.jpg"))
+
+
+def judge_frames(
+    master: Path,
+    lead_portrait: Path,
+    *,
+    embedder: EmbedFn | None = None,
+    interval: float = SAMPLE_INTERVAL,
+) -> list[FrameVerdict]:
+    """Whether the lead could be on screen, at every sampled moment."""
+    embedder = embedder or _insightface_embedder()
+    lead = reference_embedding(lead_portrait, embedder)
+    verdicts: list[FrameVerdict] = []
+    with tempfile.TemporaryDirectory() as scratch:
+        for index, frame in enumerate(_sample_all(master, Path(scratch), interval)):
+            faces = [(emb, area) for emb, area in embedder(frame) if area >= MIN_FACE_AREA]
+            at = round(index * interval, 3)
+            if not faces:
+                verdicts.append(FrameVerdict(at, False, "no face", 0.0, 0.0))
+                continue
+            best = max(_cosine(lead, emb) for emb, _ in faces)
+            largest = max(area for _, area in faces)
+            matched = any(
+                _cosine(lead, emb) >= PASS_SIMILARITY
+                for emb, area in faces
+                if area >= IDENTIFIABLE_FACE_AREA
+            )
+            # A face too small to identify cannot be ruled out, so it counts as
+            # the lead possibly being here. This is what the aisle shot needed.
+            unidentifiable = any(area < IDENTIFIABLE_FACE_AREA for _, area in faces)
+            if matched:
+                reason = "lead matched"
+            elif unidentifiable:
+                reason = "face too small to rule out"
+            else:
+                reason = "identified, not the lead"
+            verdicts.append(
+                FrameVerdict(
+                    at,
+                    matched or unidentifiable,
+                    reason,
+                    round(best, 3),
+                    round(largest, 5),
+                )
+            )
+    return verdicts
+
+
+def _snap(value: float, cuts: list[float], limit: float = SNAP_SECONDS) -> float:
+    """Move a window edge onto a real cut when one is close enough."""
+    if not cuts:
+        return value
+    nearest = min(cuts, key=lambda c: abs(c - value))
+    return round(nearest, 3) if abs(nearest - value) <= limit else round(value, 3)
+
+
+def windows(
+    verdicts: list[FrameVerdict],
+    *,
+    interval: float = SAMPLE_INTERVAL,
+    cuts: list[float] | None = None,
+    total_duration: float | None = None,
+) -> list[Window]:
+    """Runs of designated frames, merged and tidied onto shot boundaries."""
+    runs: list[list[float]] = []
+    for verdict in verdicts:
+        if not verdict.designated:
+            continue
+        end = verdict.at + interval
+        if runs and verdict.at - runs[-1][1] <= MERGE_GAP_SECONDS:
+            runs[-1][1] = end
+        else:
+            runs.append([verdict.at, end])
+
+    cuts = cuts or []
+    result: list[Window] = []
+    for start, end in runs:
+        if end - start < MIN_RUN_SECONDS:
+            continue
+        start = _snap(start, cuts)
+        end = _snap(end, cuts)
+        if total_duration is not None:
+            end = min(end, total_duration)
+        start = max(0.0, start)
+        if end - start >= MIN_RUN_SECONDS:
+            result.append(Window(round(start, 3), round(end - start, 3)))
+    return result
 
 
 def scan(
@@ -143,63 +209,17 @@ def scan(
     *,
     duration: float,
     embedder: EmbedFn | None = None,
-    threshold: float = SCENE_THRESHOLD,
-) -> list[ScannedShot]:
-    """Every shot in the master, with whether the original lead is in it."""
-    embedder = embedder or _insightface_embedder()
-    lead = reference_embedding(lead_portrait, embedder)
-    results: list[ScannedShot] = []
-    with tempfile.TemporaryDirectory() as scratch:
-        boundaries = shot_boundaries(master, duration, threshold=threshold)
-        for index, (start, span) in enumerate(boundaries):
-            frames = _sample(master, start, span, Path(scratch) / f"shot{index:04d}")
-            matching = 0
-            best = 0.0
-            biggest = 0.0
-            for frame in frames:
-                faces = [
-                    (emb, area) for emb, area in embedder(frame) if area >= MIN_FACE_AREA
-                ]
-                if not faces:
-                    continue
-                biggest = max(biggest, max(area for _, area in faces))
-                similarity = max(_cosine(lead, emb) for emb, _ in faces)
-                best = max(best, similarity)
-                if similarity >= PASS_SIMILARITY:
-                    matching += 1
-            results.append(
-                ScannedShot(
-                    start=round(start, 3),
-                    duration=span,
-                    frames_sampled=len(frames),
-                    frames_matching_lead=matching,
-                    best_similarity=round(best, 4),
-                    largest_face_area=round(biggest, 5),
-                )
-            )
-    return results
-
-
-def designated(shots: list[ScannedShot]) -> list[tuple[float, float]]:
-    """Merge the lead's shots into contiguous (start, duration) windows.
-
-    Adjacent shots are joined because a batch of continuous footage is one
-    provider call rather than two, and because a cut inside a window is
-    something the model handles better than a seam in the timeline does.
-    """
-    windows: list[list[float]] = []
-    for shot in shots:
-        if not shot.has_lead:
-            continue
-        if windows and abs(shot.start - windows[-1][1]) < 0.05:
-            windows[-1][1] = shot.end
-        else:
-            windows.append([shot.start, shot.end])
-    return [(round(a, 3), round(b - a, 3)) for a, b in windows]
+    interval: float = SAMPLE_INTERVAL,
+) -> tuple[list[FrameVerdict], list[Window]]:
+    """Judge every frame, then turn the designated runs into windows."""
+    verdicts = judge_frames(master, lead_portrait, embedder=embedder, interval=interval)
+    return verdicts, windows(
+        verdicts, interval=interval, cuts=scene_cuts(master), total_duration=duration
+    )
 
 
 def manifest_entries(
-    shots: list[ScannedShot], *, episode: int, role_character: str, co_stars: str = ""
+    found: list[Window], *, episode: int, role_character: str, co_stars: str = ""
 ) -> list[dict[str, object]]:
     """The designated windows in the shot-manifest shape the pipeline reads."""
     characters = role_character + (f", {co_stars}" if co_stars else "")
@@ -207,30 +227,31 @@ def manifest_entries(
         {
             "episode": episode,
             "clip": f"ep{episode:02d}_{role_character.lower()}_auto_{index + 1:02d}",
-            "start": start,
-            "duration": span,
+            "start": window.start,
+            "duration": window.duration,
             "characters": characters,
         }
-        for index, (start, span) in enumerate(designated(shots))
+        for index, window in enumerate(found)
     ]
 
 
-def report(shots: list[ScannedShot]) -> str:
-    """A human-readable scan, so a person can sanity-check the machine."""
+def report(verdicts: list[FrameVerdict], found: list[Window]) -> str:
+    """What the scan decided, in a form a person can argue with."""
+    designated_seconds = sum(w.duration for w in found)
     lines = [
-        f"{len(shots)} shots | "
-        f"{sum(1 for s in shots if s.has_lead)} contain the lead | "
-        f"{sum(s.duration for s in shots if s.has_lead):.1f}s designated of "
-        f"{sum(s.duration for s in shots):.1f}s",
+        f"{len(verdicts)} frames judged | {len(found)} windows | "
+        f"{designated_seconds:.1f}s designated",
         "",
-        f"{'start':>8} {'dur':>6} {'frames':>7} {'match':>6} {'sim':>6} {'face%':>7}  lead",
+        "windows:",
     ]
-    for shot in shots:
-        lines.append(
-            f"{shot.start:>8.2f} {shot.duration:>6.2f} {shot.frames_sampled:>7} "
-            f"{shot.frames_matching_lead:>6} {shot.best_similarity:>6.2f} "
-            f"{shot.largest_face_area * 100:>6.2f}%  {'YES' if shot.has_lead else '-'}"
-        )
+    lines += [f"  {w.start:>7.2f} -> {w.end:>7.2f}  ({w.duration:.2f}s)" for w in found]
+    lines += ["", "frames not designated, with a face big enough to judge:"]
+    for verdict in verdicts:
+        if not verdict.designated and verdict.largest_face_area >= IDENTIFIABLE_FACE_AREA:
+            lines.append(
+                f"  {verdict.at:>7.2f}  sim {verdict.best_similarity:>5.2f}  "
+                f"face {verdict.largest_face_area * 100:>5.2f}%  {verdict.reason}"
+            )
     return "\n".join(lines)
 
 

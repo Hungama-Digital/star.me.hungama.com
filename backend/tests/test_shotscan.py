@@ -1,16 +1,27 @@
 """The scanner decides where the lead is, so these tests pin that decision.
 
-Every wrong face shipped so far came from a hand-written list of the lead's
-shots. These cover the two ways such a list goes wrong: designating footage he
-is absent from (which is what puts his face on the co-star) and skipping
-footage he is in (which leaves the original actor on screen).
+The cases are the real ones, with the areas and similarities measured off
+Episode 1 on 27 August:
+
+  * the co-star's extreme close-up: 50-64% of frame, 0.19 against the lead
+  * the lead in a two-shot: 3-5% of frame, 0.40-0.63
+  * the bus aisle: every face 0.15-0.77%, similarities 0.05-0.36 - noise
+
+Shot-level designation failed both ends of this: it sent the co-star's close-up
+because it shared an undetected cut with a two-shot, and it skipped the aisle
+because nothing there scores above the match threshold.
 """
 
 import subprocess
 from pathlib import Path
 
 from starme import shotscan
-from starme.shotscan import ScannedShot, designated, manifest_entries, shot_boundaries
+from starme.shotscan import (
+    FrameVerdict,
+    Window,
+    manifest_entries,
+    windows,
+)
 
 LEAD = [1.0, 0.0, 0.0]
 COSTAR = [0.0, 1.0, 0.0]
@@ -29,63 +40,17 @@ def make_clip(path: Path, seconds: float = 2.0) -> None:
     )
 
 
-def _shot(
-    matching: int, sampled: int = 8, start: float = 0.0, duration: float = 2.0
-) -> ScannedShot:
-    return ScannedShot(
-        start=start,
-        duration=duration,
-        frames_sampled=sampled,
-        frames_matching_lead=matching,
-        best_similarity=0.9 if matching else 0.05,
-        largest_face_area=0.02,
-    )
-
-
-def test_one_matching_frame_is_not_enough() -> None:
-    """A single match is treated as noise. Designating a shot the lead is not
-    in is the failure that sends the co-star's close-up to the provider."""
-    assert not _shot(matching=1).has_lead
-    assert _shot(matching=2).has_lead
-
-
-def test_adjacent_shots_merge_into_one_window() -> None:
-    shots = [
-        _shot(matching=4, start=0.0, duration=2.0),
-        _shot(matching=4, start=2.0, duration=1.5),
-        _shot(matching=0, start=3.5, duration=1.0),
-        _shot(matching=3, start=4.5, duration=2.0),
+def _verdicts(pattern: str, interval: float = 0.25) -> list[FrameVerdict]:
+    """Build a frame sequence from a string: '#' designated, '.' not."""
+    return [
+        FrameVerdict(round(i * interval, 3), ch == "#", "", 0.0, 0.0)
+        for i, ch in enumerate(pattern)
     ]
-    assert designated(shots) == [(0.0, 3.5), (4.5, 2.0)]
 
 
-def test_shots_without_the_lead_are_excluded() -> None:
-    shots = [_shot(matching=0, start=0.0, duration=3.0), _shot(matching=5, start=3.0)]
-    assert designated(shots) == [(3.0, 2.0)]
-
-
-def test_a_small_but_present_face_still_counts(tmp_path: Path) -> None:
-    """The aisle shot nobody swapped had the lead at under 0.2% of frame area,
-    behind the co-star, and a viewer noticed immediately. The area floor sits
-    below that on purpose."""
-    clip = tmp_path / "clip.mp4"
-    make_clip(clip)
-    portrait = tmp_path / "lead.png"
-    portrait.write_bytes(b"x")
-
-    def embed(path: Path):
-        # The portrait is the lead alone; the frames are a tiny lead face
-        # behind a large co-star, exactly the aisle shot's geometry.
-        if path.name == "lead.png":
-            return [(LEAD, 0.5)]
-        return [(LEAD, 0.0015), (COSTAR, 0.09)]
-
-    shots = shotscan.scan(clip, portrait, duration=2.0, embedder=embed)
-    assert shots, "the scan produced no shots"
-    assert all(s.has_lead for s in shots)
-
-
-def test_a_costar_only_shot_is_not_designated(tmp_path: Path) -> None:
+def test_a_large_face_that_is_not_the_lead_is_excluded(tmp_path: Path) -> None:
+    """The co-star's close-up: big enough to identify, and not him. This is
+    the frame that came back wearing a subscriber's face."""
     clip = tmp_path / "clip.mp4"
     make_clip(clip)
     portrait = tmp_path / "lead.png"
@@ -94,29 +59,86 @@ def test_a_costar_only_shot_is_not_designated(tmp_path: Path) -> None:
     def embed(path: Path):
         if path.name == "lead.png":
             return [(LEAD, 0.5)]
-        return [(COSTAR, 0.09)]
+        return [(COSTAR, 0.55)]
 
-    shots = shotscan.scan(clip, portrait, duration=2.0, embedder=embed)
-    assert shots
-    assert not any(s.has_lead for s in shots)
-    assert designated(shots) == []
+    verdicts = shotscan.judge_frames(clip, portrait, embedder=embed)
+    assert verdicts
+    assert not any(v.designated for v in verdicts)
+    assert all(v.reason == "identified, not the lead" for v in verdicts)
 
 
-def test_boundaries_cover_the_whole_clip(tmp_path: Path) -> None:
+def test_a_face_too_small_to_identify_is_kept(tmp_path: Path) -> None:
+    """The bus aisle. Nothing there can be identified, so nothing there can be
+    ruled out - and leaving it produced a visibly unswapped face."""
     clip = tmp_path / "clip.mp4"
-    make_clip(clip, seconds=3.0)
-    bounds = shot_boundaries(clip, 3.0)
-    assert bounds
-    assert bounds[0][0] == 0.0
-    assert abs((bounds[-1][0] + bounds[-1][1]) - 3.0) < 0.05
+    make_clip(clip)
+    portrait = tmp_path / "lead.png"
+    portrait.write_bytes(b"x")
+
+    def embed(path: Path):
+        if path.name == "lead.png":
+            return [(LEAD, 0.5)]
+        return [(COSTAR, 0.004), (COSTAR, 0.006)]
+
+    verdicts = shotscan.judge_frames(clip, portrait, embedder=embed)
+    assert all(v.designated for v in verdicts)
+    assert all(v.reason == "face too small to rule out" for v in verdicts)
+
+
+def test_the_lead_is_matched_when_his_face_is_judgeable(tmp_path: Path) -> None:
+    clip = tmp_path / "clip.mp4"
+    make_clip(clip)
+    portrait = tmp_path / "lead.png"
+    portrait.write_bytes(b"x")
+
+    def embed(path: Path):
+        if path.name == "lead.png":
+            return [(LEAD, 0.5)]
+        return [(LEAD, 0.04), (COSTAR, 0.03)]
+
+    verdicts = shotscan.judge_frames(clip, portrait, embedder=embed)
+    assert all(v.designated for v in verdicts)
+    assert all(v.reason == "lead matched" for v in verdicts)
+
+
+def test_an_empty_frame_is_not_designated(tmp_path: Path) -> None:
+    clip = tmp_path / "clip.mp4"
+    make_clip(clip)
+    portrait = tmp_path / "lead.png"
+    portrait.write_bytes(b"x")
+
+    def embed(path: Path):
+        return [(LEAD, 0.5)] if path.name == "lead.png" else []
+
+    verdicts = shotscan.judge_frames(clip, portrait, embedder=embed)
+    assert not any(v.designated for v in verdicts)
+
+
+def test_a_mixed_shot_splits_at_the_frames(tmp_path: Path) -> None:
+    """The 51.5-54s case: the lead, then her close-up, then the lead again,
+    with no cut the scene detector can see. Shot-level designation sent the
+    whole thing; frame-level keeps her out of it."""
+    found = windows(_verdicts("####........####"), interval=0.25)
+    assert found == [Window(0.0, 1.0), Window(3.0, 1.0)]
+
+
+def test_one_stray_frame_does_not_become_a_provider_call() -> None:
+    assert windows(_verdicts("..#....."), interval=0.25) == []
+
+
+def test_a_short_gap_is_bridged_rather_than_split() -> None:
+    """Two calls and a timeline seam are not worth saving a quarter second."""
+    assert windows(_verdicts("####.####"), interval=0.25) == [Window(0.0, 2.25)]
+
+
+def test_window_edges_snap_onto_real_cuts() -> None:
+    found = windows(_verdicts("..####.."), interval=0.25, cuts=[0.4, 1.6])
+    assert found == [Window(0.4, 1.2)]
 
 
 def test_manifest_entries_match_the_pipeline_shape() -> None:
     entries = manifest_entries(
-        [_shot(matching=4, start=1.5, duration=2.5)],
-        episode=1,
-        role_character="Arjun",
-        co_stars="Riya",
+        [Window(1.5, 2.5)], episode=1, role_character="Arjun", co_stars="Riya"
     )
     assert entries == [
         {
