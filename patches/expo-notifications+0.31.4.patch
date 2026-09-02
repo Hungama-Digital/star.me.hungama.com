@@ -1,0 +1,66 @@
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationForwarderActivity.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationForwarderActivity.kt
+index 259f136..c0582ef 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationForwarderActivity.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationForwarderActivity.kt
+@@ -3,6 +3,7 @@ package expo.modules.notifications.service
+ import android.app.Activity
+ import android.content.Intent
+ import android.os.Bundle
++import android.util.Log
+ import expo.modules.notifications.BuildConfig
+ import expo.modules.notifications.service.delegates.ExpoHandlingDelegate
+ 
+@@ -14,11 +15,39 @@ import expo.modules.notifications.service.delegates.ExpoHandlingDelegate
+ class NotificationForwarderActivity : Activity() {
+   override fun onCreate(savedInstanceState: Bundle?) {
+     super.onCreate(savedInstanceState)
+-    val broadcastIntent =
+-      NotificationsService.createNotificationResponseBroadcastIntent(applicationContext, intent.extras)
+-    val notificationResponse = NotificationsService.getNotificationResponseFromBroadcastIntent(broadcastIntent)
+-    ExpoHandlingDelegate.openAppToForeground(this, notificationResponse)
+-    sendBroadcast(broadcastIntent)
++    val extras = intent?.extras
++    if (extras == null) {
++      Log.w(TAG, "NotificationForwarderActivity started with null extras; opening app without notification response.")
++      openAppAndFinish()
++      return
++    }
++    try {
++      val broadcastIntent =
++        NotificationsService.createNotificationResponseBroadcastIntent(applicationContext, extras)
++      val notificationResponse = NotificationsService.getNotificationResponseFromBroadcastIntent(broadcastIntent)
++      ExpoHandlingDelegate.openAppToForeground(this, notificationResponse)
++      sendBroadcast(broadcastIntent)
++    } catch (e: IllegalArgumentException) {
++      Log.w(TAG, "NotificationForwarderActivity: invalid notification/action extras, opening app without response.", e)
++      openAppAndFinish()
++      return
++    } catch (e: Exception) {
++      Log.e(TAG, "NotificationForwarderActivity: unexpected error handling notification tap.", e)
++      openAppAndFinish()
++      return
++    }
++    finish()
++  }
++
++  private fun openAppAndFinish() {
++    try {
++      packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
++        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
++        startActivity(launchIntent)
++      }
++    } catch (e: Exception) {
++      Log.e(TAG, "Failed to open main activity.", e)
++    }
+     finish()
+   }
+ 
+@@ -30,4 +59,8 @@ class NotificationForwarderActivity : Activity() {
+       throw AssertionError()
+     }
+   }
++
++  companion object {
++    private const val TAG = "NotificationForwarder"
++  }
+ }

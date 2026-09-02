@@ -1,0 +1,63 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    classpath('com.google.gms:google-services:4.4.2')
+    classpath('com.google.firebase:firebase-crashlytics-gradle:3.0.6')
+  }
+}
+
+def reactNativeAndroidDir = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine("node", "--print", "require.resolve('react-native/package.json')")
+  }.standardOutput.asText.get().trim(),
+  "../android"
+)
+
+allprojects {
+  // Pin play-services-auth to a version that still ships the legacy Google Sign-In API
+  // (com.google.android.gms.auth.api.signin.GoogleSignIn and Auth.GOOGLE_SIGN_IN_API).
+  // react-native-otp-verify requests "play-services-auth:+", which otherwise resolves to
+  // 22.0.0 where Google removed those classes — breaking @react-native-google-signin at
+  // runtime and failing react-native-otp-verify compilation.
+  configurations.all {
+    resolutionStrategy {
+      force 'com.google.android.gms:play-services-auth:21.3.0'
+    }
+  }
+
+  repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url = reactNativeAndroidDir
+    }
+
+    google()
+    mavenCentral()
+    maven { url = 'https://www.jitpack.io' }
+  }
+}
+
+// Align Java and Kotlin JVM targets across all subprojects to avoid compilation errors
+subprojects { subproject ->
+  subproject.afterEvaluate {
+    if (subproject.hasProperty('android')) {
+      subproject.android.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+      subproject.android.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+      if (subproject.android.hasProperty('kotlinOptions')) {
+        subproject.android.kotlinOptions.jvmTarget = '17'
+      }
+    }
+  }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

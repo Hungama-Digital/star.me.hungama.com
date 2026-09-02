@@ -1,0 +1,28 @@
+{
+  "Top Picks": [
+    {
+      "asset_group_id": "164",
+      "title": "Im Obsessed With My Boss Part II",
+      "is_interactive": true,
+      "poster_url": "https://images.fasttv.app/i/3e9/2ba/fposter/8903247943340.jpg",
+      "genre_tags": ["Romance", "Drama"],
+      "episode_count": 50
+    },
+    {
+      "asset_group_id": "165",
+      "title": "Tied By Fate",
+      "is_interactive": true,
+      "poster_url": "https://images.fasttv.app/i/6ad/0e7/fposter/8903247943371.jpg",
+      "genre_tags": ["Romance", "Drama"],
+      "episode_count": 50
+    },
+    {
+      "asset_group_id": "166",
+      "title": "The Phoenix Conspiracy",
+      "is_interactive": true,
+      "poster_url": "https://images.fasttv.app/i/05d/2c3/fposter/8903247943388.jpg",
+      "genre_tags": ["Romance", "Drama"],
+      "episode_count": 48
+    }
+  ]
+}

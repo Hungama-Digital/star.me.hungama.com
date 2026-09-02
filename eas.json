@@ -1,0 +1,80 @@
+{
+  "cli": {
+    "version": ">= 16.13.3",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOENGAGE_WORKSPACE_ID": "N1HHQFTNK11YN4GSI4XC904M",
+        "EXPO_PUBLIC_MOENGAGE_DATA_KEY": "pVZ1QwRmcJt61nNfDbEy7nnE",
+        "EXPO_PUBLIC_MIXPANEL_TOKEN": "df7df4bfd68a61480b681cdfee8e3bed",
+        "EXPO_PUBLIC_MIXPANEL_ID": "3976933"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOENGAGE_WORKSPACE_ID": "N1HHQFTNK11YN4GSI4XC904M",
+        "EXPO_PUBLIC_MOENGAGE_DATA_KEY": "pVZ1QwRmcJt61nNfDbEy7nnE",
+         "EXPO_PUBLIC_MIXPANEL_TOKEN": "df7df4bfd68a61480b681cdfee8e3bed",
+        "EXPO_PUBLIC_MIXPANEL_ID": "3976933"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote"
+      }
+    },
+    "testing": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOENGAGE_WORKSPACE_ID": "N1HHQFTNK11YN4GSI4XC904M",
+        "EXPO_PUBLIC_MOENGAGE_DATA_KEY": "pVZ1QwRmcJt61nNfDbEy7nnE",
+         "EXPO_PUBLIC_MIXPANEL_TOKEN": "df7df4bfd68a61480b681cdfee8e3bed",
+        "EXPO_PUBLIC_MIXPANEL_ID": "3976933"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_MOENGAGE_WORKSPACE_ID": "N1HHQFTNK11YN4GSI4XC904M",
+        "EXPO_PUBLIC_MOENGAGE_DATA_KEY": "pVZ1QwRmcJt61nNfDbEy7nnE",
+         "EXPO_PUBLIC_MIXPANEL_TOKEN": "a6be67695a5584b3d9e67609990d4fa9",
+        "EXPO_PUBLIC_MIXPANEL_ID": "3987259"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote"
+      }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

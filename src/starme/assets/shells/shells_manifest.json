@@ -1,0 +1,41 @@
+{
+  "manifestVersion": 1,
+  "brand": "StarME",
+  "welcomeCredits": 200,
+  "packages": [
+    { "id": "cameo",  "name": "Cameo",      "episodes": 1,  "credits": 60,  "desc": "One episode plus your poster" },
+    { "id": "debut",  "name": "Lead Debut", "episodes": 3,  "credits": 150, "desc": "Three episode arc, poster and trailer", "highlight": true },
+    { "id": "season", "name": "Season Star","episodes": 5,  "credits": 220, "desc": "Five episodes, poster pack, trailer" },
+    { "id": "super",  "name": "Superstar",  "episodes": 10, "credits": 380, "desc": "Full season with priority rendering" }
+  ],
+  "shells": [
+    {
+      "id": "love",
+      "title": "Ek Love Story Aisi Bhi",
+      "kicker": "A runaway romance that lands on Mars",
+      "palette": { "c1": "#26060B", "c2": "#B0432F", "accent": "#E9BF6B" },
+      "status": "live",
+      "roles": [
+        { "id": "arjun", "name": "Arjun", "desc": "He followed her without a second thought. Now he's a world away from home." }
+      ],
+      "episodes": [
+        { "n": 1,  "title": "Wrong Ride",                     "file": "shell_love_ep01.mp4", "durationSec": 74,  "placeholder": true },
+        { "n": 2,  "title": "Asmaan Se Gire Khajoor Pe Atke", "file": "shell_love_ep02.mp4", "durationSec": 79,  "placeholder": true },
+        { "n": 3,  "title": "Saath Milkar",                   "file": "shell_love_ep03.mp4", "durationSec": 107, "placeholder": true },
+        { "n": 4,  "title": "Toofan Se Pehle",   "file": null, "placeholder": true },
+        { "n": 5,  "title": "3 Months Back",     "file": null, "placeholder": true },
+        { "n": 6,  "title": "Sailaab",           "file": null, "placeholder": true },
+        { "n": 7,  "title": "Will God Listen?",  "file": null, "placeholder": true },
+        { "n": 8,  "title": "Commander Speaking","file": null, "placeholder": true },
+        { "n": 9,  "title": "Ore Piya",          "file": null, "placeholder": true },
+        { "n": 10, "title": "The Last Pad",      "file": null, "placeholder": true },
+        { "n": 11, "title": "Alone on Mars",     "file": null, "placeholder": true }
+      ]
+    },
+    { "id": "act", "title": "Hukum", "kicker": "An action drama", "status": "soon" },
+    { "id": "family",  "title": "Gharana", "kicker": "A family saga",     "status": "soon" },
+    { "id": "revenge", "title": "Badla",   "kicker": "A revenge thriller","status": "soon" },
+    { "id": "campus",  "title": "Campus",  "kicker": "A campus romance",  "status": "soon" },
+    { "id": "comedy",  "title": "Jugaad",  "kicker": "A comedy",          "status": "soon" }
+  ]
+}

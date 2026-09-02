@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <bool name="com_moengage_core_file_based_initialisation_enabled">true</bool>
+
+  <!-- Mandatory -->
+  <string name="com_moengage_core_workspace_id">N1HHQFTNK11YN4GSI4XC904M</string>
+
+  <!-- Mandatory: set this to your dashboard host number (01..06) -->
+  <integer name="com_moengage_core_data_center">1</integer>
+
+  <!-- Optional: test/live -->
+  <!-- <string name="com_moengage_core_environment">test</string> -->
+  <!-- Match dashboard for Integration Validation: use "live" when validating with live environment -->
+  <string name="com_moengage_core_environment">live</string>
+</resources>

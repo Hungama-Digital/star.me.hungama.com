@@ -1,0 +1,142 @@
+{
+  "expo": {
+    "name": "Fast TV",
+    "slug": "hungama",
+    "version": "1.0.3",
+    "build": "1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "scheme": "hmini",
+    "web": {
+      "bundler": "metro"
+    },
+    "splash": {
+      "image": "./assets/Splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "buildNumber": "62",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.app.hmini",
+      "associatedDomains": ["applinks:fasttv.app"],
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "GoogleSignIn",
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.587534339972-s6hv8402cbh1cnj6re9mb6u97r6os3n2"
+            ]
+          },
+          {
+            "CFBundleURLName": "StripePayments",
+            "CFBundleURLSchemes": [
+              "hmini"
+            ]
+          },
+          {
+            "CFBundleURLName": "FacebookAuth",
+            "CFBundleURLSchemes": [
+              "fb893068479886286"
+            ]
+          }
+        ],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "NSUserNotificationUsageDescription": "This app uses notifications to keep you updated with new content and episodes.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "splash": {
+        "image": "./assets/Splash_iOS.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000"
+      }
+    },
+    "android": {
+      "versionCode": 4,
+      "package": "com.app.fastme",
+      "googleServicesFile": "./google-services.json",
+      "signingCredentials": {
+        "keystorePath": "./android/app/fastme-release.keystore",
+        "keystorePassword": "fastme2024",
+        "keyAlias": "fastme-release",
+        "keyPassword": "fastme2024"
+      },
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            { "scheme": "fb893068479886286", "host": "authorize" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.587534339972-s6hv8402cbh1cnj6re9mb6u97r6os3n2"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#009CDB"
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "StarME needs the camera to take your close-up selfie for casting."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "StarME needs access to your photos so you can upload a close-up for casting."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "StarME saves your generated poster to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-apple-authentication",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      "./plugins/withAndroidNativeMods.js"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9860dbea-b006-49a4-b076-d28bb8d2d87f"
+      }
+    },
+    "owner": "vivek.bh"
+  }
+}

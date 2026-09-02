@@ -1,0 +1,578 @@
+{
+  "pageCategoryListing": [
+    {
+      "path": 100,
+      "title": "Interactive Shows",
+      "description": "",
+      "isActive": 1,
+      "sameForAllZone": 0,
+      "displayIndexing": "2",
+      "sameForAllProductType": 0,
+      "pcdlmId": 100,
+      "verticalFileName": null,
+      "verticalFilePath": null,
+      "horizontalFileName": null,
+      "horizontalFilePath": null,
+      "thumbFileName": null,
+      "thumbFilePath": null,
+      "dtypeId": 4,
+      "langId": 1,
+      "exclusionText": "",
+      "displayType": "1",
+      "orderBy": "Display Indexing",
+      "isPrimaryNavigationVisible": 1,
+      "isMenuCategoryVisible": 0,
+      "isAssetGroupVisible": 0,
+      "isAssetCategoryVisible": 0,
+      "isAssetVisible": 0,
+      "isVisible": 1,
+      "mapCmsUserWithWatchlist": 0,
+      "mapCmsUserPlaylist": 0,
+      "mapCmsUserWithFavorite": 0,
+      "uploadVerticalImage": null,
+      "uploadHorizontalImage": null,
+      "uploadThumbImage": null,
+      "label": "Interactive Shows",
+      "assetMappedCount": 0,
+      "assetGenreMappedCount": 0,
+      "assetGroupMappedCount": 3,
+      "assetCategoryMappedCount": 0,
+      "castMappedCount": 0,
+      "classificationMappedCount": 0,
+      "sorting": "",
+      "randomPageCategory": 0,
+      "subMenuIds": [],
+      "type": "page_category",
+      "data": [
+        {
+          "path": 87,
+          "pageCategoryId": 100,
+          "title": "Tied By Fate",
+          "description": "Mia and James enter a contract marriage to fix their problems, but secrets, humor, and unexpected feelings change everything.",
+          "isActive": 1,
+          "agdlmId": 165,
+          "isPremium": 0,
+          "subscription_type": null,
+          "tile_label": "Interactive Show",
+          "deviceName": "All",
+          "dtypeId": 4,
+          "langId": 1,
+          "exclusionText": "Language, Theme",
+          "sameForAllZone": 0,
+          "sameForAllProductType": 0,
+          "contentType": null,
+          "assetGroupType": null,
+          "coinsToRedeem": 0,
+          "isVisible": 1,
+          "isCarouselApplicable": 1,
+          "orderBy": null,
+          "sorting": null,
+          "displayindex": 1,
+          "airStartDate": "2026-05-19T18:30:00.000Z",
+          "airEndDate": "2029-05-19T18:30:00.000Z",
+          "verticalFileName": null,
+          "verticalFilePath": "https://images.fasttv.app/i/307/ec3/vposter/8903247943371.jpg",
+          "verticalFileNamePlain": null,
+          "verticalFilePathPlain": null,
+          "horizontalFileName": null,
+          "horizontalFilePath": "https://images.fasttv.app/i/18d/508/hposter/8903247943371.jpg",
+          "posterFileName": null,
+          "posterFilePath": "https://images.fasttv.app/i/6ad/0e7/fposter/8903247943371.jpg",
+          "titleFileName": null,
+          "titleFilePath": null,
+          "thumbFileName": null,
+          "thumbFilePath": "https://images.fasttv.app/i/3c6/c1e/thumb/8903247943371.jpg",
+          "trailerplaybackid": null,
+          "asset_group_trailer_url": "https://videos.fasttv.app/c/199/f62/trailer/content/8903247943371_,500,900,1800,3500,.mp4/index.m3u8",
+          "asset_group_preview_url": "https://videos.fasttv.app/c/9fd/4c6/preview/content/8903247943371_1800.mp4",
+          "tropes_name": null,
+          "cliffhanger_strength": null,
+          "cliffhanger_description": null,
+          "cliffhanger_start": null,
+          "cliffhanger_end": null,
+          "cliffhanger_effectiveness": null,
+          "cliffhanger_keywords": null,
+          "opening_hook_strength": null,
+          "opening_hook_description": null,
+          "opening_hook_start": null,
+          "opening_hook_end": null,
+          "opening_hook_effectiveness": null,
+          "opening_hook_keywords": null,
+          "langaugeId": 1,
+          "langaugeName": "English",
+          "langaugeCode": "ENG",
+          "label": "Tied By Fate",
+          "geners": "Romance . Drama",
+          "content_audio": "Hindi",
+          "content_subtitles": null,
+          "uploadVerticalImage": "568",
+          "uploadHorizontalImage": "565",
+          "uploadThumbImage": "567",
+          "vodOrLivePosterImage": null,
+          "vodTitleImage": null,
+          "release_date": "2026-05-20 00:00:00",
+          "year_of_release": 2026,
+          "total_sessions": 1,
+          "total_episodes": 50,
+          "age_rating": "13+",
+          "actor": null,
+          "seoTitle": null,
+          "seoKeyword": "Micro Drama Series, Cipe Technology Ptd Ltd, Tied By Fate",
+          "keywords": "Micro Drama Series, Cipe Technology Ptd Ltd, Tied By Fate",
+          "seoDescription": null,
+          "mappedGeoZoneIds": [
+            1
+          ],
+          "mappedGeoZoneCountries": [],
+          "is_interactive": true,
+          "verticalImage": [
+            {
+              "content_id": "568",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/307/ec3/vposter/8903247943371.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "horizontalImage": [
+            {
+              "content_id": "565",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/18d/508/hposter/8903247943371.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "vodOrLivePoster": [
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/6ad/0e7/fposter/8903247943371.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "vodTitle": [
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "uploadThumb": [
+            {
+              "content_id": "567",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/3c6/c1e/thumb/8903247943371.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "trailer_url": "https://videos.fasttv.app/c/199/f62/trailer/content/8903247943371_,500,900,1800,3500,.mp4/index.m3u8",
+          "hlsUrl": "https://videos.fasttv.app/c/199/f62/trailer/content/8903247943371_,500,900,1800,3500,.mp4/index.m3u8",
+          "preview_url": "https://videos.fasttv.app/c/9fd/4c6/preview/content/8903247943371_1800.mp4",
+          "type": "asset_group"
+        },
+        {
+          "path": 88,
+          "pageCategoryId": 100,
+          "title": "The Phoenix Conspiracy",
+          "description": "A private investigator is pulled into a covert group led by the mysterious Phoenix after falling for a woman tied to one of its members.",
+          "isActive": 1,
+          "agdlmId": 166,
+          "isPremium": 0,
+          "subscription_type": null,
+          "tile_label": "Interactive Show",
+          "deviceName": "All",
+          "dtypeId": 4,
+          "langId": 1,
+          "exclusionText": "Language, Theme",
+          "sameForAllZone": 0,
+          "sameForAllProductType": 0,
+          "contentType": null,
+          "assetGroupType": null,
+          "coinsToRedeem": 0,
+          "isVisible": 1,
+          "isCarouselApplicable": 1,
+          "orderBy": null,
+          "sorting": null,
+          "displayindex": 2,
+          "airStartDate": "2026-05-19T18:30:00.000Z",
+          "airEndDate": "2029-05-19T18:30:00.000Z",
+          "verticalFileName": null,
+          "verticalFilePath": "https://images.fasttv.app/i/ea6/28f/vposter/8903247943388.jpg",
+          "verticalFileNamePlain": null,
+          "verticalFilePathPlain": null,
+          "horizontalFileName": null,
+          "horizontalFilePath": "https://images.fasttv.app/i/945/feb/hposter/8903247943388.jpg",
+          "posterFileName": null,
+          "posterFilePath": "https://images.fasttv.app/i/05d/2c3/fposter/8903247943388.jpg",
+          "titleFileName": null,
+          "titleFilePath": null,
+          "thumbFileName": null,
+          "thumbFilePath": "https://images.fasttv.app/i/31d/d34/thumb/8903247943388.jpg",
+          "trailerplaybackid": null,
+          "asset_group_trailer_url": "https://videos.fasttv.app/c/aff/42b/trailer/content/8903247943388_,500,900,1800,3500,.mp4/index.m3u8",
+          "asset_group_preview_url": "https://videos.fasttv.app/c/f25/e50/preview/content/8903247943388_1800.mp4",
+          "tropes_name": null,
+          "cliffhanger_strength": null,
+          "cliffhanger_description": null,
+          "cliffhanger_start": null,
+          "cliffhanger_end": null,
+          "cliffhanger_effectiveness": null,
+          "cliffhanger_keywords": null,
+          "opening_hook_strength": null,
+          "opening_hook_description": null,
+          "opening_hook_start": null,
+          "opening_hook_end": null,
+          "opening_hook_effectiveness": null,
+          "opening_hook_keywords": null,
+          "langaugeId": 1,
+          "langaugeName": "English",
+          "langaugeCode": "ENG",
+          "label": "The Phoenix Conspiracy",
+          "geners": "Romance . Drama",
+          "content_audio": "Hindi",
+          "content_subtitles": null,
+          "uploadVerticalImage": "564",
+          "uploadHorizontalImage": "562",
+          "uploadThumbImage": "563",
+          "vodOrLivePosterImage": null,
+          "vodTitleImage": null,
+          "release_date": "2026-05-20 00:00:00",
+          "year_of_release": 2026,
+          "total_sessions": 1,
+          "total_episodes": 48,
+          "age_rating": "13+",
+          "actor": null,
+          "seoTitle": null,
+          "seoKeyword": "Micro Drama Series, Cipe Technology Ptd Ltd, The Phoenix Conspiracy",
+          "keywords": "Micro Drama Series, Cipe Technology Ptd Ltd, The Phoenix Conspiracy",
+          "seoDescription": null,
+          "mappedGeoZoneIds": [
+            1
+          ],
+          "mappedGeoZoneCountries": [],
+          "is_interactive": true,
+          "verticalImage": [
+            {
+              "content_id": "564",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/ea6/28f/vposter/8903247943388.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "horizontalImage": [
+            {
+              "content_id": "562",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/945/feb/hposter/8903247943388.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "vodOrLivePoster": [
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/05d/2c3/fposter/8903247943388.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "vodTitle": [
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "uploadThumb": [
+            {
+              "content_id": "563",
+              "artwork_variant_id": null,
+              "artwork_url": "https://images.fasttv.app/i/31d/d34/thumb/8903247943388.jpg"
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            },
+            {
+              "content_id": null,
+              "artwork_variant_id": null,
+              "artwork_url": null
+            }
+          ],
+          "trailer_url": "https://videos.fasttv.app/c/aff/42b/trailer/content/8903247943388_,500,900,1800,3500,.mp4/index.m3u8",
+          "hlsUrl": "https://videos.fasttv.app/c/aff/42b/trailer/content/8903247943388_,500,900,1800,3500,.mp4/index.m3u8",
+          "preview_url": "https://videos.fasttv.app/c/f25/e50/preview/content/8903247943388_1800.mp4",
+          "type": "asset_group"
+        },
+        {
+          "path": 84,
+          "pageCategoryId": 100,
+          "title": "If Only You Were Mine",
+          "description": "In Cedarbrook, shy Brandon loves his friend Sarah and supports her as she\u2019s trapped in an abusive relationship with Mark that ends in hospitalization.",
+          "isActive": 1,
+          "agdlmId": 162,
+          "isPremium": 0,
+          "subscription_type": null,
+          "tile_label": "Interactive Show",
+          "deviceName": "All",
+          "dtypeId": 4,
+          "langId": 1,
+          "exclusionText": "Language, Theme",
+          "sameForAllZone": 0,
+          "sameForAllProductType": 0,
+          "contentType": null,
+          "assetGroupType": null,
+          "coinsToRedeem": 0,
+          "isVisible": 1,
+          "isCarouselApplicable": 1,
+          "orderBy": null,
+          "sorting": null,
+          "displayindex": 0,
+          "airStartDate": "2026-05-19T18:30:00.000Z",
+          "airEndDate": "2029-05-19T18:30:00.000Z",
+          "verticalFileName": null,
+          "verticalFilePath": "https://images.fasttv.app/i/db4/463/vposter/8903247943289.jpg",
+          "horizontalFileName": null,
+          "horizontalFilePath": "https://images.fasttv.app/i/c8a/675/hposter/8903247943289.jpg",
+          "posterFileName": null,
+          "posterFilePath": "https://images.fasttv.app/i/fec/3c6/fposter/8903247943289.jpg",
+          "titleFileName": null,
+          "titleFilePath": null,
+          "thumbFileName": null,
+          "thumbFilePath": "https://images.fasttv.app/i/3fd/9a1/thumb/8903247943289.jpg",
+          "trailerplaybackid": null,
+          "asset_group_trailer_url": "https://videos.fasttv.app/c/91e/9d3/trailer/content/8903247943289_,500,900,1800,3500,.mp4/index.m3u8",
+          "asset_group_preview_url": "https://videos.fasttv.app/c/fc8/511/preview/content/8903247943289_1800.mp4",
+          "tropes_name": null,
+          "cliffhanger_strength": null,
+          "cliffhanger_description": null,
+          "cliffhanger_start": null,
+          "cliffhanger_end": null,
+          "cliffhanger_effectiveness": null,
+          "cliffhanger_keywords": null,
+          "opening_hook_strength": null,
+          "opening_hook_description": null,
+          "opening_hook_start": null,
+          "opening_hook_end": null,
+          "opening_hook_effectiveness": null,
+          "opening_hook_keywords": null,
+          "langaugeId": 1,
+          "langaugeName": "English",
+          "langaugeCode": "ENG",
+          "label": "If Only You Were Mine",
+          "geners": "Romance . Drama",
+          "content_audio": "English",
+          "content_subtitles": null,
+          "uploadVerticalImage": "544",
+          "uploadHorizontalImage": "542",
+          "uploadThumbImage": "543",
+          "vodOrLivePosterImage": null,
+          "vodTitleImage": null,
+          "release_date": "2026-05-20 00:00:00",
+          "year_of_release": 2026,
+          "total_sessions": 1,
+          "total_episodes": 50,
+          "age_rating": "13+",
+          "actor": null,
+          "seoTitle": null,
+          "seoKeyword": "Micro Drama Series, Cipe Technology Ptd Ltd, If Only You Were Mine",
+          "seoDescription": null,
+          "mappedGeoZoneIds": [
+            1
+          ],
+          "mappedGeoZoneCountries": [],
+          "is_interactive": true,
+          "trailer_url": "https://videos.fasttv.app/c/91e/9d3/trailer/content/8903247943289_,500,900,1800,3500,.mp4/index.m3u8?hdnea=exp%3D1782476279%7Eacl%3D%2Fc%2F91e%2F9d3%2Ftrailer%2Fcontent%2F8903247943289_*%7Ehmac%3Da04d68bb4832e8b262bbb67d0b316c507ebc15f07d2f57a519ae804cc05a3a99",
+          "hlsUrl": "https://videos.fasttv.app/c/91e/9d3/trailer/content/8903247943289_,500,900,1800,3500,.mp4/index.m3u8?hdnea=exp%3D1782476279%7Eacl%3D%2Fc%2F91e%2F9d3%2Ftrailer%2Fcontent%2F8903247943289_*%7Ehmac%3Da04d68bb4832e8b262bbb67d0b316c507ebc15f07d2f57a519ae804cc05a3a99",
+          "preview_url": "https://videos.fasttv.app/c/fc8/511/preview/content/8903247943289_1800.mp4?hdnea=exp%3D1782476279%7Ehmac%3Da8ad730d4963f01f773d5c40a9d932c9b9d295dcf49793669c44c55d68ed819a",
+          "type": "asset_group"
+        }
+      ],
+      "subMenu": [],
+      "generatedAt": "2026-05-26T06:21:45.118Z",
+      "version": "1.1"
+    }
+  ]
+}

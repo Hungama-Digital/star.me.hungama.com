@@ -1,0 +1,35 @@
+---
+description: Patterns to reduce Android/Hermes crashes—native module lazy loading, expo-video lifecycle, and Android state/foreground service
+alwaysApply: true
+---
+
+# Crash reduction patterns (Shortify)
+
+When adding or changing code, follow these patterns to avoid known crashes.
+
+## 1. Native modules at bundle load (Hermes: "Cannot read property 'NativeModule' of undefined")
+
+**Do not** import or call native/Expo modules at top level in files that are loaded when the app starts (e.g. from `App.js`, `AuthContext`, or anything they import).
+
+**Do** lazy-load such modules:
+
+- **Require inside a function** that runs after mount or on first use (e.g. `function getX() { return require('expo-...'); }`), or
+- **Call in `useEffect`** so the bridge is ready (e.g. `require('expo-splash-screen').preventAutoHideAsync()` in a mount effect).
+
+**Already lazy in this project:** `expo-splash-screen`, `react-native-iap`, `@react-native-firebase/auth`, `react-native-otp-verify`, `appleAuth` / `facebookAuth` (expo-apple-authentication, expo-auth-session, expo-web-browser), `expo-linking` (in deepLinkingService and AuthGate). **Any new native or Expo dependency** that is pulled in from the initial load path (App, AuthContext, root providers, or services they import) should be lazy-loaded the same way.
+
+## 2. expo-video (MediaSession NPE, shared object released, foreground service)
+
+- **ReelItem / list items:** Use `useVideoPlayer(isCurrent ? source : null, ...)` so only the current item has a real source; passing `null` when not current lets the library release the previous session and avoids MediaSession buildup.
+- **Any timer or interval** that reads from the player (`player.currentTime`, `player.duration`, `player.playing`, etc.): wrap in **try/catch** so a tick after the player was released does not crash ("Cannot use shared object that was already released").
+- **Native patch (expo-video):** We use `patches/expo-video+2.2.3.patch` which (1) wraps `registerPlayer` in try/catch to avoid MediaSession NPE when the player was already released, and (2) calls `startForeground()` in `onCreate()` so the playback service never triggers "startForegroundService() did not call startForeground()". Do not remove or bypass this patch when upgrading expo-video without re-applying equivalent fixes.
+
+## 3. Android activity state (TransactionTooLargeException)
+
+**MainActivity** overrides `onSaveInstanceState` and does **not** call `super.onSaveInstanceState(outState)` so we do not persist large state (nav, activity result keys, fragments). App state lives in JS. When changing MainActivity or adding new Android activity/fragment state saving, do not reintroduce saving large bundles.
+
+## 4. New features that touch native or Expo
+
+- Prefer **lazy require** or **useEffect** for any new dependency that uses native modules (camera, storage, notifications, auth, linking, etc.) if it could be in the initial require chain.
+- For **new expo-video usage** (e.g. another screen with a list of videos), reuse the same pattern: one active player per “current” item, `null` when not current, and try/catch around any delayed access to the player.
+- For **new Android services** that use `startForegroundService`, ensure they call `startForeground()` soon after starting (e.g. in `onCreate` with a placeholder notification).

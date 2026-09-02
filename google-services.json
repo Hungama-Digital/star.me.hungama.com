@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "587534339972",
+    "project_id": "h-minis-a0f1d",
+    "storage_bucket": "h-minis-a0f1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:587534339972:android:ce9901fe55dc9a092397d1",
+        "android_client_info": {
+          "package_name": "com.app.hmini"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwcgsCRO3_TRBdoWpg1xKRVHQc8u_zHPE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,93 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <uses-permission android:name="android.permission.CAMERA"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+  <uses-permission android:name="android.permission.VIBRATE"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <!-- Required for showing notifications on Android 13+ (API 33+) -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.VIEW"/>
+      <category android:name="android.intent.category.BROWSABLE"/>
+      <data android:scheme="https"/>
+    </intent>
+  </queries>
+  <!-- allowBackup=false: after uninstall/reinstall user must see login (no restored auth/guest from Android Auto Backup) -->
+  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:theme="@style/AppTheme" tools:replace="android:allowBackup" android:supportsRtl="true" android:requestLegacyExternalStorage="true" android:largeHeap="true">
+    <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color" tools:replace="android:resource"/>
+    <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/notification_icon" tools:replace="android:resource"/>
+    <meta-data
+      android:name="com.google.firebase.messaging.default_notification_channel_id"
+      android:value="default"
+      tools:replace="android:value" />
+    <meta-data android:name="expo.modules.notifications.default_notification_color" android:resource="@color/notification_icon_color" tools:replace="android:resource"/>
+    <meta-data android:name="expo.modules.notifications.default_notification_icon" android:resource="@drawable/notification_icon" tools:replace="android:resource"/>
+    <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color"/>
+    <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/notification_icon"/>
+    <meta-data android:name="expo.modules.notifications.default_notification_color" android:resource="@color/notification_icon_color"/>
+    <meta-data android:name="expo.modules.notifications.default_notification_icon" android:resource="@drawable/notification_icon"/>
+    <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
+    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
+    <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
+    <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait" android:supportsPictureInPicture="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="hmini"/>
+        <data android:scheme="exp+hungama"/>
+      </intent-filter>
+      <intent-filter data-generated="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="fb893068479886286" android:host="authorize"/>
+        <data android:scheme="exp+hungama"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https" android:host="fasttv.app" android:pathPrefix="/"/>
+      </intent-filter>
+    </activity>
+
+    <receiver android:name=".FcmKilledNotificationReceiver" android:exported="true" android:permission="com.google.android.c2dm.permission.SEND">
+      <intent-filter android:priority="100">
+        <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+      </intent-filter>
+    </receiver>
+
+    <!-- ✅ Native interception to route MoEngage payloads reliably -->
+    <service android:name=".CustomFirebaseMessagingService" android:exported="true">
+      <intent-filter android:priority="1000">
+        <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+      </intent-filter>
+    </service>
+
+    <!-- Remove default RN Firebase Service, ours extends it -->
+    <service android:name="io.invertase.firebase.messaging.ReactNativeFirebaseMessagingService" tools:node="remove" />
+
+    <!-- Disable expo-video playback service to avoid MediaSession NPE after WebView close.
+         Video playback still works; only "now playing" notification is skipped. -->
+    <service
+      android:name="expo.modules.video.playbackService.ExpoVideoPlaybackService"
+      android:enabled="false"
+      tools:node="merge"
+      tools:replace="android:enabled" />
+
+    <!-- ✅ CRITICAL: Remove Expo's default Firebase Service. Expo intercepts MoEngage payloads,
+         wraps them in a generic Expo notification, and routes the tap to NotificationForwarderActivity 
+         instead of MainActivity, breaking MoEngage push clicks completely on Android. -->
+    <service android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService" tools:node="remove" />
+
+  </application>
+</manifest>
