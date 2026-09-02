@@ -254,13 +254,20 @@ def _pad_to_whole_second(source: Path, destination: Path, seconds: float) -> int
     """
     whole = max(int(MIN_PROVIDER_SECONDS), int(math.ceil(seconds - 0.001)))
     destination.parent.mkdir(parents=True, exist_ok=True)
+    # The audio is padded with silence rather than dropped, and that is not
+    # cosmetic. The render function remuxes its output against the audio it was
+    # given and then checks the duration survived; handed the UNPADDED audio it
+    # truncated an 8.04s render to 7.03s and failed its own gate, which is how
+    # the first real masked canary lost two rolls (2 Sep 2026). Whatever video
+    # goes to the provider, its audio has to be the same length.
     _run(
         ["ffmpeg", "-y", "-i", str(source)]
         + ["-vf", f"tpad=stop_mode=clone:stop_duration={whole},fps={_FPS},"
                   f"scale={PROVIDER_WIDTH}:{PROVIDER_HEIGHT}"]
-        + ["-t", str(whole), "-an"]
+        + ["-af", "apad"]
+        + ["-t", str(whole)]
         + _ENCODE
-        + ["-movflags", "+faststart", str(destination)]
+        + ["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(destination)]
     )
     return whole
 
@@ -403,7 +410,6 @@ def _swap_batch_once(
             width=PROVIDER_WIDTH,
             height=PROVIDER_HEIGHT,
         )
-    batch_audio = _extract_audio(batch_input, work_dir / f"{reference}-audio.m4a")
     true_span = probe_media(batch_input).duration_seconds
     # The masked pipeline runs on Seedance 2.0, which takes an explicit integer
     # duration and invents footage for any second the input does not cover. Pad
@@ -416,6 +422,9 @@ def _swap_batch_once(
         padded = work_dir / f"{reference}-padded.mp4"
         asked = _pad_to_whole_second(batch_input, padded, true_span)
         provider_input = padded
+    # Taken from whatever is actually being sent, so the render's own remux and
+    # duration check are consistent with its input.
+    batch_audio = _extract_audio(provider_input, work_dir / f"{reference}-audio.m4a")
     spec = SeedanceRenderSpec(
         reference=reference,
         source_video_url="",

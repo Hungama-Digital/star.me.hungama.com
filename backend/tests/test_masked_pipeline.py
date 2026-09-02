@@ -136,3 +136,46 @@ def test_a_swap_with_no_reference_face_is_still_refused() -> None:
     )
     with pytest.raises(ValueError, match="reference asset URI is required"):
         request.payload()
+
+
+def _av_clip(path: Path, seconds: float) -> Path:
+    """A clip with both streams, like the cuts the assembly actually batches."""
+    subprocess.run(  # noqa: S603
+        [  # noqa: S607
+            "ffmpeg", "-y", "-v", "error",
+            "-f", "lavfi", "-i", f"color=c=black:s=320x568:r=24:d={seconds}",
+            "-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}",
+            "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-shortest", str(path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    return path
+
+
+def test_padding_pads_the_audio_too(tmp_path: Path) -> None:
+    """What cost the first real masked canary two rolls.
+
+    The render function remuxes its output against the audio it was handed and
+    then checks the duration survived. Padded video plus unpadded audio meant
+    an 8.04s render came back 7.03s and failed that check, reported as a face
+    QA failure three rolls deep. Both streams have to reach the whole second.
+    """
+    source = _av_clip(tmp_path / "cut.mp4", 7.04)
+    padded = tmp_path / "padded.mp4"
+    assert _pad_to_whole_second(source, padded, 7.04) == 8
+
+    def stream_duration(kind: str) -> float:
+        out = subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "ffprobe", "-v", "error", "-select_streams", kind,
+                "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1",
+                str(padded),
+            ],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip().splitlines()[0]
+        return float(out)
+
+    assert abs(stream_duration("v:0") - 8.0) < 0.15
+    assert abs(stream_duration("a:0") - 8.0) < 0.15, "audio must reach the padded length"
