@@ -31,9 +31,20 @@ class SeedanceGenerationRequest:
     duration: int | None = None
     generate_audio: bool = False
     watermark: bool = True
+    #: Whether this request must carry a reference face. True for every swap:
+    #: a swap with no reference silently returns the original footage, and the
+    #: guard is what stops that reaching a subscriber as a finished episode.
+    #:
+    #: False for exactly one caller - the masked pipeline's stage 1, which
+    #: paints the lead's head white and needs no face to do it. That stage was
+    #: refused outright until this existed, so the masked path had never once
+    #: reached the provider (found 2 Sep 2026, after it was reported working).
+    #: Deliberately not inferred from an empty tuple: an empty tuple is far
+    #: more often a caller that forgot the face than one that means it.
+    reference_required: bool = True
 
     def payload(self) -> dict[str, Any]:
-        if not self.reference_asset_uris:
+        if self.reference_required and not self.reference_asset_uris:
             raise ValueError("At least one trusted reference asset URI is required")
         content: list[dict[str, Any]] = [
             {"type": "text", "text": self.prompt},

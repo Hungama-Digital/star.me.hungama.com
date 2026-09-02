@@ -96,3 +96,43 @@ def test_the_fill_prompt_asks_for_a_reconstruction() -> None:
     assert "no white area remains" in text
     assert "face, hairline and hairstyle" in text
     assert "Leave the woman untouched." in text
+
+
+def test_the_mask_stage_builds_a_payload_with_no_reference_face() -> None:
+    """The bug that meant the masked pipeline had never run.
+
+    Stage 1 paints the lead's head white and needs no reference face, but
+    payload() refused any request without one, so the very first provider call
+    of every masked render raised before it was sent. It surfaced as "failed
+    face QA after 3 rolls", which is why it went unnoticed: the roll never
+    reached QA.
+    """
+    from starme.seedance import SeedanceGenerationRequest
+
+    request = SeedanceGenerationRequest(
+        source_video_url="asset://asset-1",
+        reference_asset_uris=(),
+        prompt="Strictly edit @Video 1: cover the entire head with white.",
+        reference_required=False,
+    )
+    payload = request.payload()
+    roles = [block.get("role") for block in payload["content"]]
+    assert "reference_video" in roles
+    assert "reference_image" not in roles
+
+
+def test_a_swap_with_no_reference_face_is_still_refused() -> None:
+    """The guard has to stay for the swap stages. A swap sent without a face
+    comes back as the original footage, and a subscriber would be handed an
+    episode of somebody else with nothing having failed."""
+    import pytest
+
+    from starme.seedance import SeedanceGenerationRequest
+
+    request = SeedanceGenerationRequest(
+        source_video_url="asset://asset-1",
+        reference_asset_uris=(),
+        prompt="Replace the white rectangle with the face in @Image 1.",
+    )
+    with pytest.raises(ValueError, match="reference asset URI is required"):
+        request.payload()

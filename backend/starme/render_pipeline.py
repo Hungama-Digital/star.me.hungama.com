@@ -213,6 +213,7 @@ def _submit_and_download(
     model: str,
     duration: int | None,
     destination: Path,
+    reference_required: bool = True,
 ) -> str:
     """One provider generation, start to downloaded file. Returns the task id."""
     is_v25 = "seedance-2-5" in model
@@ -229,6 +230,7 @@ def _submit_and_download(
         duration=-1 if is_v25 else duration,
         generate_audio=False,
         watermark=False,
+        reference_required=reference_required,
     )
     with _client(settings) as client:
         submitted = client.submit(request)
@@ -280,6 +282,10 @@ def execute_masked_render(
         model=model,
         duration=spec.duration,
         destination=masked,
+        # Masking needs no face, and must not be given one: handing the
+        # reference to this stage invites it to swap while it should only be
+        # painting the head out.
+        reference_required=False,
     )
 
     # Stage 2: tighten the fill prompt. Falls back to the base text silently.
