@@ -18,8 +18,9 @@ const HARDCODED_NAVIGATION_DATA = [
     menuCategory: [],
   },
   {
-    title: 'My List',
-    path: '3',
+    // StarME entry point — centered create action (feature yourself in a show).
+    title: 'StarME',
+    path: 'starme',
     icon: null,
     menuCategory: [],
   },

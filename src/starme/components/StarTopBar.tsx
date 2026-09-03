@@ -3,8 +3,8 @@
 // subline "A FAST TV ORIGINAL" 8pt dim, and a wallet chip on the right
 // that appears only when subscribed or credits > 0.
 import React from 'react';
-import { Text, View } from 'react-native';
-import { StarPalette as C, radius, type as T, Display } from '../theme';
+import { Image, Text, View } from 'react-native';
+import { StarPalette as C, radius, type as T, StarImages } from '../theme';
 
 export const Coin = ({ size = 14 }: { size?: number }) => (
   // Radial gradient #FFE9B0 -> gold -> #8A6A24, approximated with a solid gold
@@ -52,28 +52,12 @@ export const StarTopBar = ({
       paddingBottom: 10,
     }}
   >
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ fontFamily: Display, fontSize: 22, letterSpacing: 0.88, color: C.text }}>
-          STAR
-        </Text>
-        <Text
-          style={{
-            ...T.labelSmall,
-            fontSize: 12,
-            letterSpacing: 2.16,
-            color: C.gold,
-            marginLeft: 5,
-            marginTop: 2,
-          }}
-        >
-          ME
-        </Text>
-      </View>
-      <Text style={{ ...T.labelSmall, fontSize: 8, letterSpacing: 1.44, color: C.dim }}>
-        A FAST TV ORIGINAL
-      </Text>
-    </View>
+    <Image
+      source={StarImages.logo}
+      style={{ width: 55, height: 61 }}
+      resizeMode="contain"
+      accessibilityLabel="StarME"
+    />
     {walletVisible && (
       <View
         style={{

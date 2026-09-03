@@ -7,7 +7,7 @@ import {
   canContinueConsent,
 } from '../state/types';
 import { useStarStore } from '../state/store';
-import { pkg, welcomeCredits } from '../data/manifest';
+import { pkg } from '../data/manifest';
 import { Step } from './routes';
 import { starNavigate } from './navRef';
 
@@ -16,6 +16,10 @@ export type CtaDescriptor = {
   enabled: boolean;
   variant: 'PRIMARY' | 'GHOST' | 'GOLD';
   onPress: () => void;
+  // When disabled, show an animated "keep going" indicator inside the button.
+  hintWhenDisabled?: boolean;
+  // Optional second button rendered beside the primary (same row), e.g. Reset.
+  secondary?: { label: string; onPress: () => void };
 };
 
 export function useCta(route: string): CtaDescriptor | null {
@@ -27,7 +31,7 @@ export function useCta(route: string): CtaDescriptor | null {
 
     case Step.SUBSCRIBE:
       return {
-        label: s.subscribing ? 'Subscribing…' : `Subscribe · ₹499 And Claim ${welcomeCredits} Credits`,
+        label: s.subscribing ? 'Please Wait…' : 'Continue',
         enabled: !s.subscribing,
         variant: 'PRIMARY',
         onPress: () => s.onSubscribe(),
@@ -35,7 +39,7 @@ export function useCta(route: string): CtaDescriptor | null {
 
     case Step.CAPTURE:
       return {
-        label: canContinueCapture(s) ? 'Continue To Consent' : 'Add Your Photo And Name',
+        label: canContinueCapture(s) ? 'Consent' : 'Add Your Photo And Name',
         enabled: canContinueCapture(s),
         variant: 'PRIMARY',
         onPress: () => starNavigate(Step.CONSENT),
@@ -43,10 +47,12 @@ export function useCta(route: string): CtaDescriptor | null {
 
     case Step.CONSENT:
       return {
-        label: canContinueConsent(s) ? 'Continue · Consent Recorded' : 'Tick Both Boxes And Sign',
+        label: canContinueConsent(s) ? 'Continue' : 'Tick Both Boxes And Sign',
         enabled: canContinueConsent(s),
         variant: 'PRIMARY',
-        onPress: () => starNavigate(Step.CONCEPT),
+        hintWhenDisabled: true,
+        // "Choose Your World" was removed; the live world is auto-cast, so go to Package.
+        onPress: () => starNavigate(Step.PACKAGE),
       };
 
     case Step.CONCEPT:
@@ -77,10 +83,18 @@ export function useCta(route: string): CtaDescriptor | null {
 
     case Step.PRODUCTION:
       return {
-        label: s.awaitingFirstLook ? 'Approve First Look' : 'Refresh Production Status',
+        label: s.awaitingFirstLook ? 'Approve' : 'Refresh Status',
         enabled: !s.rendering && !s.renderComplete,
         variant: 'PRIMARY',
         onPress: () => (s.awaitingFirstLook ? s.approveFirstLook() : s.onStartRender()),
+        // Reset = scrap this order and start over from the first step.
+        secondary: {
+          label: 'Reset',
+          onPress: () => {
+            s.onMakeAnother();
+            starNavigate(Step.SUBSCRIBE);
+          },
+        },
       };
 
     case Step.PREMIERE:
@@ -90,7 +104,7 @@ export function useCta(route: string): CtaDescriptor | null {
         variant: 'PRIMARY',
         onPress: () => {
           s.onMakeAnother();
-          starNavigate(Step.CONCEPT);
+          starNavigate(Step.PACKAGE);
         },
       };
 

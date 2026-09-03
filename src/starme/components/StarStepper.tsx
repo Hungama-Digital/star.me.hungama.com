@@ -3,12 +3,12 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { StarPalette as C, type as T } from '../theme';
 
+// Promo (welcome) is the landing and is not counted. "Choose Your World" was
+// removed from the flow (single live world is auto-cast).
 const STEP_NAMES = [
-  'Welcome',
-  'Membership',
+  'Feature Yourself',
   'Your Close-Up',
   'Consent',
-  'Choose Your World',
   'Choose Your Package',
   'In Production',
   'Premiere',
@@ -16,7 +16,7 @@ const STEP_NAMES = [
 
 export const StarStepper = ({
   current,
-  total = 8,
+  total = 6,
 }: {
   current: number | null;
   total?: number;

@@ -7,7 +7,6 @@ import { Stage, Eyebrow, ScreenHeading, Lead, CheckLine, StarCard, StarButton } 
 import { StarPalette as C, radius, type as T, Display } from '../theme';
 import { useStarStore } from '../state/store';
 import { pkg as pkgById, shell as shellById } from '../data/manifest';
-import { schedulePremiereNotification } from '../services/notifications';
 
 const START_SECONDS = 12 * 3600 - 1; // 11:59:59
 
@@ -37,12 +36,7 @@ export default function ProductionScreen() {
 
   const [countdown, setCountdown] = useState(START_SECONDS);
 
-  // Effect 1: schedule the premiere notification once, keyed on the order.
-  useEffect(() => {
-    if (!orderId) return;
-    schedulePremiereNotification(name);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  // (Premiere-status notification disabled for now.)
 
   // Effect 2: auto-advance poll every 2500ms while an order exists and we are
   // neither awaiting a first look nor complete.
@@ -55,12 +49,12 @@ export default function ProductionScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteOrderId, awaitingFirstLook, renderComplete]);
 
-  // Effect 3: countdown ticks every second while not rendering.
+  // Effect 3: countdown ticks every second. Runs ONCE and is never torn down by a
+  // status refresh, so tapping "Check Status" can no longer restart the timer.
   useEffect(() => {
-    if (rendering) return;
     const id = setInterval(() => setCountdown((c) => (c > 0 ? c - 1 : 0)), 1000);
     return () => clearInterval(id);
-  }, [rendering]);
+  }, []);
 
   const p = pkgById(packageId);
   const sh = shellById(shellId);

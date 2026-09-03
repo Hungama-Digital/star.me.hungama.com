@@ -10,7 +10,6 @@ import {
   FACE_ROW,
   initialState,
   QUALITY_ROW,
-  type IdentityAssetState,
   type StarUiState,
   type VerifyRow,
 } from './types';
@@ -22,7 +21,7 @@ import { loadSession, session } from '../data/session';
 import { walletRepo } from '../data/walletRepo';
 import { consentRepo } from '../data/consentRepo';
 import { orderRepo } from '../data/orderRepo';
-import { pkg, welcomeCredits } from '../data/manifest';
+import { pkg, welcomeCredits, liveShells } from '../data/manifest';
 import { files } from '../data/files';
 import { billing, TOP_UP_CREDITS } from '../services/billing';
 import { faceChecker } from '../services/faceChecker';
@@ -42,6 +41,11 @@ export interface StarActions {
   onPhotoSelected(uri: string): Promise<void>;
   runVerification(): Promise<void>;
   registerFaceAsset(): Promise<void>;
+  /** Clear the chosen photo + its verification so the capture screen resets. */
+  resetPhoto(): void;
+
+  /** Auto-pick the single live story world + its role (the "Choose Your World" step is gone). */
+  autoSelectWorld(): void;
 
   onConsentSigned(signaturePng: string, checkedA: boolean, checkedB: boolean): Promise<void>;
   onSignatureCleared(): void;
@@ -74,10 +78,18 @@ export const useStarStore = create<StarStore>()((set, get) => ({
     await loadSession();
     await files.ensureDirs();
 
+    // No access code / Bearer token anymore: the backend identifies each call by the
+    // X-Device-Id header the client attaches from session.deviceBindingId().
     const remoteOrderId = session.getRemoteOrderId();
     const localOrderId = session.getLocalOrderId();
     set({ authenticated: true, remoteOrderId, orderId: localOrderId });
-    if (remoteOrderId && localOrderId) emitStarEvent({ type: 'OrderCreated' });
+    // "Choose Your World" was removed from the flow: always cast the single live world.
+    get().autoSelectWorld();
+    // NOTE: launch resume-navigation is NOT emitted here. StarNavigator gates the whole
+    // shell behind a boot splash until hydrate() resolves, then mounts the navigator
+    // DIRECTLY on the resolved route (Production if a saved order exists, else Promo) so
+    // the Promo/home screen never flashes before the jump. OrderCreated -> Production is
+    // only for an order placed FRESH during this session (see createOrder).
 
     await get().refreshCapabilities();
     await walletRepo.ensureInitialized();
@@ -88,19 +100,18 @@ export const useStarStore = create<StarStore>()((set, get) => ({
     const ref = session.getConsentRef();
     const record = ref ? await consentRepo.byRef(ref) : null;
     const valid = !!record && record.checkedA === 1 && record.checkedB === 1 && !record.revokedAtEpoch;
+    // Restore membership + consent + name across launches, but NEVER the photo:
+    // the Capture screen always starts empty so the user must pick a fresh selfie
+    // that passes the on-device face check — a saved photo is never blindly accepted.
     set((s) => ({
       subscribed,
       consentRef: valid ? record!.ref : null,
       signed: !!valid,
       name: valid ? record!.name : s.name,
-      photoPath: valid ? record!.photoUri : s.photoPath,
-      verified: !!valid || s.verified,
-      verifyRows: valid
-        ? defaultVerifyRows.map((r) => ({ ...r, state: 'PASSED' as const }))
-        : s.verifyRows,
-      identityAssetState: valid
-        ? ((s.identityProviderEnabled ? 'AWAITING_LIVENESS' : 'STAGING_LOCAL_ONLY') as IdentityAssetState)
-        : s.identityAssetState,
+      photoPath: s.photoPath,
+      verified: s.verified,
+      verifyRows: s.verifyRows,
+      identityAssetState: s.identityAssetState,
     }));
   },
 
@@ -125,7 +136,7 @@ export const useStarStore = create<StarStore>()((set, get) => ({
       emitStarEvent({ type: 'ConsentRequired' });
       emitStarEvent({
         type: 'Toast',
-        message: 'Please confirm consent for this tester session. Your photo and selections are saved.',
+        message: 'Please confirm consent for this session. Your photo and selections are saved.',
       });
       return true;
     }
@@ -225,7 +236,6 @@ export const useStarStore = create<StarStore>()((set, get) => ({
       verifyError: null,
       identityAssetState: s.identityProviderEnabled ? 'UPLOADING' : 'STAGING_LOCAL_ONLY',
     }));
-    emitStarEvent({ type: 'Toast', message: 'Local photo checks passed' });
     if (get().identityProviderEnabled) await get().registerFaceAsset();
   },
 
@@ -307,6 +317,24 @@ export const useStarStore = create<StarStore>()((set, get) => ({
 
   onSignatureCleared() {
     set({ signed: false });
+  },
+
+  resetPhoto() {
+    set({
+      photoPath: null,
+      verifying: false,
+      verified: false,
+      verifyError: null,
+      verifyRows: defaultVerifyRows,
+      identityAssetState: 'LOCAL_CHECKS_PENDING',
+      identityAssetId: null,
+    });
+  },
+
+  autoSelectWorld() {
+    const sh = liveShells()[0];
+    if (!sh) return;
+    set({ shellId: sh.id, roleId: sh.roles?.[0]?.id ?? null });
   },
 
   // ---------- Concept ----------
@@ -438,8 +466,10 @@ export const useStarStore = create<StarStore>()((set, get) => ({
         emitStarEvent({ type: 'RenderComplete' });
       }
     } catch {
+      // Stale/unknown demo order or a transient blip: keep the user in production
+      // with a soft note instead of a scary failure, and never disturb the countdown.
       set({ rendering: false });
-      emitStarEvent({ type: 'Error', message: 'Render status could not be refreshed.' });
+      emitStarEvent({ type: 'Toast', message: 'Still in production · check back soon' });
     }
   },
 
@@ -481,8 +511,6 @@ export const useStarStore = create<StarStore>()((set, get) => ({
   onMakeAnother() {
     session.clearActiveOrder();
     set({
-      shellId: null,
-      roleId: null,
       packageId: null,
       orderId: null,
       remoteOrderId: null,

@@ -1,9 +1,9 @@
 // src/starme/screens/ConsentScreen.tsx  ·  Step 4 of 8 · Consent (guide section 11)
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Eyebrow, ScreenHeading, Lead, SmallDim, StarButton } from '../components';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Stage, Eyebrow, ScreenHeading, SmallDim, StarButton } from '../components';
 import { SignaturePad, type SignaturePadHandle } from '../components/SignaturePad';
-import { StarPalette as C, radius, spacing, type as T } from '../theme';
+import { StarPalette as C, radius, type as T } from '../theme';
 import { useStarStore } from '../state/store';
 
 const SECTIONS: { h: string; b: string }[] = [
@@ -66,7 +66,7 @@ function Checkbox({ checked, onToggle, label }: { checked: boolean; onToggle: ()
 
 export default function ConsentScreen() {
   const store = useStarStore();
-  const { consentVersion, consentSubmitFailed, signed, consentRef } = store;
+  const { consentVersion, consentSubmitFailed, signed, consentRef, photoPath } = store;
 
   const [checkedA, setCheckedA] = useState(false);
   const [checkedB, setCheckedB] = useState(false);
@@ -109,26 +109,30 @@ export default function ConsentScreen() {
   const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingTop: spacing.top, paddingBottom: spacing.bottom }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <Stage ref={scrollRef}>
       <Eyebrow>Step 3 · Your consent, on record</Eyebrow>
       <ScreenHeading>Read, tick and sign</ScreenHeading>
-      <Lead>
-        Plain language, no fine print. A signed copy stays in your consent ledger and travels with
-        every render.
-      </Lead>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <Text style={{ ...T.bodyMedium, color: C.dim, flex: 1 }}>
+          Plain language, no fine print. A signed copy stays in your consent ledger and travels with
+          every render.
+        </Text>
+        {photoPath ? (
+          <Image
+            source={{ uri: photoPath }}
+            style={{ width: 54, height: 66, borderRadius: radius.pill, borderWidth: 1, borderColor: C.line }}
+            resizeMode="cover"
+          />
+        ) : null}
+      </View>
 
       {consentVersion === null ? (
         <View
           style={{
-            backgroundColor: 'rgba(217,30,54,0.10)',
+            backgroundColor: 'rgba(229,72,77,0.10)',
             borderRadius: radius.pill,
             borderWidth: 1,
-            borderColor: 'rgba(217,30,54,0.5)',
+            borderColor: 'rgba(229,72,77,0.5)',
             padding: 14,
             marginBottom: 12,
           }}
@@ -183,7 +187,7 @@ export default function ConsentScreen() {
         <Text style={{ color: C.dim, fontWeight: '700', fontSize: 11, letterSpacing: 1.54, marginBottom: 6 }}>
           SIGN WITH YOUR FINGER
         </Text>
-        <SignaturePad ref={sigRef} onInkChange={setHasInk} />
+        <SignaturePad ref={sigRef} onInkChange={setHasInk} enabled={checkedA && checkedB} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <SmallDim>{`Signed on ${today}`}</SmallDim>
           <Pressable onPress={() => sigRef.current?.clear()}>
@@ -197,10 +201,10 @@ export default function ConsentScreen() {
         <View
           style={{
             marginTop: 12,
-            backgroundColor: 'rgba(217,30,54,0.10)',
+            backgroundColor: 'rgba(229,72,77,0.10)',
             borderRadius: radius.pill,
             borderWidth: 1,
-            borderColor: 'rgba(217,30,54,0.5)',
+            borderColor: 'rgba(229,72,77,0.5)',
             padding: 14,
           }}
         >
@@ -232,6 +236,6 @@ export default function ConsentScreen() {
           </Text>
         </View>
       ) : null}
-    </ScrollView>
+    </Stage>
   );
 }

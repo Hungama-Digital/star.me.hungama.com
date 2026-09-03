@@ -2,7 +2,6 @@
 // From ui/nav/Routes.kt. The stepper is 8 segments and the index is the enum ordinal.
 import {
   canContinueCapture,
-  canContinueConcept,
   canContinueConsent,
   type StarUiState,
 } from '../state/types';
@@ -31,10 +30,22 @@ export const STEP_ORDER = [
 
 export const Routes = { ACCESS: 'access', SETTINGS: 'settings', PROJECTS: 'projects' } as const;
 
-export const STEP_COUNT = 8;
+// The stepper counts the flow steps (Subscribe -> Premiere). Promo is the welcome
+// landing and is NOT counted. "Choose Your World" (Concept) was removed from the flow
+// (the single live world is auto-cast), so it no longer appears in the stepper.
+export const STEPPER_STEPS = [
+  Step.SUBSCRIBE,
+  Step.CAPTURE,
+  Step.CONSENT,
+  Step.PACKAGE,
+  Step.PRODUCTION,
+  Step.PREMIERE,
+] as const;
+
+export const STEP_COUNT = STEPPER_STEPS.length; // 7
 
 export const stepperIndex = (route?: string): number | null => {
-  const i = STEP_ORDER.indexOf(route as (typeof STEP_ORDER)[number]);
+  const i = STEPPER_STEPS.indexOf(route as (typeof STEPPER_STEPS)[number]);
   return i === -1 ? null : i;
 };
 
@@ -43,9 +54,9 @@ export function nextCreationRoute(s: StarUiState): string {
   if (!s.subscribed) return Step.SUBSCRIBE;
   if (!canContinueCapture(s)) return Step.CAPTURE;
   if (!canContinueConsent(s)) return Step.CONSENT;
-  if (!canContinueConcept(s)) return Step.CONCEPT;
+  // Concept is gone; the world is auto-cast, so we jump straight to Package.
   if (s.packageId === null) return Step.PACKAGE;
-  if (s.renderComplete) return Step.CONCEPT;
+  if (s.renderComplete) return Step.PACKAGE;
   if (s.remoteOrderId || s.orderId) return Step.PRODUCTION;
   return Step.PACKAGE;
 }

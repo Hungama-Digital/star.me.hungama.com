@@ -33,7 +33,6 @@ import { useDataCache } from '../context/DataCacheContext';
 import { useMyList } from '../context/MyListContext';
 import { useAuth } from '../context/AuthContext';
 import ViewportContext, { updateViewport, ScrollViewRefProvider, updateTouchX } from '../context/ViewportContext';
-import StarMeHomeCard from '../starme/components/StarMeHomeCard';
 import API from '../services/api';
 import { redirectGuestToLogin } from '../utils/guestUtils';
 import Svg, { Path } from 'react-native-svg';
@@ -2062,7 +2061,8 @@ const HomeScreen = ({ navigation }) => {
                 switch (item.type) {
 
                   case 'starme':
-                    return <StarMeHomeCard />;
+                    // StarME entry moved to the centered bottom-tab button.
+                    return null;
 
                   case 'featured':
                     return (

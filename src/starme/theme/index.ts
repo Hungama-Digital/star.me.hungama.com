@@ -17,4 +17,6 @@ export const StarFonts = {
 export const StarImages = {
   loveKeyart: require('../assets/images/story_love_keyart.png'),
   actionKeyart: require('../assets/images/story_action_keyart.png'),
+  // Vertical StarME brand lockup (white text, for dark surfaces). Star over wordmark.
+  logo: require('../assets/images/starme_logo_vertical.png'),
 } as const;

@@ -320,6 +320,7 @@ function BottomTabNavigator({ navItems, tabIcons, navigation }) {
     'My List': MyListStackScreen,
     'Profile': ProfileScreen,
     'Search': SearchStackScreen,
+    'StarME': StarNavigator,
   };
 
   // Default Ionicons mapping for fallback
@@ -358,6 +359,16 @@ function BottomTabNavigator({ navItems, tabIcons, navigation }) {
           tabBarItemStyle: { alignItems: 'center', justifyContent: 'center' },
         }),
         tabBarLabel: ({ focused, color }) => {
+          // StarME: render the StarME wordmark image at the label position.
+          if (route.name === 'StarME') {
+            return (
+              <Image
+                source={require('./src/starme/assets/images/starme_wordmark.png')}
+                style={{ width: 52, height: 12, marginTop: isIPad ? 4 : 6, opacity: focused ? 1 : 0.9 }}
+                resizeMode="contain"
+              />
+            );
+          }
           return (
             <Text
               style={{
@@ -396,6 +407,16 @@ function BottomTabNavigator({ navItems, tabIcons, navigation }) {
 
             case 'Profile':
               return <ProfileIcon size={iconSize} focused={focused} />;
+
+            case 'StarME':
+              // StarME star icon (wordmark is rendered at the label position below).
+              return (
+                <Image
+                  source={require('./src/starme/assets/images/starme_star.png')}
+                  style={{ width: 30, height: 29, opacity: focused ? 1 : 0.9 }}
+                  resizeMode="contain"
+                />
+              );
 
             default:
               // Fallback to default icons for other routes

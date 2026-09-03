@@ -15,11 +15,18 @@ export type SignaturePadHandle = {
 
 type Point = { x: number; y: number };
 
-export const SignaturePad = forwardRef<SignaturePadHandle, { onInkChange: (hasInk: boolean) => void }>(
-  ({ onInkChange }, ref) => {
+export const SignaturePad = forwardRef<
+  SignaturePadHandle,
+  { onInkChange: (hasInk: boolean) => void; enabled?: boolean }
+>(({ onInkChange, enabled = true }, ref) => {
     const [strokes, setStrokes] = useState<Point[][]>([]);
     const [size, setSize] = useState({ width: 0, height: 0 });
     const shotRef = useRef<View>(null);
+    // Kept in a ref so the once-created PanResponder always sees the latest value.
+    const enabledRef = useRef(enabled);
+    useEffect(() => {
+      enabledRef.current = enabled;
+    }, [enabled]);
 
     const hasInk = strokes.some((s) => s.length > 1);
     useEffect(() => {
@@ -28,8 +35,8 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { onInkChange: (hasIn
 
     const responder = useRef(
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: () => enabledRef.current,
+        onMoveShouldSetPanResponder: () => enabledRef.current,
         onPanResponderGrant: (e) => {
           const { locationX: x, locationY: y } = e.nativeEvent;
           setStrokes((s) => [...s, [{ x, y }]]);
@@ -65,11 +72,12 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { onInkChange: (hasIn
         {...responder.panHandlers}
         style={{
           height: 140,
-          backgroundColor: '#100D17',
+          backgroundColor: 'rgba(255,255,255,0.06)',
           borderRadius: radius.note,
           borderWidth: 1,
-          borderColor: '#4A3F60',
+          borderColor: 'rgba(255,255,255,0.2)',
           overflow: 'hidden',
+          opacity: enabled ? 1 : 0.5,
         }}
       >
         {/* Transparent capture layer (no bg) so the rasterised PNG has alpha. */}
@@ -94,7 +102,9 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { onInkChange: (hasIn
         </View>
         {!hasInk ? (
           <View style={{ ...({ position: 'absolute' } as const), top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ ...T.bodyMedium, color: '#5B5170' }}>Sign here</Text>
+            <Text style={{ ...T.bodyMedium, color: 'rgba(255,255,255,0.4)' }}>
+              {enabled ? 'Sign here' : 'Tick both boxes to sign'}
+            </Text>
           </View>
         ) : null}
       </View>
