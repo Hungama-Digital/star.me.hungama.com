@@ -21,8 +21,17 @@ export const StarBottomNav = ({ route }: { route: string }) => {
   const insets = useSafeAreaInsets();
   const state = useStarStore();
 
+  // The creation-flow steps (Production step 6, Premiere step 7) are part of the
+  // Home/Create journey, not the "My Premieres" library. So Home stays selected
+  // through the flow, and Premieres lights up ONLY on the My Premieres page itself.
   const items: { key: string; label: string; icon: IconName; selected: boolean; target: string }[] = [
-    { key: 'home', label: 'Home', icon: 'home', selected: route === Step.PROMO, target: Step.PROMO },
+    {
+      key: 'home',
+      label: 'Home',
+      icon: 'home',
+      selected: route === Step.PROMO || route === Step.PRODUCTION || route === Step.PREMIERE,
+      target: Step.PROMO,
+    },
     {
       key: 'create',
       label: 'Create',
@@ -34,7 +43,7 @@ export const StarBottomNav = ({ route }: { route: string }) => {
       key: 'premieres',
       label: 'Premieres',
       icon: 'movie',
-      selected: route === Routes.PROJECTS || route === Step.PRODUCTION || route === Step.PREMIERE,
+      selected: route === Routes.PROJECTS,
       target: Routes.PROJECTS,
     },
     {

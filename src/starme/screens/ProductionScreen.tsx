@@ -103,12 +103,16 @@ export default function ProductionScreen() {
         ) : showCountdown ? (
           <View style={{ alignItems: 'center' }}>
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
               style={{
                 fontFamily: Display,
-                fontSize: 64,
+                fontSize: 46,
                 fontWeight: '900',
-                letterSpacing: 2.56,
+                letterSpacing: 1.5,
                 color: C.text,
+                textAlign: 'center',
               }}
             >
               {hms(countdown)}
