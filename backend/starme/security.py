@@ -1,14 +1,12 @@
 import hashlib
 import hmac
-import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
-from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from starme.config import Settings
-from starme.models import AccessCode, ClientSession
+from starme.models import ClientSession
 
 
 def utcnow() -> datetime:
@@ -19,102 +17,50 @@ def digest(value: str, pepper: str) -> str:
     return hmac.new(pepper.encode(), value.encode(), hashlib.sha256).hexdigest()
 
 
-def issue_code(
-    session: Session, tester_reference: str, hours: int, settings: Settings
-) -> tuple[str, datetime]:
-    plaintext = secrets.token_urlsafe(9)
-    expires_at = utcnow() + timedelta(hours=hours)
-    session.add(
-        AccessCode(
-            code_digest=digest(plaintext, settings.token_hash_pepper.get_secret_value()),
-            tester_reference=tester_reference,
-            expires_at=expires_at,
-        )
-    )
-    session.commit()
-    return plaintext, expires_at
+#: Identity used when an open call carries no device header at all.
+OPEN_ACCESS_TESTER = "open-access"
 
 
-def redeem_code(
-    session: Session, code: str, device_id: str, settings: Settings
-) -> tuple[str, datetime]:
-    now = utcnow()
-    shared_code = settings.shared_tester_code
-    shared_expiry = settings.shared_tester_code_expires_at
-    is_shared = (
-        shared_code is not None
-        and shared_expiry is not None
-        and hmac.compare_digest(code, shared_code.get_secret_value())
-        and shared_expiry.replace(tzinfo=UTC) > now
-    )
-    if is_shared:
-        assert shared_expiry is not None  # narrowed by is_shared; keeps the session cutoff explicit
-        device_digest = digest(device_id, settings.token_hash_pepper.get_secret_value())
-        # Preserve the device's established tester identity. A shared staging code must not collapse
-        # multiple testers into one consent/order owner, otherwise existing active consent becomes
-        # unusable and different testers' projects can be mixed. New devices receive an isolated,
-        # deterministic pseudonymous identity derived from the already-peppered device digest.
-        prior_session = session.scalar(
-            select(ClientSession)
-            .where(
-                ClientSession.device_digest == device_digest,
-                ClientSession.tester_reference != "shared-staging-review",
-            )
-            .order_by(ClientSession.created_at.desc())
-        )
-        tester_reference = (
-            prior_session.tester_reference
-            if prior_session is not None
-            else f"shared-device-{device_digest[:16]}"
-        )
-        token = secrets.token_urlsafe(32)
-        session.add(
-            ClientSession(
-                token_digest=digest(token, settings.token_hash_pepper.get_secret_value()),
-                tester_reference=tester_reference,
-                device_digest=device_digest,
-                expires_at=shared_expiry,
-            )
-        )
-        session.commit()
-        return token, shared_expiry
+def open_client(
+    session: Session, device_id: str | None, settings: Settings
+) -> ClientSession:
+    """Identity for a caller that presents no token.
 
-    code_row = session.scalar(
-        select(AccessCode).where(
-            AccessCode.code_digest == digest(code, settings.token_hash_pepper.get_secret_value())
+    The tester code screen was removed from the app, so nothing can obtain a
+    bearer token any more and every call arrived tokenless - 401 on consent,
+    orders and face assets. Access is therefore no longer authenticated.
+
+    The returned row is deliberately NOT added to the session: there is no
+    token to store, so there is no session to persist. Only
+    `tester_reference` is read downstream.
+
+    Identity still has to be per device. Filing every caller under one shared
+    reference is how a shared staging code once collapsed several testers into
+    a single consent/order owner, which made active consent unusable and mixed
+    different testers' projects - so the device decides. A device that
+    redeemed a code before keeps the reference its existing consent and orders
+    are already filed under, so nothing it created becomes unreachable.
+    """
+    if not device_id:
+        return ClientSession(
+            tester_reference=OPEN_ACCESS_TESTER, device_digest="", expires_at=utcnow()
         )
-    )
-    if (
-        code_row is None
-        or code_row.consumed_at is not None
-        or code_row.revoked_at is not None
-        or code_row.expires_at.replace(tzinfo=UTC) <= now
-    ):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Access code is invalid or expired")
     device_digest = digest(device_id, settings.token_hash_pepper.get_secret_value())
-    token = secrets.token_urlsafe(32)
-    expires_at = now + timedelta(hours=12)
-    code_row.consumed_at = now
-    code_row.device_digest = device_digest
-    session.add(
-        ClientSession(
-            token_digest=digest(token, settings.token_hash_pepper.get_secret_value()),
-            tester_reference=code_row.tester_reference,
-            device_digest=device_digest,
-            expires_at=expires_at,
+    prior = session.scalar(
+        select(ClientSession)
+        .where(
+            ClientSession.device_digest == device_digest,
+            ClientSession.tester_reference != OPEN_ACCESS_TESTER,
         )
+        .order_by(ClientSession.created_at.desc())
     )
-    session.commit()
-    return token, expires_at
-
-
-def authenticate_token(session: Session, token: str, settings: Settings) -> ClientSession:
-    row = session.scalar(
-        select(ClientSession).where(
-            ClientSession.token_digest
-            == digest(token, settings.token_hash_pepper.get_secret_value())
-        )
+    tester_reference = (
+        prior.tester_reference
+        if prior is not None
+        else f"open-device-{device_digest[:16]}"
     )
-    if row is None or row.revoked_at is not None or row.expires_at.replace(tzinfo=UTC) <= utcnow():
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session is invalid or expired")
-    return row
+    return ClientSession(
+        tester_reference=tester_reference,
+        device_digest=device_digest,
+        expires_at=utcnow(),
+    )

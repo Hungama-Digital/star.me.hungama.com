@@ -9,26 +9,9 @@ client = TestClient(app)
 
 
 def authenticated_headers(tester: str = "tester-1") -> dict[str, str]:
-    issued = client.post(
-        "/v1/operator/access-codes",
-        headers={"X-Operator-Key": "test-operator-key"},
-        json={"tester_reference": tester, "expires_in_hours": 24},
-    )
-    assert issued.status_code == 200
-    code = issued.json()["code"]
-    redeemed = client.post(
-        "/v1/access/redeem",
-        json={"code": code, "device_id": f"device-{tester}-00000000"},
-    )
-    assert redeemed.status_code == 200
-    assert (
-        client.post(
-            "/v1/access/redeem",
-            json={"code": code, "device_id": f"device-{tester}-other000"},
-        ).status_code
-        == 401
-    )
-    return {"Authorization": f"Bearer {redeemed.json()['access_token']}"}
+    """The API is open, so this is just the device identifier every call now
+    carries. Kept under the same name so the workflow tests read unchanged."""
+    return {"X-Device-Id": f"device-{tester}-00000000"}
 
 
 def create_consent(headers: dict[str, str]) -> str:

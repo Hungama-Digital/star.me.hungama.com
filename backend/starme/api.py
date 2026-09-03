@@ -6,7 +6,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
@@ -28,46 +27,44 @@ from starme.schemas import (
     FirstLookDecisionRequest,
     FirstLookResponse,
     HealthResponse,
-    IssueAccessCodeRequest,
-    IssueAccessCodeResponse,
     JobResponse,
     JobState,
     OrderCreateRequest,
     OrderResponse,
     OrderState,
-    RedeemAccessCodeRequest,
     RevocationResponse,
     ServiceState,
-    SessionResponse,
     SyntheticShell,
 )
-from starme.security import authenticate_token, issue_code, redeem_code, utcnow
+from starme.security import open_client, utcnow
 from starme.services import audit, cancel_active_jobs, register_face_asset
 
 router = APIRouter()
-bearer = HTTPBearer(auto_error=False)
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
 SessionDependency = Annotated[Session, Depends(get_session)]
-CredentialsDependency = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
 
 def current_client(
-    credentials: CredentialsDependency,
     session: SessionDependency,
     settings: SettingsDependency,
+    x_device_id: Annotated[str | None, Header()] = None,
 ) -> ClientSession:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer token is required")
-    return authenticate_token(session, credentials.credentials, settings)
+    """Resolve the caller. Never rejects: the API is open.
+
+    Nothing authenticates any more. The app's tester code screen was removed,
+    the access-code and redeem endpoints are gone with it, and every call
+    arrived tokenless - 401 on consent, orders and face assets, which is what
+    this exists to stop.
+
+    The caller is identified by `X-Device-Id`, which is an identifier and not
+    a credential: it is not secret and is not checked against anything. It is
+    still needed, because consent and orders are filed per tester_reference
+    and one shared reference would let any caller read and revoke another's.
+    """
+    return open_client(session, x_device_id, settings)
 
 
 ClientDependency = Annotated[ClientSession, Depends(current_client)]
-
-
-def require_operator_key(operator_key: str | None, settings: Settings) -> None:
-    expected = settings.operator_api_key.get_secret_value()
-    if operator_key is None or not hmac.compare_digest(operator_key, expected):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Operator key is invalid")
 
 
 def owned_order(session: Session, order_id: str, client: ClientSession) -> Order:
@@ -199,30 +196,6 @@ def capabilities(settings: SettingsDependency) -> CapabilityResponse:
             else "Workflow APIs are available; real sensitive processing remains disabled"
         ),
     )
-
-
-@router.post("/v1/operator/access-codes", response_model=IssueAccessCodeResponse)
-def create_access_code(
-    request: IssueAccessCodeRequest,
-    session: SessionDependency,
-    settings: SettingsDependency,
-    x_operator_key: Annotated[str | None, Header()] = None,
-) -> IssueAccessCodeResponse:
-    require_operator_key(x_operator_key, settings)
-    code, expires_at = issue_code(
-        session, request.tester_reference, request.expires_in_hours, settings
-    )
-    return IssueAccessCodeResponse(code=code, expires_at=expires_at)
-
-
-@router.post("/v1/access/redeem", response_model=SessionResponse)
-def redeem_access_code(
-    request: RedeemAccessCodeRequest,
-    session: SessionDependency,
-    settings: SettingsDependency,
-) -> SessionResponse:
-    token, expires_at = redeem_code(session, request.code, request.device_id, settings)
-    return SessionResponse(access_token=token, expires_at=expires_at)
 
 
 @router.get("/v1/catalogue/shells", response_model=list[SyntheticShell])

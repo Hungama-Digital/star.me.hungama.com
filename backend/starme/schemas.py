@@ -75,27 +75,6 @@ class FaceAssetResponse(BaseModel):
     tester_reference: str
 
 
-class IssueAccessCodeRequest(BaseModel):
-    tester_reference: str = Field(min_length=2, max_length=100)
-    expires_in_hours: int = Field(default=24, ge=1, le=168)
-
-
-class IssueAccessCodeResponse(BaseModel):
-    code: str
-    expires_at: datetime
-
-
-class RedeemAccessCodeRequest(BaseModel):
-    code: str = Field(min_length=8, max_length=100)
-    device_id: str = Field(min_length=8, max_length=255)
-
-
-class SessionResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"  # noqa: S105 - OAuth token type, not a credential
-    expires_at: datetime
-
-
 class ConsentCreateRequest(BaseModel):
     typed_name: str = Field(min_length=2, max_length=100)
     consent_version: str = Field(min_length=2, max_length=50)
