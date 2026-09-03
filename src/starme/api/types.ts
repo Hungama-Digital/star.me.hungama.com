@@ -14,12 +14,6 @@ export interface CapabilityDto {
   reason?: string;
 }
 
-export interface SessionDto {
-  access_token: string;
-  token_type: string; // 'bearer'
-  expires_at: string; // ISO-8601
-}
-
 export interface ConsentRequest {
   typed_name: string;
   consent_version: string;

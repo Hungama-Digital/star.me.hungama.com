@@ -4,7 +4,7 @@
 // guard, the server-id mapping, and (interactively) the live /v1 backend.
 // Not part of the shipping flow.
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StarPalette as C, type as T } from '../theme';
 import { StarButton } from '../components';
@@ -21,7 +21,6 @@ type Row = { label: string; ok: boolean; detail?: string };
 
 export default function StarMeDataHarness() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [code, setCode] = useState('');
   const [net, setNet] = useState<string>('(not run)');
 
   useEffect(() => {
@@ -114,21 +113,6 @@ export default function StarMeDataHarness() {
     }
   };
 
-  const runRedeem = async () => {
-    if (code.trim().length < 8) {
-      setNet('code must be >= 8 chars (not uppercased)');
-      return;
-    }
-    setNet('redeeming ...');
-    try {
-      const s = await api.redeem(code, session.deviceBindingId());
-      session.setAccessToken(s.access_token);
-      setNet(`redeem OK · token stored · expires ${s.expires_at}`);
-    } catch (e) {
-      setNet(`redeem FAILED · ${e instanceof ApiError ? e.statusCode : ''} ${String(e)}`);
-    }
-  };
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
@@ -153,25 +137,6 @@ export default function StarMeDataHarness() {
         <Text style={{ ...T.bodySmall, color: C.dim, marginBottom: 10 }}>{net}</Text>
         <View style={{ gap: 10 }}>
           <StarButton label="GET /v1/capabilities" variant="GHOST" onPress={runCapabilities} />
-          <TextInput
-            value={code}
-            onChangeText={setCode}
-            autoCapitalize="none"
-            autoCorrect={false}
-            spellCheck={false}
-            placeholder="Single-use access code"
-            placeholderTextColor={C.dim}
-            style={{
-              borderWidth: 1,
-              borderColor: C.line,
-              borderRadius: 12,
-              backgroundColor: C.surface2,
-              color: C.text,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-            }}
-          />
-          <StarButton label="POST /v1/access/redeem" variant="PRIMARY" onPress={runRedeem} />
         </View>
       </ScrollView>
     </SafeAreaView>

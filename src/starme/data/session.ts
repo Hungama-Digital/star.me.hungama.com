@@ -11,7 +11,6 @@ const K = {
   SUBSCRIBED: 'subscribed',
   CONSENT_REF: 'active_consent_ref',
   NAME: 'star_name',
-  ACCESS_TOKEN: 'access_token',
   DEVICE_BINDING: 'device_binding_id',
   REMOTE_ORDER_ID: 'active_remote_order_id',
   LOCAL_ORDER_ID: 'active_local_order_id',
@@ -55,10 +54,6 @@ export async function loadSession(): Promise<void> {
 
 export const session = {
   isLoaded: () => loaded,
-
-  getAccessToken: () => cache[K.ACCESS_TOKEN] ?? null,
-  setAccessToken: (t: string) => put(K.ACCESS_TOKEN, t),
-  clearAccessToken: () => drop(K.ACCESS_TOKEN),
 
   /** Stable per install (UUID v4), created once. Guaranteed present after loadSession. */
   deviceBindingId: (): string => {

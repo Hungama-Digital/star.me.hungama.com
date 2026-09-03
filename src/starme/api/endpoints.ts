@@ -9,7 +9,6 @@ import type {
   FirstLookDecision,
   OrderDto,
   OrderRequest,
-  SessionDto,
 } from './types';
 
 /**
@@ -43,15 +42,11 @@ export function buildServerOrderRequest(input: {
   };
 }
 
-// Access-code gate removed: these calls no longer send a Bearer token.
+// The backend no longer requires an access code; every call is identified by the
+// X-Device-Id header the client attaches automatically (see client.ts).
 export const api = {
   capabilities: () =>
     callText('GET', '/v1/capabilities').then((j) => JSON.parse(j) as CapabilityDto),
-
-  redeem: (code: string, deviceId: string) =>
-    callText('POST', '/v1/access/redeem', JSON.stringify({ code, device_id: deviceId })).then(
-      (j) => JSON.parse(j) as SessionDto,
-    ),
 
   createConsent: (req: ConsentRequest) =>
     callText('POST', '/v1/consents', JSON.stringify(req)).then((j) => JSON.parse(j) as ConsentDto),
