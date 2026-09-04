@@ -271,6 +271,18 @@ def store_selfie(
     )
 
 
+def artwork_urls_for(shell_id: str, settings: Settings) -> tuple[str, str]:
+    """Conventional portrait and landscape artwork paths for a shell.
+
+    Portrait keeps the bare ``<shell_id>.png`` name it already had, because
+    artwork was uploaded under it before landscape existed and renaming would
+    break the shell already in use.
+    """
+    portrait = artwork_url_for(shell_id, settings)
+    base = portrait.rsplit(".", 1)[0]
+    return portrait, f"{base}-landscape.png"
+
+
 def artwork_url_for(shell_id: str, settings: Settings) -> str:
     """Where a series' key artwork is expected to live.
 
@@ -298,18 +310,30 @@ def submit(
     selfie: AppSelfie | None,
     image_url: str | None,
     artwork_url: str | None,
+    landscape_artwork_url: str | None,
     settings: Settings,
 ) -> ArtworkSwap:
     """Record a swap request. Does not call the model - the worker does."""
     source = image_url or (selfie.public_url if selfie else None)
     if not source:
         raise ArtworkError("Provide either selfie_id or image_url")
+    # An explicit artwork_url means "use exactly this". No landscape is
+    # invented from it: a derived "-landscape" guess would usually 404 and
+    # deriving it needs a CDN base the caller has just made irrelevant.
+    # Only when neither is given does the shell's convention apply.
+    if artwork_url or landscape_artwork_url:
+        portrait, landscape = artwork_url, landscape_artwork_url
+        if portrait is None:
+            portrait, _ = artwork_urls_for(shell_id, settings)
+    else:
+        portrait, landscape = artwork_urls_for(shell_id, settings)
     row = ArtworkSwap(
         tester_reference=tester_reference,
         selfie_id=selfie.id if selfie else None,
         source_image_url=source,
         shell_id=shell_id,
-        artwork_url=artwork_url or artwork_url_for(shell_id, settings),
+        artwork_url=portrait,
+        landscape_artwork_url=landscape,
         status=QUEUED,
     )
     session.add(row)
@@ -410,37 +434,65 @@ def run_artwork_swap(
     row.attempt_count += 1
     session.commit()
 
+    problems: list[str] = []
     try:
         with httpx.Client(transport=transport, timeout=httpx.Timeout(120.0)) as client:
-            artwork, artwork_type = _fetch(row.artwork_url, client)
+            # The selfie is fetched once and reused for both aspects.
             selfie, selfie_type = _fetch(row.source_image_url, client)
-        # The artwork's own aspect picks the output shape. Without an explicit
-        # size gpt-image-2 returns a square and re-crops the poster.
-        shape = read_dimensions(artwork[:65536])
-        result = swap_face_onto_artwork(
-            artwork=artwork, artwork_type=artwork_type,
-            selfie=selfie, selfie_type=selfie_type,
-            settings=settings,
-            size=openai_size(*shape) if shape else None,
-            transport=transport,
-        )
-        if len(result) > CDN_MAX_BYTES:
-            raise ArtworkError(
-                f"The generated artwork is {len(result) / 1e6:.1f}MB, which the "
-                "CDN will not serve"
-            )
-        store = _storage(settings, storage)
-        extension, content_type = image_kind(result)
-        prefix = settings.linode_app_prefix.strip("/")
-        key = f"{prefix}/artwork-swaps/{row.id}.{extension}"
-        store.put(key, result, content_type)
-        row.result_object_key = key
-        row.result_url = store.public_url(key)
-        row.status = SUCCEEDED
-        row.failure_reason = None
-    except Exception as exc:  # noqa: BLE001 - recorded so the App can poll it
+            artworks: list[tuple[str, str]] = [("portrait", row.artwork_url)]
+            if row.landscape_artwork_url:
+                artworks.append(("landscape", row.landscape_artwork_url))
+            fetched: list[tuple[str, bytes, str]] = []
+            for aspect, url in artworks:
+                try:
+                    raw, kind = _fetch(url, client)
+                    fetched.append((aspect, raw, kind))
+                except ArtworkError as exc:
+                    # A shell with no landscape key art is normal, so a missing
+                    # one is noted and skipped rather than failing the job.
+                    problems.append(f"{aspect}: {exc}")
+    except Exception as exc:  # noqa: BLE001 - the selfie itself is unusable
         row.status = FAILED
         row.failure_reason = f"{type(exc).__name__}: {exc}"[:1000]
+        row.completed_at = datetime.now(UTC)
+        session.commit()
+        return row
+
+    store = None
+    prefix = settings.linode_app_prefix.strip("/")
+    for aspect, artwork, artwork_type in fetched:
+        try:
+            shape = read_dimensions(artwork[:65536])
+            result = swap_face_onto_artwork(
+                artwork=artwork, artwork_type=artwork_type,
+                selfie=selfie, selfie_type=selfie_type,
+                settings=settings,
+                size=openai_size(*shape) if shape else None,
+                transport=transport,
+            )
+            if len(result) > CDN_MAX_BYTES:
+                raise ArtworkError(
+                    f"the generated artwork is {len(result) / 1e6:.1f}MB, which "
+                    "the CDN will not serve"
+                )
+            store = _storage(settings, storage) if store is None else store
+            extension, content_type = image_kind(result)
+            suffix = "" if aspect == "portrait" else f"-{aspect}"
+            key = f"{prefix}/artwork-swaps/{row.id}{suffix}.{extension}"
+            store.put(key, result, content_type)
+            if aspect == "portrait":
+                row.result_object_key, row.result_url = key, store.public_url(key)
+            else:
+                row.landscape_object_key = key
+                row.landscape_url = store.public_url(key)
+        except Exception as exc:  # noqa: BLE001 - per aspect, so one can survive
+            problems.append(f"{aspect}: {type(exc).__name__}: {exc}")
+
+    # Succeeds on a partial result: one usable image beats none, and the App
+    # is told what is missing through `error` rather than being left to guess
+    # why a URL is null.
+    row.status = SUCCEEDED if (row.result_url or row.landscape_url) else FAILED
+    row.failure_reason = "; ".join(problems)[:1000] if problems else None
     row.completed_at = datetime.now(UTC)
     session.commit()
     return row

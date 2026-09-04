@@ -445,13 +445,18 @@ def artwork_response(row: ArtworkSwap, settings: Settings) -> ArtworkSwapRespons
     ``poll_after_seconds`` is the stop signal: a value means keep polling, and
     None means this is terminal. That keeps the decision on the server, so the
     interval can change later without shipping a new build.
+
+    One job carries both aspects. ``landscape_url`` is null for a shell with
+    no landscape key art, and ``error`` then says so - a partial result still
+    reports "succeeded", because one usable image beats none.
     """
     terminal = row.status in TERMINAL
     return ArtworkSwapResponse(
         job_id=row.id,
         status=row.status,
         shell_id=row.shell_id,
-        artwork_url=row.result_url,
+        portrait_url=row.result_url,
+        landscape_url=row.landscape_url,
         error=row.failure_reason,
         poll_after_seconds=None if terminal else settings.artwork_poll_seconds,
         attempts=row.attempt_count,
@@ -527,6 +532,7 @@ def create_artwork_swap(
             selfie=selfie,
             image_url=request.image_url,
             artwork_url=request.artwork_url,
+            landscape_artwork_url=request.landscape_artwork_url,
             settings=settings,
         )
     except ArtworkError as exc:

@@ -139,7 +139,8 @@ def test_submit_returns_a_job_and_polling_reports_a_readable_failure(storage) ->
     assert state["status"] == FAILED
     assert "STARME_OPENAI_API_KEY" in state["error"], state["error"]
     assert state["poll_after_seconds"] is None
-    assert state["artwork_url"] is None
+    assert state["portrait_url"] is None
+    assert state["landscape_url"] is None
 
 
 def test_submit_accepts_a_bare_image_url_without_a_stored_selfie(storage) -> None:
@@ -199,6 +200,13 @@ PNG_1000x1777 = (
 )
 
 
+#: A landscape header, so the worker picks the landscape output size for it.
+PNG_1672x941 = (
+    b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
+    + (1672).to_bytes(4, "big") + (941).to_bytes(4, "big") + b"rest"
+)
+
+
 def _transport(swapped: bytes, captured: dict) -> httpx.MockTransport:
     def handle(request: httpx.Request) -> httpx.Response:
         if request.method == "GET":
@@ -236,6 +244,8 @@ def test_worker_publishes_the_swapped_artwork_and_marks_it_succeeded(storage) ->
         assert done.result_url == (
             f"https://images.hungama.com/starme/app-assets/artwork-swaps/{swap_id}.png"
         )
+        # no landscape artwork on this row, so that half is simply absent
+        assert done.landscape_url is None
         assert storage.objects[done.result_object_key][0] == b"swapped-artwork-bytes"
         assert done.attempt_count == 1
         # artwork first, selfie second: the prompt refers to them by position
@@ -293,9 +303,15 @@ def test_an_unreachable_artwork_fails_the_job_not_the_request(storage) -> None:
         session.commit()
         done = run_artwork_swap(
             session, row.id, settings=settings,
-            transport=httpx.MockTransport(lambda r: httpx.Response(404)),
+            transport=httpx.MockTransport(
+                lambda r: httpx.Response(404) if "absent" in str(r.url)
+                else httpx.Response(200, content=PNG_1000x1777,
+                                    headers={"content-type": "image/png"})
+            ),
             storage=storage,
         )
+        # the selfie fetched fine, so this is a per-aspect failure with no
+        # portrait produced - hence FAILED overall, naming the artwork
         assert done.status == FAILED
         assert "absent.png" in done.failure_reason
     finally:
@@ -337,3 +353,96 @@ def test_output_shape_follows_the_artwork(width, height, expected) -> None:
     from starme.artwork import openai_size
 
     assert openai_size(width, height) == expected
+
+# ── both aspects from one job ─────────────────────────────────────────────
+def test_one_job_returns_portrait_and_landscape(storage) -> None:
+    """The App shows the key art in a portrait slot and a landscape slot, so a
+    single submit has to produce both rather than make it run two jobs."""
+    settings = with_key()
+    calls: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            wide = "landscape" in str(request.url)
+            raw = PNG_1672x941 if wide else PNG_1000x1777
+            return httpx.Response(200, content=raw, headers={"content-type": "image/png"})
+        body = request.content
+        calls.append("1536x1024" if b"1536x1024" in body else "1024x1536")
+        blob = base64.b64encode(b"art-" + str(len(calls)).encode()).decode()
+        return httpx.Response(200, json={"data": [{"b64_json": blob}]})
+
+    session = next(get_session())
+    try:
+        row = ArtworkSwap(
+            tester_reference="device-x", source_image_url="https://example.test/selfie.png",
+            shell_id="ek-love-story-001",
+            artwork_url="https://example.test/art.png",
+            landscape_artwork_url="https://example.test/art-landscape.png",
+            status="queued",
+        )
+        session.add(row)
+        session.commit()
+        swap_id = row.id
+        done = run_artwork_swap(
+            session, swap_id, settings=settings,
+            transport=httpx.MockTransport(handle), storage=storage,
+        )
+        assert done.status == SUCCEEDED, done.failure_reason
+        assert done.failure_reason is None
+        assert done.result_url.endswith(f"{swap_id}.png")
+        assert done.landscape_url.endswith(f"{swap_id}-landscape.png")
+        # each aspect asked for its own output shape
+        assert sorted(calls) == ["1024x1536", "1536x1024"]
+        assert done.result_object_key != done.landscape_object_key
+    finally:
+        session.close()
+
+
+def test_a_missing_landscape_still_succeeds_and_says_so(storage) -> None:
+    """A shell with only portrait key art must not fail the whole job - the
+    portrait is the primary output and one usable image beats none."""
+    settings = with_key()
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            if "landscape" in str(request.url):
+                return httpx.Response(404)
+            return httpx.Response(200, content=PNG_1000x1777,
+                                  headers={"content-type": "image/png"})
+        return httpx.Response(
+            200, json={"data": [{"b64_json": base64.b64encode(b"portrait-only").decode()}]}
+        )
+
+    session = next(get_session())
+    try:
+        row = ArtworkSwap(
+            tester_reference="device-x", source_image_url="https://example.test/selfie.png",
+            shell_id="no-landscape-shell",
+            artwork_url="https://example.test/art.png",
+            landscape_artwork_url="https://example.test/art-landscape.png",
+            status="queued",
+        )
+        session.add(row)
+        session.commit()
+        done = run_artwork_swap(
+            session, row.id, settings=settings,
+            transport=httpx.MockTransport(handle), storage=storage,
+        )
+        assert done.status == SUCCEEDED
+        assert done.result_url is not None
+        assert done.landscape_url is None
+        # the App must be told why the URL is null rather than left guessing
+        assert "landscape" in done.failure_reason
+    finally:
+        session.close()
+
+
+def test_submit_derives_both_conventional_artwork_paths() -> None:
+    from starme.artwork import artwork_urls_for
+
+    settings = get_settings().model_copy(
+        update={"linode_cdn_base_url": "https://images.hungama.com"}
+    )
+    portrait, landscape = artwork_urls_for("ek-love-story-001", settings)
+    assert portrait.endswith("/artwork/ek-love-story-001.png")
+    assert landscape.endswith("/artwork/ek-love-story-001-landscape.png")

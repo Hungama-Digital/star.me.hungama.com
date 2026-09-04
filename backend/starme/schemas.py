@@ -162,18 +162,25 @@ class ArtworkSwapCreateRequest(BaseModel):
     #: the job to a stored row.
     selfie_id: str | None = None
     image_url: str | None = Field(default=None, max_length=500)
-    #: Overrides where the series artwork is fetched from. Without it the
-    #: server looks under the conventional artwork path for shell_id.
+    #: Overrides where the series artwork is fetched from. Without these the
+    #: server looks under the conventional artwork paths for shell_id.
+    #: `artwork_url` is the portrait one, named without a prefix because the
+    #: App integrated against it before landscape existed.
     artwork_url: str | None = Field(default=None, max_length=500)
+    landscape_artwork_url: str | None = Field(default=None, max_length=500)
 
 
 class ArtworkSwapResponse(BaseModel):
     job_id: str
     status: str
     shell_id: str
-    #: Present only once status is "succeeded".
-    artwork_url: str | None = None
-    #: Present only once status is "failed".
+    #: Both populated once status is "succeeded". A shell with no landscape
+    #: key art still succeeds with portrait_url set and landscape_url null,
+    #: so the App must treat landscape as optional rather than assume it.
+    portrait_url: str | None = None
+    landscape_url: str | None = None
+    #: Set when anything failed. Present even on a partial success - portrait
+    #: produced, landscape refused - so a half-result is never silent.
     error: str | None = None
     #: How long the App should wait before polling again. None when terminal,
     #: which is the App's signal to stop.

@@ -179,12 +179,21 @@ class ArtworkSwap(Base):
     #: The selfie actually used, kept even if the selfie row is later removed.
     source_image_url: Mapped[str] = mapped_column(String(500))
     shell_id: Mapped[str] = mapped_column(String(100), index=True)
+    #: The portrait artwork. Always present - it is the primary output.
     artwork_url: Mapped[str] = mapped_column(String(500))
+    #: The landscape artwork, when the shell has one. Optional: a shell with
+    #: only portrait key art still produces a usable job.
+    landscape_artwork_url: Mapped[str | None] = mapped_column(String(500))
     #: queued | running | succeeded | failed
     status: Mapped[str] = mapped_column(String(20), index=True)
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    #: result_* is the PORTRAIT output, kept under the original column names so
+    #: adding landscape needed no destructive migration. The API exposes them
+    #: as portrait_url / landscape_url, which is what the App reads.
     result_object_key: Mapped[str | None] = mapped_column(String(255))
     result_url: Mapped[str | None] = mapped_column(String(500))
+    landscape_object_key: Mapped[str | None] = mapped_column(String(255))
+    landscape_url: Mapped[str | None] = mapped_column(String(500))
     failure_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
