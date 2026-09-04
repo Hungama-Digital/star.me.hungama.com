@@ -4,20 +4,45 @@ import secrets
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
 from starme import __version__
+from starme.artwork import (
+    TERMINAL,
+    ArtworkError,
+    store_selfie,
+)
+from starme.artwork import submit as submit_artwork_swap
 from starme.catalogue import SYNTHETIC_SHELLS
 from starme.config import Settings, get_settings
 from starme.database import get_session
 from starme.delivery import resolve_media_file, signed_url
-from starme.jobs import enqueue_first_look, enqueue_full_render
-from starme.models import ClientSession, ConsentRecord, Order, RenderJob
+from starme.jobs import enqueue_artwork_swap, enqueue_first_look, enqueue_full_render
+from starme.models import (
+    AppSelfie,
+    ArtworkSwap,
+    ClientSession,
+    ConsentRecord,
+    Order,
+    RenderJob,
+)
 from starme.schemas import (
+    ArtworkSwapCreateRequest,
+    ArtworkSwapResponse,
     CapabilityResponse,
     ConsentCreateRequest,
     ConsentResponse,
@@ -33,6 +58,7 @@ from starme.schemas import (
     OrderResponse,
     OrderState,
     RevocationResponse,
+    SelfieResponse,
     ServiceState,
     SyntheticShell,
 )
@@ -411,6 +437,135 @@ def decide_first_look(
     enqueue_full_render(job_id)
     session.expire_all()
     return order_response(owned_order(session, order_id, client), settings)
+
+
+def artwork_response(row: ArtworkSwap, settings: Settings) -> ArtworkSwapResponse:
+    """One shape for all three states, so the App parses one thing.
+
+    ``poll_after_seconds`` is the stop signal: a value means keep polling, and
+    None means this is terminal. That keeps the decision on the server, so the
+    interval can change later without shipping a new build.
+    """
+    terminal = row.status in TERMINAL
+    return ArtworkSwapResponse(
+        job_id=row.id,
+        status=row.status,
+        shell_id=row.shell_id,
+        artwork_url=row.result_url,
+        error=row.failure_reason,
+        poll_after_seconds=None if terminal else settings.artwork_poll_seconds,
+        attempts=row.attempt_count,
+    )
+
+
+@router.post("/v1/app/selfies", response_model=SelfieResponse, status_code=201)
+def upload_selfie(
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+    name: Annotated[str, Form()],
+    image: Annotated[UploadFile, File()],
+) -> SelfieResponse:
+    """API 1. Publish the user's selfie and hand back a public URL.
+
+    The App uses the returned ``image_url`` directly wherever it wants to show
+    the user's own face - no second call, no bytes to keep. The row records
+    the name typed during onboarding alongside the id, so a selfie can be
+    traced back to a person later.
+    """
+    raw = image.file.read()
+    try:
+        stored = store_selfie(
+            session,
+            raw=raw,
+            display_name=name,
+            content_type=image.content_type or "",
+            tester_reference=client.tester_reference,
+            settings=settings,
+        )
+    except ArtworkError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    audit(session, "selfie.uploaded", client.tester_reference, "selfie", stored.selfie_id,
+          {"name": stored.display_name, "bytes": stored.size_bytes})
+    session.commit()
+    return SelfieResponse(
+        selfie_id=stored.selfie_id,
+        name=stored.display_name,
+        image_url=stored.public_url,
+        size_bytes=stored.size_bytes,
+    )
+
+
+@router.post("/v1/app/artwork-swaps", response_model=ArtworkSwapResponse, status_code=202)
+def create_artwork_swap(
+    request: ArtworkSwapCreateRequest,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> ArtworkSwapResponse:
+    """API 2. Ask for the user's face on a series' artwork.
+
+    Returns 202 with a job id immediately: the image model takes tens of
+    seconds, which is far too long to hold a phone request open. The App then
+    polls API 3 until ``poll_after_seconds`` comes back null.
+    """
+    selfie: AppSelfie | None = None
+    if request.selfie_id:
+        selfie = session.scalar(
+            select(AppSelfie).where(
+                AppSelfie.id == request.selfie_id,
+                AppSelfie.tester_reference == client.tester_reference,
+            )
+        )
+        if selfie is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Selfie not found")
+    try:
+        row = submit_artwork_swap(
+            session,
+            tester_reference=client.tester_reference,
+            shell_id=request.shell_id,
+            selfie=selfie,
+            image_url=request.image_url,
+            artwork_url=request.artwork_url,
+            settings=settings,
+        )
+    except ArtworkError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    audit(session, "artwork_swap.requested", client.tester_reference, "artwork_swap", row.id,
+          {"shell_id": row.shell_id})
+    session.commit()
+    swap_id = row.id
+    # Queued after the commit so the worker cannot start on a row that is not
+    # visible yet - and inline mode runs it right here, which is why the
+    # response is re-read from the database afterwards.
+    enqueue_artwork_swap(swap_id)
+    session.expire_all()
+    fresh = session.get(ArtworkSwap, swap_id)
+    return artwork_response(fresh or row, settings)
+
+
+@router.get("/v1/app/artwork-swaps/{job_id}", response_model=ArtworkSwapResponse)
+def get_artwork_swap(
+    job_id: str,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> ArtworkSwapResponse:
+    """API 3. Poll one artwork swap.
+
+    Scoped to the calling device, so one user cannot read another's job by
+    guessing an id. Poll until ``poll_after_seconds`` is null; then read
+    ``artwork_url`` on success or ``error`` on failure.
+    """
+    row = session.scalar(
+        select(ArtworkSwap).where(
+            ArtworkSwap.id == job_id,
+            ArtworkSwap.tester_reference == client.tester_reference,
+        )
+    )
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Artwork swap not found")
+    return artwork_response(row, settings)
 
 
 @router.get("/v1/media/{key:path}")

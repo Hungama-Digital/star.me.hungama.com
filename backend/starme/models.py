@@ -132,3 +132,63 @@ class AuditEvent(Base):
     subject_reference: Mapped[str] = mapped_column(String(255), index=True)
     correlation_id: Mapped[str] = mapped_column(String(100), index=True)
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
+
+class AppSelfie(Base):
+    """A selfie the app uploaded, hosted publicly so the app can show it back.
+
+    Separate from the render pipeline's face assets: that path normalises,
+    crops and registers a portrait with the video provider under a single
+    per-device filename. This one keeps whatever the user sent, under the name
+    they typed, and its whole job is to hand back a URL the app can render in
+    an <Image>. One device can have several, so the newest is not privileged.
+    """
+
+    __tablename__ = "app_selfies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    tester_reference: Mapped[str] = mapped_column(String(100), index=True)
+    display_name: Mapped[str] = mapped_column(String(100))
+    #: Filesystem/URL-safe form of display_name, used in the object key.
+    name_slug: Mapped[str] = mapped_column(String(100), index=True)
+    object_key: Mapped[str] = mapped_column(String(255), unique=True)
+    public_url: Mapped[str] = mapped_column(String(500))
+    content_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    checksum_sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    swaps: Mapped[list["ArtworkSwap"]] = relationship(back_populates="selfie")
+
+
+class ArtworkSwap(Base):
+    """One request to paint a user's face onto a series' key artwork.
+
+    Asynchronous on purpose: the image model takes tens of seconds, which is
+    far longer than a phone request should hold open. Submit returns an id,
+    the app polls, and the row carries whichever terminal state it reached so
+    a failure is a readable reason rather than a request that never returns.
+    """
+
+    __tablename__ = "artwork_swaps"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    tester_reference: Mapped[str] = mapped_column(String(100), index=True)
+    selfie_id: Mapped[str | None] = mapped_column(
+        ForeignKey("app_selfies.id", ondelete="SET NULL"), index=True
+    )
+    #: The selfie actually used, kept even if the selfie row is later removed.
+    source_image_url: Mapped[str] = mapped_column(String(500))
+    shell_id: Mapped[str] = mapped_column(String(100), index=True)
+    artwork_url: Mapped[str] = mapped_column(String(500))
+    #: queued | running | succeeded | failed
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    result_object_key: Mapped[str | None] = mapped_column(String(255))
+    result_url: Mapped[str | None] = mapped_column(String(500))
+    failure_reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    selfie: Mapped["AppSelfie | None"] = relationship(back_populates="swaps")

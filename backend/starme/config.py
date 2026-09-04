@@ -96,6 +96,22 @@ class Settings(BaseSettings):
     # write. Operator-placed portraits under media_dir/faces still work.
     faces_dir: str = "/faces"
 
+    # ── App artwork swap (selfie -> series key art) ────────────────────────
+    # The image model that repaints the artwork character's face. Set
+    # STARME_OPENAI_API_KEY to enable; without it the two artwork endpoints
+    # still accept work and the job fails with a clear reason rather than the
+    # API pretending the feature exists.
+    openai_api_key: SecretStr | None = None
+    openai_image_model: str = "gpt-image-1"
+    openai_base_url: str = "https://api.openai.com/v1"
+    # Where selfies, series artwork and swapped results live in the bucket.
+    # Deliberately NOT linode_prefix ("starme/renders"), which the delivery
+    # signer owns and cleanup scripts sweep.
+    linode_app_prefix: str = "starme/app-assets"
+    # How long the app should wait between polls of an artwork job. Returned
+    # in the submit response so the client does not hardcode its own guess.
+    artwork_poll_seconds: int = Field(default=15, ge=5, le=120)
+
     @model_validator(mode="after")
     def reject_local_secrets_outside_development(self) -> "Settings":
         if self.environment in {"staging", "production"}:

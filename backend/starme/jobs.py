@@ -32,3 +32,21 @@ def enqueue_full_render(job_id: str) -> None:
         return
     queue = Queue("starme-full-render", connection=Redis.from_url(settings.redis_url))
     queue.enqueue(run_full_render, job_id, job_id=job_id, job_timeout="2h")
+
+
+def run_artwork_swap_job(swap_id: str) -> None:
+    from starme.artwork import run_artwork_swap
+
+    with SessionLocal() as session:
+        run_artwork_swap(session, swap_id, settings=get_settings())
+
+
+def enqueue_artwork_swap(swap_id: str) -> None:
+    settings = get_settings()
+    if settings.queue_backend == "inline":
+        run_artwork_swap_job(swap_id)
+        return
+    queue = Queue("starme-artwork-swap", connection=Redis.from_url(settings.redis_url))
+    # Generous but bounded: the image model is the slow part and a stuck job
+    # must eventually fail so the App's polling loop terminates.
+    queue.enqueue(run_artwork_swap_job, swap_id, job_id=swap_id, job_timeout="15m")
