@@ -65,7 +65,7 @@ services:
       STARME_RENDER_PROVIDER: ${STARME_RENDER_PROVIDER:-stub}
       STARME_STORAGE_BACKEND: memory
       STARME_RENDER_WORK_DIR: /renders
-    command: ["rq", "worker", "starme-first-look", "starme-full-render", "starme-seedance", "--url", "redis://redis:6379/0"]
+    command: ["rq", "worker", "starme-first-look", "starme-full-render", "starme-seedance", "starme-artwork-swap", "--url", "redis://redis:6379/0"]
     volumes:
       - ./media:/media:ro
       - starme_faces:/faces:ro
