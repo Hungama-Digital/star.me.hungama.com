@@ -119,7 +119,7 @@ def test_slugify_always_yields_a_url_safe_name(raw: str, expected: str) -> None:
 
 # ── API 2 + API 3 ─────────────────────────────────────────────────────────
 def test_submit_returns_a_job_and_polling_reports_a_readable_failure(storage) -> None:
-    """With no image-model key - staging's state today - the job must fail
+    """With no image-model key the job must fail
     with a reason the App can show, not hang. poll_after_seconds going null is
     the App's signal to stop polling."""
     selfie_id = upload().json()["selfie_id"]
@@ -192,10 +192,18 @@ def with_key():  # noqa: ANN201
     return get_settings().model_copy(update={"openai_api_key": SecretStr("test-key")})
 
 
+#: A minimal real PNG header so read_dimensions can size the output.
+PNG_1000x1777 = (
+    b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
+    + (1000).to_bytes(4, "big") + (1777).to_bytes(4, "big") + b"rest"
+)
+
+
 def _transport(swapped: bytes, captured: dict) -> httpx.MockTransport:
     def handle(request: httpx.Request) -> httpx.Response:
         if request.method == "GET":
-            return httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+            return httpx.Response(200, content=PNG_1000x1777,
+                                  headers={"content-type": "image/png"})
         captured["url"] = str(request.url)
         captured["auth"] = request.headers.get("authorization")
         captured["body"] = request.content
@@ -234,6 +242,9 @@ def test_worker_publishes_the_swapped_artwork_and_marks_it_succeeded(storage) ->
         assert captured["url"].endswith("/images/edits")
         assert captured["auth"] == "Bearer test-key"
         assert b'name="image[]"' in captured["body"]
+        assert b"gpt-image-2" in captured["body"]
+        # a 1000x1777 artwork is portrait, so the portrait size must be sent
+        assert b"1024x1536" in captured["body"]
     finally:
         session.close()
 
@@ -243,7 +254,8 @@ def test_worker_records_a_model_refusal_instead_of_raising(storage) -> None:
 
     def refuse(request: httpx.Request) -> httpx.Response:
         if request.method == "GET":
-            return httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+            return httpx.Response(200, content=PNG_1000x1777,
+                                  headers={"content-type": "image/png"})
         return httpx.Response(400, json={"error": {"message": "content policy"}})
 
     session = next(get_session())
@@ -266,7 +278,9 @@ def test_worker_records_a_model_refusal_instead_of_raising(storage) -> None:
         session.close()
 
 
-def test_a_missing_artwork_fails_the_job_rather_than_the_request(storage) -> None:
+def test_an_unreachable_artwork_fails_the_job_not_the_request(storage) -> None:
+    """gpt-image-2 takes bytes, so we fetch the artwork. A 404 on it must land
+    on the row as a readable reason, not surface as a request error."""
     settings = with_key()
     session = next(get_session())
     try:
@@ -279,7 +293,8 @@ def test_a_missing_artwork_fails_the_job_rather_than_the_request(storage) -> Non
         session.commit()
         done = run_artwork_swap(
             session, row.id, settings=settings,
-            transport=httpx.MockTransport(lambda r: httpx.Response(404)), storage=storage,
+            transport=httpx.MockTransport(lambda r: httpx.Response(404)),
+            storage=storage,
         )
         assert done.status == FAILED
         assert "absent.png" in done.failure_reason
@@ -310,3 +325,15 @@ def test_submitting_without_a_locatable_artwork_is_refused(storage) -> None:
     )
     assert response.status_code == 400
     assert "artwork_url" in response.json()["detail"]
+
+@pytest.mark.parametrize(
+    ("width", "height", "expected"),
+    [(1000, 1777, "1024x1536"), (1672, 941, "1536x1024"), (2048, 2048, "1024x1024"),
+     (0, 0, "1024x1536")],
+)
+def test_output_shape_follows_the_artwork(width, height, expected) -> None:
+    """Asked for no size, gpt-image-2 returns a square and re-crops portrait
+    key art, so the artwork's own aspect always picks one of its three sizes."""
+    from starme.artwork import openai_size
+
+    assert openai_size(width, height) == expected

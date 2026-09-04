@@ -8,8 +8,23 @@ Three moving parts behind the App's three calls:
 3. ``run_artwork_swap`` does the slow bit - fetch artwork, fetch selfie, ask
    the image model to replace the character's face, publish the result.
 
-Asynchronous because the image model takes tens of seconds. A phone request
+Asynchronous because the image model takes 40 to 60 seconds. A phone request
 must not hold open that long, so submit returns an id and the App polls.
+
+The model is gpt-image-2, picked on measured likeness rather than taste.
+Scored against Neeraj's reference portrait on the real Mars posters,
+4 Sep 2026 - cosine similarity of the swapped face, insightface buffalo_s:
+
+    gpt-image-2            portrait +0.848   landscape +0.818
+    seedream-5-0-260128    portrait +0.805   landscape +0.749
+    gemini-3-pro-image     portrait +0.704   landscape +0.720
+    gemini-2.5-flash-image ("nano banana")   refuses outright
+
+Nano banana returns finishReason IMAGE_OTHER with no image and no safety
+category, on both a detailed and a stripped-down prompt: Google blocks
+identity face-swaps on it, so it is not a fallback. Seedream was the
+runner-up and can hit an exact output aspect, which gpt-image-2 cannot;
+likeness decided it.
 
 The HTTP transport is injectable, matching ``seedance.py``, so every path
 here is testable without a key or a network.
@@ -35,7 +50,7 @@ from starme.models import AppSelfie, ArtworkSwap
 #: render path's portrait ceiling so the two cannot disagree.
 MAX_SELFIE_BYTES = 15 * 1024 * 1024
 #: images.hungama.com will not serve an object much over this, so a result
-#: bigger than it would upload fine and then 404 for the App. Measured
+#: bigger than it would upload fine and then 403 for the App. Measured
 #: 3 Sep 2026: 64MB served, 128MB did not.
 CDN_MAX_BYTES = 64 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {
@@ -44,23 +59,57 @@ ALLOWED_IMAGE_TYPES = {
     "image/png": "png",
     "image/webp": "webp",
 }
+#: The only sizes gpt-image-2 accepts. It cannot render an arbitrary WxH, so a
+#: 16:9 poster comes back 3:2 - the closest of these - and the App letterboxes
+#: or crops. Asked for no size at all it returns a SQUARE, which silently
+#: re-crops portrait key art, so one of these is always sent.
+OPENAI_SIZES = {
+    "portrait": "1024x1536",
+    "landscape": "1536x1024",
+    "square": "1024x1024",
+}
+#: Read from the returned bytes rather than assumed: gpt-image-2 answers PNG
+#: today, Seedream answered JPEG, and publishing one as the other mislabels
+#: every result.
+IMAGE_MAGIC = (
+    (b"\xff\xd8\xff", "jpg", "image/jpeg"),
+    (b"\x89PNG\r\n\x1a\n", "png", "image/png"),
+    (b"RIFF", "webp", "image/webp"),
+)
 
 QUEUED, RUNNING, SUCCEEDED, FAILED = "queued", "running", "succeeded", "failed"
 TERMINAL = {SUCCEEDED, FAILED}
 
-#: What the image model is asked to do. Written the same way the video prompts
-#: are: say what to change, then name everything that must survive, because
-#: "swap the face" alone also invites a redrawn poster.
+#: Every clause here was earned by a failure on the real posters:
+#:  - "the YOUNG MAN", not "the main character": these posters carry two
+#:    people and the generic wording is ambiguous.
+#:  - the proportions sentence: without it the head came back oversized on an
+#:    unchanged neck - the bobblehead Amol caught on the landscape poster,
+#:    which also dropped likeness from +0.685 to +0.436 once constrained.
+#:  - "CLEARLY and UNMISTAKABLY": the models hedge back towards the original
+#:    face unless pushed, and likeness is the whole point of the feature.
+#:  - the title-text sentence: image models redraw lettering, and this
+#:    poster's Hindi and ornate English title must stay legible.
+#:  - the reference-photo exclusions: an earlier run put the reference's own
+#:    shirt onto the character across three segments.
 SWAP_PROMPT = (
-    "Replace only the face and head of the main character in the first image "
-    "with the face of the person in the second image. Keep that person's "
-    "identity, skin tone, facial features and hairline recognisable. "
-    "Everything else in the first image must stay exactly as it is: the "
-    "composition, framing, aspect ratio, background, costume, clothing, "
-    "lighting, colour grade, any logos, and all text and titles must remain "
-    "unchanged and legible. Do not add or remove any person or object, do not "
-    "re-stage or re-crop the artwork, and do not copy the background or "
-    "clothing from the second image."
+    "Image 1 is a movie poster. Image 2 is a photograph of a man. "
+    "Replace ONLY the face and head of the YOUNG MAN in image 1 with the face "
+    "of the man in image 2. His new face must be CLEARLY and UNMISTAKABLY the "
+    "man from image 2 - same bone structure, same eyes, nose and mouth, same "
+    "greying hairline, same age. Render the face at high detail. Match image "
+    "1's lighting, camera angle and head tilt. "
+    "Keep natural human proportions: the head must be the same size, angle "
+    "and position as the head it replaces, sitting correctly on the SAME neck "
+    "and shoulders, which must not change width or shape. Do not enlarge the "
+    "head. "
+    "Do NOT change any other person in image 1 - their face, hair, expression "
+    "and clothing must stay exactly as they are. All title text and any "
+    "non-English text must remain correctly spelled, undistorted and legible. "
+    "Keep the composition, framing, subject scale and position, the "
+    "background, all clothing and the colour grade unchanged. Do not zoom, "
+    "re-crop or re-stage the artwork. Do not copy the background, suit, shirt "
+    "or tie from image 2."
 )
 
 
@@ -68,16 +117,51 @@ class ArtworkError(RuntimeError):
     """Raised when a swap cannot be attempted or the model refused it."""
 
 
-def slugify(value: str) -> str:
-    """A name safe to put in an object key, and therefore in a URL.
+def image_kind(raw: bytes) -> tuple[str, str]:
+    """(extension, content type) from the leading bytes, defaulting to PNG."""
+    for magic, extension, content_type in IMAGE_MAGIC:
+        if raw.startswith(magic):
+            return extension, content_type
+    return "png", "image/png"
 
-    The App collects a human name; keys that keep spaces or brackets need
-    percent-encoding forever after, which is how a hardcoded URL quietly
-    breaks. Falls back to "user" when a name has nothing usable in it, so a
-    name in another script still uploads instead of erroring.
+
+def read_dimensions(raw: bytes) -> tuple[int, int] | None:
+    """Width and height from a PNG or JPEG header, without Pillow.
+
+    Only the first few KB are needed, so a caller can range-request rather
+    than download whole artwork just to learn its shape.
     """
-    cleaned = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
-    return (cleaned or "user")[:60]
+    if raw.startswith(b"\x89PNG\r\n\x1a\n") and len(raw) >= 24:
+        return int.from_bytes(raw[16:20], "big"), int.from_bytes(raw[20:24], "big")
+    if raw.startswith(b"\xff\xd8"):
+        index = 2
+        while index + 9 < len(raw):
+            if raw[index] != 0xFF:
+                index += 1
+                continue
+            marker = raw[index + 1]
+            # SOF0..SOF15, skipping the non-frame markers in that range
+            if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                height = int.from_bytes(raw[index + 5:index + 7], "big")
+                width = int.from_bytes(raw[index + 7:index + 9], "big")
+                return width, height
+            segment = int.from_bytes(raw[index + 2:index + 4], "big")
+            if segment <= 0:
+                return None
+            index += 2 + segment
+    return None
+
+
+def openai_size(width: int, height: int) -> str:
+    """Nearest gpt-image-2 size to the artwork's own aspect."""
+    if width <= 0 or height <= 0:
+        return OPENAI_SIZES["portrait"]
+    aspect = width / height
+    if aspect <= 0.9:
+        return OPENAI_SIZES["portrait"]
+    if aspect >= 1.1:
+        return OPENAI_SIZES["landscape"]
+    return OPENAI_SIZES["square"]
 
 
 def _storage(
@@ -108,6 +192,18 @@ def _storage(
         access_key=settings.linode_access_key.get_secret_value(),
         secret_key=settings.linode_secret.get_secret_value(),
     )
+
+
+def slugify(value: str) -> str:
+    """A name safe to put in an object key, and therefore in a URL.
+
+    The App collects a human name; keys that keep spaces or brackets need
+    percent-encoding forever after, which is how a hardcoded URL quietly
+    breaks. Falls back to "user" when a name has nothing usable in it, so a
+    name in another script still uploads instead of erroring.
+    """
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
+    return (cleaned or "user")[:60]
 
 
 @dataclass(frozen=True)
@@ -180,9 +276,8 @@ def artwork_url_for(shell_id: str, settings: Settings) -> str:
 
     Refuses rather than returning a schemeless path: with no CDN configured
     this used to build "/starme/app-assets/artwork/x.png", which submitted
-    happily and then failed deep in the worker with
-    "Request URL is missing an 'http://' or 'https://' protocol". Caught by
-    the test that runs the queue inline.
+    happily and then failed deep in the worker with "Request URL is missing
+    an 'http://' or 'https://' protocol". Caught by the inline-queue test.
     """
     base = (settings.linode_cdn_base_url or "").rstrip("/")
     if not base:
@@ -223,6 +318,7 @@ def submit(
 
 
 def _fetch(url: str, client: httpx.Client) -> tuple[bytes, str]:
+    """Download one input. gpt-image-2 takes bytes, not URLs."""
     response = client.get(url)
     if response.status_code >= 400:
         raise ArtworkError(f"Could not fetch {url} (HTTP {response.status_code})")
@@ -237,9 +333,10 @@ def swap_face_onto_artwork(
     selfie: bytes,
     selfie_type: str,
     settings: Settings,
+    size: str | None = None,
     transport: httpx.BaseTransport | None = None,
 ) -> bytes:
-    """Ask the image model to repaint the artwork character's face.
+    """Ask gpt-image-2 to repaint the artwork character's face.
 
     Both images go in one edit call, artwork first: the prompt refers to them
     by position, so the order is load-bearing.
@@ -255,23 +352,31 @@ def swap_face_onto_artwork(
         ("image[]", ("selfie." + ALLOWED_IMAGE_TYPES.get(selfie_type, "png"),
                      selfie, selfie_type or "image/png")),
     ]
-    data = {"model": settings.openai_image_model, "prompt": SWAP_PROMPT, "n": "1"}
+    data = {
+        "model": settings.openai_image_model,
+        "prompt": SWAP_PROMPT,
+        "n": "1",
+        "size": size or OPENAI_SIZES["portrait"],
+    }
     with httpx.Client(
         base_url=settings.openai_base_url.rstrip("/"),
         transport=transport,
-        timeout=httpx.Timeout(300.0, connect=15.0),
-        headers={"Authorization": f"Bearer {settings.openai_api_key.get_secret_value()}"},
+        timeout=httpx.Timeout(600.0, connect=15.0),
+        headers={
+            "Authorization": f"Bearer {settings.openai_api_key.get_secret_value()}"
+        },
     ) as client:
         response = client.post("/images/edits", data=data, files=files)
     if response.status_code >= 400:
         # The model's own refusal text is the useful part; it comes back here
         # and nowhere else, so it is surfaced rather than flattened to 502.
-        detail = response.text[:400]
-        raise ArtworkError(f"Image model returned HTTP {response.status_code}: {detail}")
+        raise ArtworkError(
+            f"Image model returned HTTP {response.status_code}: {response.text[:400]}"
+        )
     payload = response.json()
     items = payload.get("data") or []
     if not items or not items[0].get("b64_json"):
-        raise ArtworkError("Image model returned no image")
+        raise ArtworkError(f"Image model returned no image: {str(payload)[:300]}")
     return base64.b64decode(items[0]["b64_json"])
 
 
@@ -291,7 +396,7 @@ def run_artwork_swap(
         return row
     # Checked before anything is fetched: without a key the job cannot
     # succeed, and two pointless downloads would only delay a failure the App
-    # is polling for.
+    # is already polling for.
     if settings.openai_api_key is None:
         row.status = FAILED
         row.failure_reason = (
@@ -309,10 +414,15 @@ def run_artwork_swap(
         with httpx.Client(transport=transport, timeout=httpx.Timeout(120.0)) as client:
             artwork, artwork_type = _fetch(row.artwork_url, client)
             selfie, selfie_type = _fetch(row.source_image_url, client)
+        # The artwork's own aspect picks the output shape. Without an explicit
+        # size gpt-image-2 returns a square and re-crops the poster.
+        shape = read_dimensions(artwork[:65536])
         result = swap_face_onto_artwork(
             artwork=artwork, artwork_type=artwork_type,
             selfie=selfie, selfie_type=selfie_type,
-            settings=settings, transport=transport,
+            settings=settings,
+            size=openai_size(*shape) if shape else None,
+            transport=transport,
         )
         if len(result) > CDN_MAX_BYTES:
             raise ArtworkError(
@@ -320,9 +430,10 @@ def run_artwork_swap(
                 "CDN will not serve"
             )
         store = _storage(settings, storage)
-        key = (f"{settings.linode_app_prefix.strip('/')}/artwork-swaps/"
-               f"{row.id}.png")
-        store.put(key, result, "image/png")
+        extension, content_type = image_kind(result)
+        prefix = settings.linode_app_prefix.strip("/")
+        key = f"{prefix}/artwork-swaps/{row.id}.{extension}"
+        store.put(key, result, content_type)
         row.result_object_key = key
         row.result_url = store.public_url(key)
         row.status = SUCCEEDED

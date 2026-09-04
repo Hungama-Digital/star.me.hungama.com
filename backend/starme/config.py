@@ -97,12 +97,14 @@ class Settings(BaseSettings):
     faces_dir: str = "/faces"
 
     # ── App artwork swap (selfie -> series key art) ────────────────────────
-    # The image model that repaints the artwork character's face. Set
-    # STARME_OPENAI_API_KEY to enable; without it the two artwork endpoints
-    # still accept work and the job fails with a clear reason rather than the
-    # API pretending the feature exists.
+    # gpt-image-2 repaints the artwork character's face. Chosen on measured
+    # likeness against Neeraj's reference on the real Mars posters, 4 Sep 2026:
+    # gpt-image-2 scored +0.848 portrait / +0.818 landscape, Seedream 5.0
+    # +0.805 / +0.749, gemini-3-pro-image +0.704 / +0.720. Nano banana
+    # (gemini-2.5-flash-image) refuses the task outright - finishReason
+    # IMAGE_OTHER with no output - so it is not an option.
     openai_api_key: SecretStr | None = None
-    openai_image_model: str = "gpt-image-1"
+    openai_image_model: str = "gpt-image-2"
     openai_base_url: str = "https://api.openai.com/v1"
     # Where selfies, series artwork and swapped results live in the bucket.
     # Deliberately NOT linode_prefix ("starme/renders"), which the delivery
