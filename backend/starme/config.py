@@ -105,6 +105,11 @@ class Settings(BaseSettings):
     # IMAGE_OTHER with no output - so it is not an option.
     openai_api_key: SecretStr | None = None
     openai_image_model: str = "gpt-image-2"
+    #: Rendering effort asked of the image model. Defaults to "high" rather
+    #: than letting the provider pick: the swap is judged on whether the face
+    #: is recognisably the user, and that is exactly what the cheaper settings
+    #: give up first. Overridable so a cost-sensitive environment can drop it.
+    openai_image_quality: str = "high"
     openai_base_url: str = "https://api.openai.com/v1"
     # Where selfies, series artwork and swapped results live in the bucket.
     # Deliberately NOT linode_prefix ("starme/renders"), which the delivery

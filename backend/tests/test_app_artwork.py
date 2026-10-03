@@ -567,3 +567,27 @@ def test_the_batch_stop_signal_tracks_the_slowest_job(storage, cdn) -> None:
     assert body["jobs"][0]["poll_after_seconds"] is not None
     assert body["jobs"][1]["poll_after_seconds"] is None
     assert body["poll_after_seconds"] is not None
+
+def test_the_edit_call_asks_for_high_quality(storage) -> None:
+    """Quality is sent explicitly, not left to the provider's default: face
+    recognisability is what the cheaper settings give up first, and that is
+    the only thing this feature is judged on."""
+    settings = with_key()
+    session = next(get_session())
+    try:
+        row = ArtworkSwap(
+            tester_reference="device-q", source_image_url="https://example.test/selfie.png",
+            shell_id="camouflage-001", artwork_url="https://example.test/art.png",
+            status="queued",
+        )
+        session.add(row)
+        session.commit()
+        captured: dict = {}
+        run_artwork_swap(
+            session, row.id, settings=settings,
+            transport=_transport(PNG_1000x1777, captured), storage=storage,
+        )
+        assert b'name="quality"' in captured["body"]
+        assert b"high" in captured["body"].split(b'name="quality"')[1][:120]
+    finally:
+        session.close()

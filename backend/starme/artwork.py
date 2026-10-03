@@ -381,6 +381,7 @@ def swap_face_onto_artwork(
         "prompt": SWAP_PROMPT,
         "n": "1",
         "size": size or OPENAI_SIZES["portrait"],
+        "quality": settings.openai_image_quality,
     }
     with httpx.Client(
         base_url=settings.openai_base_url.rstrip("/"),
