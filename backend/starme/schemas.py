@@ -170,6 +170,43 @@ class ArtworkSwapCreateRequest(BaseModel):
     landscape_artwork_url: str | None = Field(default=None, max_length=500)
 
 
+class ListingArtwork(BaseModel):
+    landscape: str
+    portrait: str
+
+
+class ListingCastMember(BaseModel):
+    #: "NA" rather than null or an omitted entry: the App renders this list
+    #: directly, and a missing key there is a crash where a placeholder string
+    #: is just a blank row.
+    name: str
+    image: str
+
+
+class ListingItem(BaseModel):
+    """One show on the App's listing screen.
+
+    Editorial metadata, not derived from the render pipeline: `content_id` is
+    the distribution barcode the rest of Hungama keys on, which is why it is a
+    string and not the `shell_id` the swap endpoints use.
+    """
+
+    content_id: str
+    content_title: str
+    content_type: str
+    content_genre: str
+    actor: str
+    age_rating: str
+    audio_language: str
+    #: ISO date as a plain string, so the App gets exactly what was authored
+    #: rather than a timezone-shifted datetime.
+    release_date: str
+    year_of_release: int
+    original_show_name: str
+    artwork: ListingArtwork
+    cast: list[ListingCastMember]
+
+
 class ArtworkSwapBatchCreateRequest(BaseModel):
     """One selfie, several series. One job is created per series.
 

@@ -33,6 +33,7 @@ from starme.config import Settings, get_settings
 from starme.database import get_session
 from starme.delivery import resolve_media_file, signed_url
 from starme.jobs import enqueue_artwork_swap, enqueue_first_look, enqueue_full_render
+from starme.listing import app_listing
 from starme.models import (
     AppSelfie,
     ArtworkSwap,
@@ -57,6 +58,7 @@ from starme.schemas import (
     HealthResponse,
     JobResponse,
     JobState,
+    ListingItem,
     OrderCreateRequest,
     OrderResponse,
     OrderState,
@@ -464,6 +466,24 @@ def artwork_response(row: ArtworkSwap, settings: Settings) -> ArtworkSwapRespons
         poll_after_seconds=None if terminal else settings.artwork_poll_seconds,
         attempts=row.attempt_count,
     )
+
+
+@router.get("/v1/app/listing", response_model=list[ListingItem])
+def list_app_catalogue(
+    client: ClientDependency,
+    settings: SettingsDependency,
+) -> tuple[ListingItem, ...]:
+    """The shows on the App's listing screen, in display order.
+
+    Editorial metadata plus artwork, with no device scoping: everyone sees the
+    same catalogue, so this answers identically for every caller and is safe
+    to cache on the client.
+
+    Artwork URLs are built from the configured CDN base rather than stored
+    absolute, so a staging build cannot hand out production links.
+    """
+    del client
+    return app_listing(settings)
 
 
 @router.post("/v1/app/selfies", response_model=SelfieResponse, status_code=201)
