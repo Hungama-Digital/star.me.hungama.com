@@ -591,3 +591,48 @@ def test_the_edit_call_asks_for_high_quality(storage) -> None:
         assert b"high" in captured["body"].split(b'name="quality"')[1][:120]
     finally:
         session.close()
+
+def test_portrait_and_landscape_render_concurrently(storage) -> None:
+    """Two model calls of ~80s each, so running them in sequence doubled the
+    wall clock the App spends on a loading screen. Proven by overlap, not by
+    elapsed time, which would be flaky on a loaded box."""
+    import threading
+    import time
+
+    settings = with_key()
+    live = 0
+    peak = 0
+    lock = threading.Lock()
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(200, content=PNG_1000x1777,
+                                  headers={"content-type": "image/png"})
+        nonlocal live, peak
+        with lock:
+            live += 1
+            peak = max(peak, live)
+        time.sleep(0.3)
+        with lock:
+            live -= 1
+        payload = {"data": [{"b64_json": base64.b64encode(PNG_1000x1777).decode()}]}
+        return httpx.Response(200, json=payload)
+
+    session = next(get_session())
+    try:
+        row = ArtworkSwap(
+            tester_reference="device-par", source_image_url="https://example.test/s.png",
+            shell_id="camouflage-001", artwork_url="https://example.test/p.png",
+            landscape_artwork_url="https://example.test/l.png", status="queued",
+        )
+        session.add(row)
+        session.commit()
+        done = run_artwork_swap(
+            session, row.id, settings=settings,
+            transport=httpx.MockTransport(handle), storage=storage,
+        )
+        assert peak == 2, f"the two aspects did not overlap (peak concurrency {peak})"
+        assert done.status == SUCCEEDED, done.failure_reason
+        assert done.result_url and done.landscape_url
+    finally:
+        session.close()

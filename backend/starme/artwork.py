@@ -37,6 +37,7 @@ import hashlib
 import re
 import secrets
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 import httpx
@@ -461,16 +462,44 @@ def run_artwork_swap(
 
     store = None
     prefix = settings.linode_app_prefix.strip("/")
-    for aspect, artwork, artwork_type in fetched:
+
+    def _render(item: tuple[str, bytes, str]) -> tuple[str, bytes | None, str | None]:
+        """One model call. Returns the aspect so results can be matched up."""
+        aspect, artwork, artwork_type = item
         try:
             shape = read_dimensions(artwork[:65536])
-            result = swap_face_onto_artwork(
+            return aspect, swap_face_onto_artwork(
                 artwork=artwork, artwork_type=artwork_type,
                 selfie=selfie, selfie_type=selfie_type,
                 settings=settings,
                 size=openai_size(*shape) if shape else None,
                 transport=transport,
-            )
+            ), None
+        except Exception as exc:  # noqa: BLE001 - per aspect, so one can survive
+            return aspect, None, f"{aspect}: {type(exc).__name__}: {exc}"
+
+    # Portrait and landscape are two independent model calls of roughly 80s
+    # each. Run them together: in sequence they doubled the wall clock for no
+    # reason while the App held a loading screen for all of it. ONLY the calls
+    # are threaded - uploads and every database write stay on this thread,
+    # because neither the storage client nor the SQLAlchemy Session is
+    # thread-safe and a shared Session across threads corrupts its state.
+    rendered: dict[str, bytes] = {}
+    if fetched:
+        with ThreadPoolExecutor(max_workers=len(fetched)) as pool:
+            for aspect, result, failure in pool.map(_render, fetched):
+                if failure:
+                    problems.append(failure)
+                else:
+                    rendered[aspect] = result
+
+    # Published in the original order so portrait, the one the App shows
+    # first, lands first.
+    for aspect, _artwork, _artwork_type in fetched:
+        result = rendered.get(aspect)
+        if result is None:
+            continue
+        try:
             if len(result) > CDN_MAX_BYTES:
                 raise ArtworkError(
                     f"the generated artwork is {len(result) / 1e6:.1f}MB, which "
