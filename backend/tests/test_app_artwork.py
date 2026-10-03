@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from starme import artwork
-from starme.artwork import FAILED, SUCCEEDED, run_artwork_swap, slugify
+from starme.artwork import FAILED, QUEUED, SUCCEEDED, run_artwork_swap, slugify
 from starme.config import get_settings
 from starme.database import get_session
 from starme.main import app
@@ -446,3 +446,124 @@ def test_submit_derives_both_conventional_artwork_paths() -> None:
     portrait, landscape = artwork_urls_for("ek-love-story-001", settings)
     assert portrait.endswith("/artwork/ek-love-story-001.png")
     assert landscape.endswith("/artwork/ek-love-story-001-landscape.png")
+
+
+# ── API 2b / 3b: one selfie, several series ───────────────────────────────
+BATCH = {"X-Device-Id": "device-batch-0001"}
+
+
+@pytest.fixture
+def cdn():  # noqa: ANN201
+    """A CDN base, so a bare shell_id can be resolved to its artwork paths.
+
+    The batch call takes no artwork_url override - one URL cannot serve N
+    series - so unlike the single-shell tests it needs a real base configured.
+    """
+    settings = get_settings().model_copy(
+        update={"linode_cdn_base_url": "https://images.hungama.com"}
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+    yield settings
+    app.dependency_overrides.pop(get_settings, None)
+
+
+def batch(shell_ids, selfie_id=None, headers=BATCH, **extra):  # noqa: ANN001,ANN201
+    payload = {"shell_ids": shell_ids, **extra}
+    if selfie_id:
+        payload["selfie_id"] = selfie_id
+    return client.post("/v1/app/artwork-swaps/batch", headers=headers, json=payload)
+
+
+def test_a_batch_creates_one_job_per_series_in_the_order_asked(storage, cdn) -> None:
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    response = batch(["camouflage-001", "echoes-of-vengeance-001", "amar-sundari-001"], selfie)
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert [j["shell_id"] for j in body["jobs"]] == [
+        "camouflage-001", "echoes-of-vengeance-001", "amar-sundari-001"]
+    assert len({j["job_id"] for j in body["jobs"]}) == 3
+    assert body["skipped"] == {}
+
+
+def test_each_job_resolves_its_own_series_artwork(storage, cdn) -> None:
+    """The whole point of a batch: every series gets ITS poster, not the first
+    series' poster reused."""
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    ids = [j["job_id"] for j in batch(["camouflage-001", "amar-sundari-001"], selfie).json()["jobs"]]
+    session = next(get_session())
+    try:
+        rows = {r.id: r for r in (session.get(ArtworkSwap, i) for i in ids)}
+        art = {rows[i].shell_id: rows[i].artwork_url for i in ids}
+    finally:
+        session.close()
+    assert art["camouflage-001"].endswith("/camouflage-001.png")
+    assert art["amar-sundari-001"].endswith("/amar-sundari-001.png")
+    assert art["camouflage-001"] != art["amar-sundari-001"]
+
+
+def test_a_repeated_series_is_collapsed_rather_than_billed_twice(storage, cdn) -> None:
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    body = batch(["camouflage-001", "camouflage-001", " camouflage-001 "], selfie).json()
+    assert [j["shell_id"] for j in body["jobs"]] == ["camouflage-001"]
+
+
+def test_a_batch_without_a_selfie_or_url_is_refused(storage, cdn) -> None:
+    response = batch(["camouflage-001"])
+    assert response.status_code == 400
+    assert "selfie_id or image_url" in response.json()["detail"]
+
+
+def test_a_batch_accepts_a_bare_image_url(storage, cdn) -> None:
+    body = batch(["camouflage-001"], image_url="https://example.test/me.png").json()
+    assert len(body["jobs"]) == 1
+
+
+def test_an_empty_shell_list_is_refused_before_anything_is_queued(storage, cdn) -> None:
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    assert batch([], selfie).status_code == 422
+    assert batch(["  "], selfie).status_code == 400
+
+
+def test_a_selfie_from_another_device_cannot_seed_a_batch(storage, cdn) -> None:
+    mine = upload(headers=BATCH).json()["selfie_id"]
+    assert batch(["camouflage-001"], mine, headers=OTHER).status_code == 404
+
+
+def test_listing_answers_in_the_order_asked(storage, cdn) -> None:
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    ids = [j["job_id"] for j in batch(["camouflage-001", "amar-sundari-001"], selfie).json()["jobs"]]
+    listed = client.get("/v1/app/artwork-swaps", headers=BATCH,
+                        params={"job_ids": ",".join(reversed(ids))})
+    assert listed.status_code == 200
+    assert [j["job_id"] for j in listed.json()["jobs"]] == list(reversed(ids))
+
+
+def test_the_list_never_leaks_another_devices_jobs(storage, cdn) -> None:
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    mine = batch(["camouflage-001"], selfie).json()["jobs"][0]["job_id"]
+    seen = client.get("/v1/app/artwork-swaps", headers=OTHER,
+                      params={"job_ids": mine}).json()
+    assert seen["jobs"] == []
+    assert seen["poll_after_seconds"] is None
+
+
+def test_the_batch_stop_signal_tracks_the_slowest_job(storage, cdn) -> None:
+    """One open job must keep the whole batch polling, or the App stops early
+    and never collects the poster that was still rendering."""
+    selfie = upload(headers=BATCH).json()["selfie_id"]
+    created = batch(["camouflage-001", "amar-sundari-001"], selfie).json()
+    ids = [j["job_id"] for j in created["jobs"]]
+    # inline queue: both ran and failed on the missing key, so all terminal
+    assert created["poll_after_seconds"] is None
+
+    session = next(get_session())
+    try:
+        session.get(ArtworkSwap, ids[0]).status = QUEUED
+        session.commit()
+    finally:
+        session.close()
+    body = client.get("/v1/app/artwork-swaps", headers=BATCH,
+                      params={"job_ids": ",".join(ids)}).json()
+    assert body["jobs"][0]["poll_after_seconds"] is not None
+    assert body["jobs"][1]["poll_after_seconds"] is None
+    assert body["poll_after_seconds"] is not None

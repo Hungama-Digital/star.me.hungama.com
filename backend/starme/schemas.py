@@ -170,6 +170,32 @@ class ArtworkSwapCreateRequest(BaseModel):
     landscape_artwork_url: str | None = Field(default=None, max_length=500)
 
 
+class ArtworkSwapBatchCreateRequest(BaseModel):
+    """One selfie, several series. One job is created per series.
+
+    Deliberately separate from ArtworkSwapCreateRequest rather than widening
+    it: the App already ships against the single-shell call, whose response is
+    one object, and a batch has to answer with a list.
+    """
+
+    #: Series to swap onto, in the order the App wants them back. Duplicates
+    #: are collapsed, because sending a series twice would bill the image
+    #: model twice for the same picture.
+    shell_ids: list[str] = Field(min_length=1, max_length=20)
+    selfie_id: str | None = None
+    image_url: str | None = Field(default=None, max_length=500)
+
+
+class ArtworkSwapBatchResponse(BaseModel):
+    jobs: list["ArtworkSwapResponse"]
+    #: Null only once EVERY job is terminal, so the App can poll the batch the
+    #: same way it polls one job: wait, re-read, stop when this goes null.
+    poll_after_seconds: int | None = None
+    #: Series that were asked for but produced no job, with the reason. The
+    #: rest of the batch still runs; a single bad name does not sink it.
+    skipped: dict[str, str] = Field(default_factory=dict)
+
+
 class ArtworkSwapResponse(BaseModel):
     job_id: str
     status: str
@@ -186,3 +212,6 @@ class ArtworkSwapResponse(BaseModel):
     #: which is the App's signal to stop.
     poll_after_seconds: int | None = None
     attempts: int = 0
+
+
+ArtworkSwapBatchResponse.model_rebuild()

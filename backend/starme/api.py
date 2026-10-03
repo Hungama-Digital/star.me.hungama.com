@@ -11,6 +11,7 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
+    Query,
     Response,
     UploadFile,
     status,
@@ -41,6 +42,8 @@ from starme.models import (
     RenderJob,
 )
 from starme.schemas import (
+    ArtworkSwapBatchCreateRequest,
+    ArtworkSwapBatchResponse,
     ArtworkSwapCreateRequest,
     ArtworkSwapResponse,
     CapabilityResponse,
@@ -548,6 +551,136 @@ def create_artwork_swap(
     session.expire_all()
     fresh = session.get(ArtworkSwap, swap_id)
     return artwork_response(fresh or row, settings)
+
+
+@router.post(
+    "/v1/app/artwork-swaps/batch",
+    response_model=ArtworkSwapBatchResponse,
+    status_code=202,
+)
+def create_artwork_swap_batch(
+    request: ArtworkSwapBatchCreateRequest,
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+) -> ArtworkSwapBatchResponse:
+    """API 2b. One selfie onto several series in a single call.
+
+    Each series becomes its own job, so one series failing cannot take the
+    others down with it, and the App can show each poster the moment it is
+    ready instead of waiting for the slowest.
+
+    A series name that cannot produce a job is reported in ``skipped`` and the
+    rest of the batch still runs: a typo in one name must not cost the user
+    the whole set.
+    """
+    selfie: AppSelfie | None = None
+    if request.selfie_id:
+        selfie = session.scalar(
+            select(AppSelfie).where(
+                AppSelfie.id == request.selfie_id,
+                AppSelfie.tester_reference == client.tester_reference,
+            )
+        )
+        if selfie is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Selfie not found")
+    if not (selfie or request.image_url):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Provide either selfie_id or image_url"
+        )
+
+    # dict, not set: the App gets its posters back in the order it asked for
+    # them, and a repeated series is collapsed rather than billed twice.
+    wanted = list(dict.fromkeys(s.strip() for s in request.shell_ids if s.strip()))
+    if not wanted:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "shell_ids is empty")
+
+    rows, skipped = [], {}
+    for shell_id in wanted:
+        try:
+            rows.append(
+                submit_artwork_swap(
+                    session,
+                    tester_reference=client.tester_reference,
+                    shell_id=shell_id,
+                    selfie=selfie,
+                    image_url=request.image_url,
+                    artwork_url=None,
+                    landscape_artwork_url=None,
+                    settings=settings,
+                )
+            )
+        except ArtworkError as exc:
+            skipped[shell_id] = str(exc)
+    if not rows:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No series could be queued: " + "; ".join(
+                f"{k}: {v}" for k, v in skipped.items()
+            ),
+        )
+    audit(session, "artwork_swap.batch_requested", client.tester_reference,
+          "artwork_swap", rows[0].id,
+          {"shell_ids": [r.shell_id for r in rows], "skipped": sorted(skipped)})
+    session.commit()
+    swap_ids = [r.id for r in rows]
+    # Enqueued after the commit, exactly as the single call does, so a worker
+    # cannot pick up a row that is not visible yet.
+    for swap_id in swap_ids:
+        enqueue_artwork_swap(swap_id)
+    session.expire_all()
+    fresh = [session.get(ArtworkSwap, i) for i in swap_ids]
+    jobs = [artwork_response(r, settings) for r in fresh if r is not None]
+    return ArtworkSwapBatchResponse(
+        jobs=jobs,
+        poll_after_seconds=(
+            None
+            if all(j.poll_after_seconds is None for j in jobs)
+            else settings.artwork_poll_seconds
+        ),
+        skipped=skipped,
+    )
+
+
+@router.get("/v1/app/artwork-swaps", response_model=ArtworkSwapBatchResponse)
+def list_artwork_swaps(
+    client: ClientDependency,
+    session: SessionDependency,
+    settings: SettingsDependency,
+    job_ids: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ArtworkSwapBatchResponse:
+    """API 3b. Poll a whole batch in one request.
+
+    Polling N jobs individually is N requests every interval; this is one.
+    Newest first. ``job_ids`` is a comma-separated filter so the App can ask
+    only about the batch it just created rather than its whole history.
+    """
+    query = select(ArtworkSwap).where(
+        ArtworkSwap.tester_reference == client.tester_reference
+    )
+    wanted: list[str] = []
+    if job_ids:
+        wanted = [j.strip() for j in job_ids.split(",") if j.strip()]
+        if wanted:
+            query = query.where(ArtworkSwap.id.in_(wanted))
+    rows = session.scalars(
+        query.order_by(ArtworkSwap.created_at.desc()).limit(limit)
+    ).all()
+    jobs = [artwork_response(row, settings) for row in rows]
+    if wanted:
+        # Answer in the order asked, so the App can zip the result straight
+        # onto the list it already holds.
+        order = {job_id: i for i, job_id in enumerate(wanted)}
+        jobs.sort(key=lambda j: order.get(j.job_id, len(order)))
+    return ArtworkSwapBatchResponse(
+        jobs=jobs,
+        poll_after_seconds=(
+            None
+            if all(j.poll_after_seconds is None for j in jobs)
+            else settings.artwork_poll_seconds
+        ),
+    )
 
 
 @router.get("/v1/app/artwork-swaps/{job_id}", response_model=ArtworkSwapResponse)
