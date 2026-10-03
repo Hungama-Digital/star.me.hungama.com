@@ -38,7 +38,8 @@ def test_listing_returns_every_show_in_authored_order() -> None:
 def test_every_item_carries_the_full_contract() -> None:
     """The App reads these keys directly, so a missing one is a crash there."""
     expected = {
-        "content_id", "content_title", "content_type", "content_genre", "actor",
+        "content_id", "shell_id", "content_title", "content_type",
+        "content_genre", "actor",
         "age_rating", "audio_language", "release_date", "year_of_release",
         "original_show_name", "artwork", "cast",
     }
@@ -73,3 +74,20 @@ def test_the_listing_needs_no_device_header() -> None:
     anonymous = listing(headers={})
     assert anonymous.status_code == 200
     assert anonymous.json() == listing().json()
+
+
+def test_every_shell_id_is_one_the_swap_endpoints_can_actually_use() -> None:
+    """The whole point of carrying shell_id here is that the App can paste it
+    straight into a batch request. A listing shell_id whose artwork does not
+    exist would send the user into a job that fails."""
+    import httpx
+
+    seen = set()
+    for item in listing().json():
+        shell = item["shell_id"]
+        assert shell and shell not in seen, f"duplicate or empty shell_id {shell!r}"
+        seen.add(shell)
+        base = "https://images.hungama.com/starme/app-assets/artwork"
+        for url in (f"{base}/{shell}.png", f"{base}/{shell}-landscape.png"):
+            head = httpx.head(url, timeout=30, follow_redirects=True)
+            assert head.status_code == 200, f"{shell}: {url} -> {head.status_code}"

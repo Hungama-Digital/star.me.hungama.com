@@ -2,7 +2,8 @@
 
 Hand-authored rather than derived. The render pipeline knows a show by its
 ``shell_id``; marketing knows it by its distribution barcode, its genre string
-and its artwork, and none of that can be computed from the pipeline. Three
+and its artwork, and none of that can be computed from the pipeline. Both ids
+travel together so the App never has to map one to the other. Three
 titles that change a few times a year do not earn a table, a migration and an
 admin screen, so they live here as data.
 
@@ -26,6 +27,7 @@ _UNKNOWN_CAST = ({"name": NOT_AVAILABLE, "image": NOT_AVAILABLE},)
 APP_LISTING: tuple[dict, ...] = (
     {
         "content_id": "8903247971336",
+        "shell_id": "ek-love-story-001",
         "content_title": "Ek Love Story Aisi Bhi",
         "content_type": "Trailer",
         "content_genre": "Drama . Romance . Sci-Fi",
@@ -41,6 +43,7 @@ APP_LISTING: tuple[dict, ...] = (
     },
     {
         "content_id": "8903247944354",
+        "shell_id": "camouflage-001",
         "content_title": "Camouflage",
         "content_type": "Trailer",
         "content_genre": "Drama . Dual Identity . Loyalty Test . Mistaken . Romance",
@@ -56,6 +59,7 @@ APP_LISTING: tuple[dict, ...] = (
     },
     {
         "content_id": "8903247943326",
+        "shell_id": "echoes-of-vengeance-001",
         "content_title": "Echoes of Vengeance",
         "content_type": "Trailer",
         "content_genre": "Drama . High Fashion World . Revenge . Romance",

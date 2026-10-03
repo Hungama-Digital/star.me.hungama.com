@@ -192,6 +192,9 @@ class ListingItem(BaseModel):
     """
 
     content_id: str
+    #: The id the swap endpoints take. Deliberately carried alongside
+    #: content_id so the App never has to map a barcode to a shell itself.
+    shell_id: str
     content_title: str
     content_type: str
     content_genre: str
