@@ -462,6 +462,7 @@ def artwork_response(row: ArtworkSwap, settings: Settings) -> ArtworkSwapRespons
         shell_id=row.shell_id,
         portrait_url=row.result_url,
         landscape_url=row.landscape_url,
+        swapped_character_image=row.character_url,
         error=row.failure_reason,
         poll_after_seconds=None if terminal else settings.artwork_poll_seconds,
         attempts=row.attempt_count,

@@ -245,6 +245,9 @@ class ArtworkSwapResponse(BaseModel):
     #: so the App must treat landscape as optional rather than assume it.
     portrait_url: str | None = None
     landscape_url: str | None = None
+    #: The subscriber as this show's character: front on, alone, square, no
+    #: title text. Populated alongside the other two when the job succeeds.
+    swapped_character_image: str | None = None
     #: Set when anything failed. Present even on a partial success - portrait
     #: produced, landscape refused - so a half-result is never silent.
     error: str | None = None

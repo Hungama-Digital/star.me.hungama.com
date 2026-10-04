@@ -21,7 +21,36 @@ from starme.schemas import ListingArtwork, ListingCastMember, ListingItem
 #: directly, so a placeholder row is safer than an absent key.
 NOT_AVAILABLE = "NA"
 
-_UNKNOWN_CAST = ({"name": NOT_AVAILABLE, "image": NOT_AVAILABLE},)
+#: The metadata feed packs several things into one "Actor" string separated by
+#: " . ", and not all of them are people. "Vertical TV" is the format and
+#: "AI Characters" is how the cast was produced; both would otherwise appear on
+#: the cast rail as performers. Matched case-insensitively on the trimmed
+#: value.
+NON_ACTORS = frozenset({"vertical tv", "ai characters", "na", "n/a", ""})
+
+#: Shown until the feed carries real cast photography. A generated neutral
+#: silhouette rather than a stock face: a placeholder that looks like a
+#: specific person is worse than one that obviously is not.
+DEFAULT_CAST_IMAGE = "artwork/cast/default-actor.png"
+
+
+def cast_from_actor_field(actor: str, settings: Settings) -> list[dict]:
+    """Split the feed's Actor string into cast rows, dropping non-people.
+
+    Returns the NA placeholder rather than an empty list when nothing
+    survives: the App renders this list directly, so an empty one is a blank
+    rail where a placeholder is a readable "cast not listed". The placeholder
+    carries the default avatar too, so `image` is never a non-URL the App has
+    to guard against.
+    """
+    image = asset_url(DEFAULT_CAST_IMAGE, settings)
+    names = [part.strip() for part in (actor or "").split(".")]
+    people = [n for n in names if n and n.lower() not in NON_ACTORS]
+    # Every row carries a usable image, including the placeholder one, so the
+    # App can bind the same <Image> for all of them with no special case.
+    if not people:
+        return [{"name": NOT_AVAILABLE, "image": image}]
+    return [{"name": n, "image": image} for n in people]
 
 #: (relative artwork paths are resolved against the CDN base at request time)
 APP_LISTING: tuple[dict, ...] = (
@@ -39,7 +68,6 @@ APP_LISTING: tuple[dict, ...] = (
         "original_show_name": "Ek Love Story Aisi Bhi",
         "landscape": "artwork/landscape/ek-love-story-aisi-bhi.png",
         "portrait": "artwork/portrait/mars-ek-lovestory-aisi-bhi.jpg",
-        "cast": _UNKNOWN_CAST,
     },
     {
         "content_id": "8903247944354",
@@ -55,7 +83,6 @@ APP_LISTING: tuple[dict, ...] = (
         "original_show_name": "Camouflage",
         "landscape": "artwork/landscape/camouflage.png",
         "portrait": "artwork/portrait/camouflage.jpg",
-        "cast": _UNKNOWN_CAST,
     },
     {
         "content_id": "8903247943326",
@@ -71,7 +98,6 @@ APP_LISTING: tuple[dict, ...] = (
         "original_show_name": "Echoes of Vengeance",
         "landscape": "artwork/landscape/echoes-of-vengeance.png",
         "portrait": "artwork/portrait/echoes-of-vengeance.jpg",
-        "cast": _UNKNOWN_CAST,
     },
 )
 
@@ -93,12 +119,13 @@ def app_listing(settings: Settings) -> tuple[ListingItem, ...]:
     return tuple(
         ListingItem(
             **{k: v for k, v in row.items()
-               if k not in {"landscape", "portrait", "cast"}},
+               if k not in {"landscape", "portrait"}},
             artwork=ListingArtwork(
                 landscape=asset_url(row["landscape"], settings),
                 portrait=asset_url(row["portrait"], settings),
             ),
-            cast=[ListingCastMember(**m) for m in row["cast"]],
+            cast=[ListingCastMember(**m)
+                  for m in cast_from_actor_field(row["actor"], settings)],
         )
         for row in APP_LISTING
     )

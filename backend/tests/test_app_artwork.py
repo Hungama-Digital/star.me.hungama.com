@@ -212,9 +212,12 @@ def _transport(swapped: bytes, captured: dict) -> httpx.MockTransport:
         if request.method == "GET":
             return httpx.Response(200, content=PNG_1000x1777,
                                   headers={"content-type": "image/png"})
+        # Three calls now run concurrently, so a single slot records whichever
+        # thread happened to finish last. Keep them all.
         captured["url"] = str(request.url)
         captured["auth"] = request.headers.get("authorization")
         captured["body"] = request.content
+        captured.setdefault("bodies", []).append(request.content)
         return httpx.Response(
             200, json={"data": [{"b64_json": base64.b64encode(swapped).decode()}]}
         )
@@ -246,15 +249,18 @@ def test_worker_publishes_the_swapped_artwork_and_marks_it_succeeded(storage) ->
         )
         # no landscape artwork on this row, so that half is simply absent
         assert done.landscape_url is None
+        # the character still only needs the portrait artwork, so it is still
+        # produced on a row that has no landscape source
+        assert done.character_url.endswith(f"{swap_id}-character.png")
         assert storage.objects[done.result_object_key][0] == b"swapped-artwork-bytes"
         assert done.attempt_count == 1
         # artwork first, selfie second: the prompt refers to them by position
         assert captured["url"].endswith("/images/edits")
         assert captured["auth"] == "Bearer test-key"
-        assert b'name="image[]"' in captured["body"]
-        assert b"gpt-image-2" in captured["body"]
+        assert all(b'name="image[]"' in b for b in captured["bodies"])
+        assert all(b"gpt-image-2" in b for b in captured["bodies"])
         # a 1000x1777 artwork is portrait, so the portrait size must be sent
-        assert b"1024x1536" in captured["body"]
+        assert any(b"1024x1536" in b for b in captured["bodies"]), "portrait size"
     finally:
         session.close()
 
@@ -367,7 +373,8 @@ def test_one_job_returns_portrait_and_landscape(storage) -> None:
             raw = PNG_1672x941 if wide else PNG_1000x1777
             return httpx.Response(200, content=raw, headers={"content-type": "image/png"})
         body = request.content
-        calls.append("1536x1024" if b"1536x1024" in body else "1024x1536")
+        calls.append(next(size for size in ("1536x1024", "1024x1536", "1024x1024")
+                          if size.encode() in body))
         blob = base64.b64encode(b"art-" + str(len(calls)).encode()).decode()
         return httpx.Response(200, json={"data": [{"b64_json": blob}]})
 
@@ -391,9 +398,12 @@ def test_one_job_returns_portrait_and_landscape(storage) -> None:
         assert done.failure_reason is None
         assert done.result_url.endswith(f"{swap_id}.png")
         assert done.landscape_url.endswith(f"{swap_id}-landscape.png")
-        # each aspect asked for its own output shape
-        assert sorted(calls) == ["1024x1536", "1536x1024"]
-        assert done.result_object_key != done.landscape_object_key
+        assert done.character_url.endswith(f"{swap_id}-character.png")
+        # three outputs, each asking for its own shape: portrait, landscape,
+        # and the square single-character still
+        assert sorted(calls) == ["1024x1024", "1024x1536", "1536x1024"]
+        assert len({done.result_object_key, done.landscape_object_key,
+                    done.character_object_key}) == 3
     finally:
         session.close()
 
@@ -590,7 +600,7 @@ def test_the_edit_call_sends_the_configured_quality(storage) -> None:
             session, row.id, settings=settings,
             transport=_transport(PNG_1000x1777, captured), storage=storage,
         )
-        field = captured["body"].split(b'name="quality"')[1][:120]
+        field = captured["bodies"][0].split(b'name="quality"')[1][:120]
         assert b"medium" in field, field
         assert b"high" not in field, "the configured value was ignored"
     finally:

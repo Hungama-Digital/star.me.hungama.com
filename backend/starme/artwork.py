@@ -64,6 +64,9 @@ ALLOWED_IMAGE_TYPES = {
 #: 16:9 poster comes back 3:2 - the closest of these - and the App letterboxes
 #: or crops. Asked for no size at all it returns a SQUARE, which silently
 #: re-crops portrait key art, so one of these is always sent.
+#: Name of the third output, used as the aspect key and the object suffix.
+CHARACTER = "character"
+
 OPENAI_SIZES = {
     "portrait": "1024x1536",
     "landscape": "1536x1024",
@@ -116,6 +119,30 @@ SWAP_PROMPT = (
 
 class ArtworkError(RuntimeError):
     """Raised when a swap cannot be attempted or the model refused it."""
+
+
+#: The third output: the user as this show's character, front on, alone.
+#:
+#: Built from the ARTWORK plus the selfie in one call, not from the finished
+#: portrait swap. Restaging an already-swapped face measured +0.911 against
+#: the source; going straight from the artwork measured +0.953, and it also
+#: runs beside the other two calls instead of waiting for one of them.
+CHARACTER_PROMPT = (
+    "Image 1 is a poster from a drama series. Image 2 is a photograph of a "
+    "man. Produce a clean single-character publicity portrait of the YOUNG MAN "
+    "from image 1, but with the face of the man in image 2. "
+    "He must face the camera straight on, head and shoulders, looking directly "
+    "at the lens, with a neutral relaxed expression. "
+    "His face must be CLEARLY and UNMISTAKABLY the man from image 2: same bone "
+    "structure, same eyes, nose and mouth, same hairline, same age, same skin "
+    "tone. Render the face at high detail. Keep natural human proportions. "
+    "Keep the wardrobe the man wears in image 1, and the same cinematic "
+    "lighting, colour grade and film texture, so it reads as from the same "
+    "production. The background is a soft out-of-focus continuation of image "
+    "1's own setting. "
+    "Remove every other person. Remove ALL text, titles and logos. Do not copy "
+    "the background or the clothing from image 2."
+)
 
 
 def image_kind(raw: bytes) -> tuple[str, str]:
@@ -359,6 +386,7 @@ def swap_face_onto_artwork(
     selfie_type: str,
     settings: Settings,
     size: str | None = None,
+    prompt: str | None = None,
     transport: httpx.BaseTransport | None = None,
 ) -> bytes:
     """Ask gpt-image-2 to repaint the artwork character's face.
@@ -379,7 +407,7 @@ def swap_face_onto_artwork(
     ]
     data = {
         "model": settings.openai_image_model,
-        "prompt": SWAP_PROMPT,
+        "prompt": prompt or SWAP_PROMPT,
         "n": "1",
         "size": size or OPENAI_SIZES["portrait"],
         "quality": settings.openai_image_quality,
@@ -467,20 +495,34 @@ def run_artwork_swap(
         """One model call. Returns the aspect so results can be matched up."""
         aspect, artwork, artwork_type = item
         try:
-            shape = read_dimensions(artwork[:65536])
+            if aspect == CHARACTER:
+                # Square, and its own prompt: this one is a single-character
+                # head-and-shoulders still, not a repaint of the poster.
+                size, prompt = OPENAI_SIZES["square"], CHARACTER_PROMPT
+            else:
+                shape = read_dimensions(artwork[:65536])
+                size = openai_size(*shape) if shape else None
+                prompt = None
             return aspect, swap_face_onto_artwork(
                 artwork=artwork, artwork_type=artwork_type,
                 selfie=selfie, selfie_type=selfie_type,
-                settings=settings,
-                size=openai_size(*shape) if shape else None,
+                settings=settings, size=size, prompt=prompt,
                 transport=transport,
             ), None
         except Exception as exc:  # noqa: BLE001 - per aspect, so one can survive
             return aspect, None, f"{aspect}: {type(exc).__name__}: {exc}"
 
-    # Portrait and landscape are two independent model calls of roughly 80s
-    # each. Run them together: in sequence they doubled the wall clock for no
-    # reason while the App held a loading screen for all of it. ONLY the calls
+    # The character still is generated from the PORTRAIT artwork, as a third
+    # call beside the other two rather than after them. It needs the artwork,
+    # not the finished swap, so it has no dependency to wait on.
+    portrait_source = next((f for f in fetched if f[0] == "portrait"), None)
+    if portrait_source is not None:
+        fetched = [*fetched, (CHARACTER, portrait_source[1], portrait_source[2])]
+
+    # Portrait, landscape and the character still are independent model calls
+    # of roughly 45s each. Run them together: in sequence they tripled the wall
+    # clock for no reason while the App held a loading screen for all of it.
+    # ONLY the calls
     # are threaded - uploads and every database write stay on this thread,
     # because neither the storage client nor the SQLAlchemy Session is
     # thread-safe and a shared Session across threads corrupts its state.
@@ -512,6 +554,9 @@ def run_artwork_swap(
             store.put(key, result, content_type)
             if aspect == "portrait":
                 row.result_object_key, row.result_url = key, store.public_url(key)
+            elif aspect == CHARACTER:
+                row.character_object_key = key
+                row.character_url = store.public_url(key)
             else:
                 row.landscape_object_key = key
                 row.landscape_url = store.public_url(key)
@@ -521,7 +566,9 @@ def run_artwork_swap(
     # Succeeds on a partial result: one usable image beats none, and the App
     # is told what is missing through `error` rather than being left to guess
     # why a URL is null.
-    row.status = SUCCEEDED if (row.result_url or row.landscape_url) else FAILED
+    row.status = SUCCEEDED if (
+        row.result_url or row.landscape_url or row.character_url
+    ) else FAILED
     row.failure_reason = "; ".join(problems)[:1000] if problems else None
     row.completed_at = datetime.now(UTC)
     session.commit()

@@ -194,6 +194,11 @@ class ArtworkSwap(Base):
     result_url: Mapped[str | None] = mapped_column(String(500))
     landscape_object_key: Mapped[str | None] = mapped_column(String(255))
     landscape_url: Mapped[str | None] = mapped_column(String(500))
+    #: The subscriber as this show's character: front on, alone, no title. A
+    #: third output rather than a crop of the portrait, because the pose and
+    #: framing are different.
+    character_object_key: Mapped[str | None] = mapped_column(String(255))
+    character_url: Mapped[str | None] = mapped_column(String(500))
     failure_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
