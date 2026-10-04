@@ -32,7 +32,7 @@ def test_listing_returns_every_show_in_authored_order() -> None:
     body = response.json()
     assert [r["content_id"] for r in body] == [r["content_id"] for r in APP_LISTING]
     assert [r["content_title"] for r in body] == [
-        "Ek Love Story Aisi Bhi", "Camouflage", "Echoes of Vengeance"]
+        "Pehchan Jhoothi Hai", "Ek Love Story Aisi Bhi", "Camouflage"]
 
 
 def test_every_item_carries_the_full_contract() -> None:

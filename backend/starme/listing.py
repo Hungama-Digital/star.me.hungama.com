@@ -55,6 +55,23 @@ def cast_from_actor_field(actor: str, settings: Settings) -> list[dict]:
 #: (relative artwork paths are resolved against the CDN base at request time)
 APP_LISTING: tuple[dict, ...] = (
     {
+        "content_id": "8903247942268",
+        "shell_id": "pehchan-jhoothi-hai-001",
+        "content_title": "Pehchan Jhoothi Hai",
+        "content_type": "Trailer",
+        # PROVISIONAL: no metadata was supplied for this title, unlike the
+        # other two. Replace genre and the dates when the feed carries them.
+        "content_genre": "Drama . Mistaken Identity . Romance . Thriller",
+        "actor": NOT_AVAILABLE,
+        "age_rating": "13+",
+        "audio_language": "Hindi",
+        "release_date": "2026-05-20",
+        "year_of_release": 2026,
+        "original_show_name": "Pehchan Jhoothi Hai",
+        "landscape": "artwork/landscape/pehchan-jhoothi-hai.png",
+        "portrait": "artwork/portrait/pehchan-jhoothi-hai.jpg",
+    },
+    {
         "content_id": "8903247971336",
         "shell_id": "ek-love-story-001",
         "content_title": "Ek Love Story Aisi Bhi",
@@ -83,21 +100,6 @@ APP_LISTING: tuple[dict, ...] = (
         "original_show_name": "Camouflage",
         "landscape": "artwork/landscape/camouflage.png",
         "portrait": "artwork/portrait/camouflage.jpg",
-    },
-    {
-        "content_id": "8903247943326",
-        "shell_id": "echoes-of-vengeance-001",
-        "content_title": "Echoes of Vengeance",
-        "content_type": "Trailer",
-        "content_genre": "Drama . High Fashion World . Revenge . Romance",
-        "actor": NOT_AVAILABLE,
-        "age_rating": "13+",
-        "audio_language": "English",
-        "release_date": "2026-05-20",
-        "year_of_release": 2026,
-        "original_show_name": "Echoes of Vengeance",
-        "landscape": "artwork/landscape/echoes-of-vengeance.png",
-        "portrait": "artwork/portrait/echoes-of-vengeance.jpg",
     },
 )
 
