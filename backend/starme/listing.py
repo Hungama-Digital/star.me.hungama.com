@@ -15,7 +15,13 @@ serving production links.
 from __future__ import annotations
 
 from starme.config import Settings
-from starme.schemas import ListingArtwork, ListingCastMember, ListingItem
+from starme.schemas import (
+    ListingArtwork,
+    ListingCastMember,
+    ListingItem,
+    ShowEpisode,
+    ShowEpisodes,
+)
 
 #: Stands in for cast that has not been supplied. The App renders the list
 #: directly, so a placeholder row is safer than an absent key.
@@ -130,4 +136,78 @@ def app_listing(settings: Settings) -> tuple[ListingItem, ...]:
                   for m in cast_from_actor_field(row["actor"], settings)],
         )
         for row in APP_LISTING
+    )
+
+
+#: Episodes per show. Separate from APP_LISTING because the catalogue screen
+#: and the episode screen are different calls: the listing must stay small and
+#: cacheable, and nothing there needs a ten-item array it will not render.
+#:
+#: `content_base` + "S01E<n>" is the distribution content id, which is how the
+#: rest of Hungama addresses a single episode. It is built rather than listed
+#: because the pattern is fixed and ten hand-written ids per show is ten
+#: chances to fat-finger one.
+#:
+#: `videos` holds only the episodes that have actually been produced. The rest
+#: are still announced, with an empty video_url, so the App can show the full
+#: run of ten with the unreleased ones greyed out rather than pretending the
+#: show is three episodes long.
+SHOW_EPISODES: dict[str, dict] = {
+    "pehchan-jhoothi-hai-001": {
+        "content_base": "EVN202638734",
+        "total_episodes": 10,
+        "videos": {
+            1: "episodes/pehchan-jhoothi-hai/pehchan-jhoothi-hai-ep1.mp4",
+            2: "episodes/pehchan-jhoothi-hai/pehchan-jhoothi-hai-ep2.mp4",
+            3: "episodes/pehchan-jhoothi-hai/pehchan-jhoothi-hai-ep3.mp4",
+        },
+    },
+    "ek-love-story-001": {
+        "content_base": "EVN202639405",
+        "total_episodes": 10,
+        "videos": {},
+    },
+    "camouflage-001": {
+        "content_base": "EVN202638822",
+        "total_episodes": 10,
+        "videos": {},
+    },
+}
+
+#: Episodes that exist but have no file yet carry "" rather than null, so the
+#: App binds one string type and decides on truthiness instead of null checks.
+NO_VIDEO = ""
+
+
+def show_episodes(shell_id: str, settings: Settings):  # noqa: ANN201
+    """The episode list for one show, or None when the shell is unknown."""
+    plan = SHOW_EPISODES.get(shell_id)
+    row = next((r for r in APP_LISTING if r["shell_id"] == shell_id), None)
+    if plan is None or row is None:
+        return None
+    portrait = asset_url(row["portrait"], settings)
+    landscape = asset_url(row["landscape"], settings)
+    episodes = [
+        ShowEpisode(
+            episode_number=n,
+            episode_name=f"Episode {n}",
+            content_id=f"{plan['content_base']}S01E{n}",
+            # Episode artwork repeats the show's today. Resolved here rather
+            # than left for the App to copy, so per-episode stills can be
+            # introduced later without an App release.
+            portrait=portrait,
+            landscape=landscape,
+            video_url=(asset_url(plan["videos"][n], settings)
+                       if n in plan["videos"] else NO_VIDEO),
+        )
+        for n in range(1, plan["total_episodes"] + 1)
+    ]
+    return ShowEpisodes(
+        shell_id=shell_id,
+        show_id=row["content_id"],
+        show_name=row["content_title"],
+        portrait=portrait,
+        landscape=landscape,
+        total_episodes=plan["total_episodes"],
+        episodes=episodes,
     )

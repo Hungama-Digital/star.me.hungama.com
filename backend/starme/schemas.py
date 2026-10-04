@@ -210,6 +210,32 @@ class ListingItem(BaseModel):
     cast: list[ListingCastMember]
 
 
+class ShowEpisode(BaseModel):
+    episode_number: int
+    episode_name: str
+    #: Distribution id for this single episode, EVN<base>S01E<n>.
+    content_id: str
+    portrait: str
+    landscape: str
+    #: Empty string, not null, for an episode that has not been produced yet.
+    #: One string type for the App to bind, decided on truthiness.
+    video_url: str
+
+
+class ShowEpisodes(BaseModel):
+    #: Echoed back so a response can be matched to the request that asked for
+    #: it without the App having to remember what it sent.
+    shell_id: str
+    show_id: str
+    show_name: str
+    portrait: str
+    landscape: str
+    #: The full announced run, which is larger than the number of episodes
+    #: that currently carry a video_url.
+    total_episodes: int
+    episodes: list[ShowEpisode]
+
+
 class ArtworkSwapBatchCreateRequest(BaseModel):
     """One selfie, several series. One job is created per series.
 

@@ -33,7 +33,7 @@ from starme.config import Settings, get_settings
 from starme.database import get_session
 from starme.delivery import resolve_media_file, signed_url
 from starme.jobs import enqueue_artwork_swap, enqueue_first_look, enqueue_full_render
-from starme.listing import app_listing
+from starme.listing import app_listing, show_episodes
 from starme.models import (
     AppSelfie,
     ArtworkSwap,
@@ -59,6 +59,7 @@ from starme.schemas import (
     JobResponse,
     JobState,
     ListingItem,
+    ShowEpisodes,
     OrderCreateRequest,
     OrderResponse,
     OrderState,
@@ -485,6 +486,27 @@ def list_app_catalogue(
     """
     del client
     return app_listing(settings)
+
+
+@router.get("/v1/app/episodes", response_model=ShowEpisodes)
+def list_show_episodes(
+    client: ClientDependency,
+    settings: SettingsDependency,
+    shell_id: Annotated[str, Query(min_length=1, max_length=100)],
+) -> ShowEpisodes:
+    """Episodes for one show, selected by the shell_id from the listing.
+
+    404 rather than an empty list for an unknown shell: an empty episode array
+    reads as "this show has no episodes", which is a different and much more
+    confusing thing than "no such show".
+    """
+    del client
+    found = show_episodes(shell_id, settings)
+    if found is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"No show with shell_id {shell_id!r}"
+        )
+    return found
 
 
 @router.post("/v1/app/selfies", response_model=SelfieResponse, status_code=201)
