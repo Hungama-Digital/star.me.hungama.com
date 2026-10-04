@@ -74,9 +74,44 @@ def test_show_fields_match_the_listing_row() -> None:
         assert body["show_name"] == row["content_title"]
         assert body["portrait"].endswith(row["portrait"].rsplit("/", 1)[-1])
         assert body["landscape"].endswith(row["landscape"].rsplit("/", 1)[-1])
-        for e in body["episodes"]:
-            assert e["portrait"] == body["portrait"]
-            assert e["landscape"] == body["landscape"]
+
+
+@pytest.mark.parametrize("shell_id", sorted(SHOW_EPISODES))
+def test_each_episode_carries_exactly_the_agreed_fields(shell_id: str) -> None:
+    """Artwork lives on the show, not repeated on every episode."""
+    for e in episodes(shell_id).json()["episodes"]:
+        assert set(e) == {"episode_number", "episode_name", "duration",
+                          "content_id", "video_url"}, e
+
+
+@pytest.mark.parametrize("shell_id", sorted(SHOW_EPISODES))
+def test_every_episode_has_a_duration(shell_id: str) -> None:
+    body = episodes(shell_id).json()
+    for e in body["episodes"]:
+        assert e["duration"].strip(), f"episode {e['episode_number']} has no duration"
+        assert " sec" in e["duration"], e["duration"]
+
+
+def test_episode_names_use_the_shows_own_prefix() -> None:
+    """Pehchan's episodes drop the "Hai", so the name cannot be derived from
+    content_title."""
+    cases = {
+        "pehchan-jhoothi-hai-001": "Pehchan Jhoothi Episode ",
+        "ek-love-story-001": "Ek Love Story Aisi Bhi Episode ",
+        "camouflage-001": "Camouflage Episode ",
+    }
+    for shell_id, prefix in cases.items():
+        body = episodes(shell_id).json()
+        assert body["episodes"][0]["episode_name"] == prefix + "1"
+        assert body["episodes"][9]["episode_name"] == prefix + "10"
+
+
+def test_the_pehchan_durations_match_the_files_that_were_uploaded() -> None:
+    """Authored copy, but it has to agree with the asset it describes: the
+    three produced episodes run 75s, 91s and 87s."""
+    body = episodes("pehchan-jhoothi-hai-001").json()
+    assert [e["duration"] for e in body["episodes"][:3]] == [
+        "1 m 15 sec", "1 m 31 sec", "1 m 27 sec"]
 
 
 def test_an_unknown_shell_is_404_not_an_empty_list() -> None:

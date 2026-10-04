@@ -145,17 +145,30 @@ def app_listing(settings: Settings) -> tuple[ListingItem, ...]:
 #:
 #: `content_base` + "S01E<n>" is the distribution content id, which is how the
 #: rest of Hungama addresses a single episode. It is built rather than listed
-#: because the pattern is fixed and ten hand-written ids per show is ten
-#: chances to fat-finger one.
+#: because the pattern is fixed and thirty hand-written ids is thirty chances
+#: to fat-finger one.
 #:
-#: `videos` holds only the episodes that have actually been produced. The rest
-#: are still announced, with an empty video_url, so the App can show the full
-#: run of ten with the unreleased ones greyed out rather than pretending the
-#: show is three episodes long.
+#: `name_prefix` is NOT the show title. Pehchan's episodes are titled "Pehchan
+#: Jhoothi Episode 1", dropping the "Hai", so the prefix is carried verbatim
+#: rather than derived from content_title.
+#:
+#: `durations` is per episode, in order, as the authored display string. Kept
+#: as a string, not seconds: it is editorial copy the App prints as-is, and
+#: formatting it here would mean guessing "1 m 0 sec" versus "1 m" versus
+#: "60 sec" on the App's behalf.
+#:
+#: `videos` holds only the episodes actually produced. The rest are still
+#: announced with an empty video_url, so the App shows the full run of ten
+#: with the unreleased ones greyed out rather than claiming the show is three
+#: episodes long.
 SHOW_EPISODES: dict[str, dict] = {
     "pehchan-jhoothi-hai-001": {
         "content_base": "EVN202638734",
+        "name_prefix": "Pehchan Jhoothi",
         "total_episodes": 10,
+        "durations": ("1 m 15 sec", "1 m 31 sec", "1 m 27 sec", "2 m 11 sec",
+                      "1 m 56 sec", "1 m 1 sec", "1 m 49 sec", "1 m 48 sec",
+                      "1 m 20 sec", "1 m 17 sec"),
         "videos": {
             1: "episodes/pehchan-jhoothi-hai/pehchan-jhoothi-hai-ep1.mp4",
             2: "episodes/pehchan-jhoothi-hai/pehchan-jhoothi-hai-ep2.mp4",
@@ -164,12 +177,20 @@ SHOW_EPISODES: dict[str, dict] = {
     },
     "ek-love-story-001": {
         "content_base": "EVN202639405",
+        "name_prefix": "Ek Love Story Aisi Bhi",
         "total_episodes": 10,
+        "durations": ("1 m 14 sec", "1 m 19 sec", "1 m 47 sec", "1 m 3 sec",
+                      "1 m 0 sec", "0 m 51 sec", "1 m 8 sec", "1 m 22 sec",
+                      "1 m 22 sec", "1 m 17 sec"),
         "videos": {},
     },
     "camouflage-001": {
         "content_base": "EVN202638822",
+        "name_prefix": "Camouflage",
         "total_episodes": 10,
+        "durations": ("1 m 3 sec", "1 m 15 sec", "1 m 1 sec", "1 m 24 sec",
+                      "1 m 3 sec", "1 m 1 sec", "1 m 2 sec", "1 m 2 sec",
+                      "1 m 10 sec", "1 m 10 sec"),
         "videos": {},
     },
 }
@@ -185,29 +206,29 @@ def show_episodes(shell_id: str, settings: Settings):  # noqa: ANN201
     row = next((r for r in APP_LISTING if r["shell_id"] == shell_id), None)
     if plan is None or row is None:
         return None
-    portrait = asset_url(row["portrait"], settings)
-    landscape = asset_url(row["landscape"], settings)
+    total = plan["total_episodes"]
+    durations = plan["durations"]
+    if len(durations) != total:
+        raise ValueError(
+            f"{shell_id}: {len(durations)} durations for {total} episodes"
+        )
     episodes = [
         ShowEpisode(
             episode_number=n,
-            episode_name=f"Episode {n}",
+            episode_name=f"{plan['name_prefix']} Episode {n}",
+            duration=durations[n - 1],
             content_id=f"{plan['content_base']}S01E{n}",
-            # Episode artwork repeats the show's today. Resolved here rather
-            # than left for the App to copy, so per-episode stills can be
-            # introduced later without an App release.
-            portrait=portrait,
-            landscape=landscape,
             video_url=(asset_url(plan["videos"][n], settings)
                        if n in plan["videos"] else NO_VIDEO),
         )
-        for n in range(1, plan["total_episodes"] + 1)
+        for n in range(1, total + 1)
     ]
     return ShowEpisodes(
         shell_id=shell_id,
         show_id=row["content_id"],
         show_name=row["content_title"],
-        portrait=portrait,
-        landscape=landscape,
-        total_episodes=plan["total_episodes"],
+        portrait=asset_url(row["portrait"], settings),
+        landscape=asset_url(row["landscape"], settings),
+        total_episodes=total,
         episodes=episodes,
     )

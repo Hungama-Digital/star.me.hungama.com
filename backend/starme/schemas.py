@@ -212,11 +212,14 @@ class ListingItem(BaseModel):
 
 class ShowEpisode(BaseModel):
     episode_number: int
+    #: Show-specific, e.g. "Pehchan Jhoothi Episode 1". Not derived from the
+    #: show title: Pehchan's episodes drop the "Hai".
     episode_name: str
+    #: Authored display string such as "1 m 31 sec", printed by the App as-is.
+    #: A string rather than seconds, so the formatting decision stays here.
+    duration: str
     #: Distribution id for this single episode, EVN<base>S01E<n>.
     content_id: str
-    portrait: str
-    landscape: str
     #: Empty string, not null, for an episode that has not been produced yet.
     #: One string type for the App to bind, decided on truthiness.
     video_url: str
