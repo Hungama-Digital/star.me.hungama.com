@@ -53,6 +53,18 @@ class Settings(BaseSettings):
     # it, borders and all (measured 26 August). 2.0's mask follows the head and
     # its fill reconstructs it.
     byteplus_masked_model: str = "dreamina-seedance-2-0-260128"
+    #: Seedream, the artwork-swap fallback for when gpt-image-2 cannot serve.
+    #:
+    #: The version is load-bearing and NOT interchangeable. Measured 5 Oct
+    #: 2026 on the Camouflage poster against the source photo:
+    #:
+    #:     seedream-5-0-260128   +0.880   swaps the face
+    #:     seedream-4-0-250828   +0.019   re-renders the poster with the
+    #:                                    ORIGINAL actor and never swaps
+    #:
+    #: A silent downgrade to 4-0 would therefore ship posters that look
+    #: finished and have the wrong person in them.
+    byteplus_image_model: str = "seedream-5-0-260128"
     byteplus_prompt_llm: str = "seed-2-0-pro-260328"
     byteplus_api_base_url: str = "https://ark.ap-southeast.bytepluses.com/api/v3"
     byteplus_project_name: str = "default"

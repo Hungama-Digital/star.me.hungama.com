@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import re
 import secrets
 from dataclasses import dataclass
@@ -70,6 +71,11 @@ ALLOWED_IMAGE_TYPES = {
 #: 16:9 poster comes back 3:2 - the closest of these - and the App letterboxes
 #: or crops. Asked for no size at all it returns a SQUARE, which silently
 #: re-crops portrait key art, so one of these is always sent.
+#: A fallback is a silent change of provider, so it must leave a trace: the
+#: output differs in size and style, and nothing else in the response says
+#: which model produced it.
+LOGGER = logging.getLogger(__name__)
+
 #: Name of the third output, used as the aspect key and the object suffix.
 CHARACTER = "character"
 
@@ -384,6 +390,66 @@ def _fetch(url: str, client: httpx.Client) -> tuple[bytes, str]:
     return response.content, content_type
 
 
+def _seedream_swap(
+    *,
+    artwork: bytes,
+    artwork_type: str,
+    selfie: bytes,
+    selfie_type: str,
+    settings: Settings,
+    prompt: str,
+    transport: httpx.BaseTransport | None = None,
+) -> bytes:
+    """Fallback swap through BytePlus Seedream.
+
+    A different API shape entirely: JSON with data-URI images rather than
+    multipart, and no output size of our choosing - Seedream keeps the
+    artwork's own aspect and returns it larger than gpt-image-2 does. That is
+    fine for the App, which only ever renders a URL, but it does mean a
+    fallback image is not pixel-identical in size to a primary one.
+    """
+    if settings.byteplus_api_key is None:
+        raise ArtworkError(
+            "No BytePlus key is configured, so the artwork fallback cannot "
+            "run. Set STARME_BYTEPLUS_API_KEY."
+        )
+
+    def data_uri(raw: bytes, content_type: str) -> str:
+        kind = content_type or "image/png"
+        return f"data:{kind};base64," + base64.b64encode(raw).decode()
+
+    body = {
+        "model": settings.byteplus_image_model,
+        "prompt": prompt,
+        "image": [data_uri(artwork, artwork_type), data_uri(selfie, selfie_type)],
+        "size": "2K",
+        "response_format": "b64_json",
+        "watermark": False,
+    }
+    with httpx.Client(
+        base_url=settings.byteplus_api_base_url.rstrip("/"),
+        transport=transport,
+        timeout=httpx.Timeout(600.0, connect=15.0),
+        headers={
+            "Authorization": f"Bearer {settings.byteplus_api_key.get_secret_value()}",
+            "Content-Type": "application/json",
+        },
+    ) as client:
+        response = client.post("/images/generations", json=body)
+    if response.status_code >= 400:
+        raise ArtworkError(
+            f"Fallback model returned HTTP {response.status_code}: "
+            f"{response.text[:300]}"
+        )
+    data = response.json().get("data") or []
+    if not data:
+        raise ArtworkError("Fallback model returned no image")
+    encoded = data[0].get("b64_json")
+    if not encoded:
+        raise ArtworkError("Fallback model returned no image data")
+    return base64.b64decode(encoded)
+
+
 def swap_face_onto_artwork(
     *,
     artwork: bytes,
@@ -521,12 +587,38 @@ def run_artwork_swap(
                 shape = read_dimensions(artwork[:65536])
                 size = openai_size(*shape) if shape else None
                 prompt = card_swap_prompt(row.shell_id)
-            return aspect, swap_face_onto_artwork(
-                artwork=artwork, artwork_type=artwork_type,
-                selfie=selfie, selfie_type=selfie_type,
-                settings=settings, size=size, prompt=prompt,
-                transport=transport,
-            ), None
+            try:
+                return aspect, swap_face_onto_artwork(
+                    artwork=artwork, artwork_type=artwork_type,
+                    selfie=selfie, selfie_type=selfie_type,
+                    settings=settings, size=size, prompt=prompt,
+                    transport=transport,
+                ), None
+            except ArtworkError as primary:
+                # The primary could not serve. Out of credits is the case this
+                # exists for, but anything that stops it producing an image is
+                # treated the same way: a user who gets no poster does not care
+                # which provider was unavailable.
+                #
+                # Only the model call is retried. A missing key, a bad download
+                # or an oversized result are our faults and would fail
+                # identically on the fallback.
+                if settings.byteplus_api_key is None:
+                    raise
+                result = _seedream_swap(
+                    artwork=artwork, artwork_type=artwork_type,
+                    selfie=selfie, selfie_type=selfie_type,
+                    settings=settings,
+                    prompt=prompt or (
+                        CHARACTER_PROMPT if aspect == CHARACTER else SWAP_PROMPT
+                    ),
+                    transport=transport,
+                )
+                LOGGER.warning(
+                    "artwork swap fell back to %s for %s: %s",
+                    settings.byteplus_image_model, aspect, primary,
+                )
+                return aspect, result, None
         except Exception as exc:  # noqa: BLE001 - per aspect, so one can survive
             return aspect, None, f"{aspect}: {type(exc).__name__}: {exc}"
 
