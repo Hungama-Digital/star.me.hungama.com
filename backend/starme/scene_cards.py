@@ -23,6 +23,20 @@ the integration pass.
 
 from __future__ import annotations
 
+#: Stated before anything else. Without it the integration instructions win
+#: outright and the face stops being the user's: the first deployed cards
+#: scored +0.468 on the Ek Love Story landscape, where the face is only ~155px
+#: and heavy relighting leaves nothing of the identity behind. Over three
+#: samples each, adding this and softening the shadow brief moved that poster
+#: from a mean of +0.778 to +0.836, with its WORST run beating the old card's
+#: best.
+_IDENTITY_FIRST = (
+    "IDENTITY IS THE PRIORITY. The finished face must be CLEARLY and "
+    "UNMISTAKABLY the man in image 2 - same bone structure, brow, eyes, nose, "
+    "mouth, jawline and hair. If any instruction below would obscure or soften "
+    "his features, favour recognisability over the effect.\n"
+)
+
 #: Shared across every card. Kept out of the per-show text so a fix here
 #: reaches all posters, and so the per-show entries stay purely editorial.
 _TAKE_IDENTITY_ONLY = (
@@ -51,10 +65,10 @@ SCENE_CARDS: dict[str, dict[str, str]] = {
         "show": "Ek Love Story Aisi Bhi",
         "lead": "the male lead, the man on the right in the denim jacket",
         "light": (
-            "a strong warm golden sunset backlight from behind and to the "
-            "right, an orange rim along the hair, cheekbone and jaw on the "
-            "right, and the left side of the face falling into deep warm "
-            "shadow. No frontal fill"
+            "warm golden sunset light from behind and to the right, with a "
+            "soft orange rim on the hair and right cheek. Keep the front of "
+            "the face clearly lit and fully readable; do not push the features "
+            "into shadow"
         ),
         "colour": (
             "the poster's amber and teal grade, warm highlights and cool "
@@ -84,10 +98,9 @@ SCENE_CARDS: dict[str, dict[str, str]] = {
         "lead": "the male lead, the bearded man on the right in the dark navy shirt",
         "light": (
             "warm tungsten light from the corridor lamps behind and to the "
-            "right, a soft amber rim on the right cheek and ear, cool blue "
-            "window light spilling from the far left, and the left side of "
-            "the face in low, moody shadow. Low-key overall, no bright "
-            "frontal fill"
+            "right, a soft amber rim on the right cheek and ear, and cool blue "
+            "window light spilling from the far left. Moody overall, but keep "
+            "the front of the face clearly lit and fully readable"
         ),
         "colour": (
             "the poster's warm amber and cool blue split grade, deep shadows, "
@@ -114,8 +127,8 @@ SCENE_CARDS: dict[str, dict[str, str]] = {
         "light": (
             "warm tungsten from the two pendant lamps overhead and slightly "
             "front-left, a soft highlight across the forehead and cheekbones, "
-            "shadow under the brow and jaw, and a dim red bounce from the "
-            "tiled wall behind. No flat frontal fill"
+            "gentle shadow under the brow and jaw, and a dim red bounce from "
+            "the tiled wall behind. Keep the features clearly readable"
         ),
         "colour": (
             "the poster's warm amber highlights against the deep red and "
@@ -147,6 +160,7 @@ def swap_prompt(shell_id: str) -> str | None:
     return (
         f"Edit image 1 (the poster for {card['show']}). Replace the face of "
         f"{card['lead']}, with the person in image 2.\n"
+        + _IDENTITY_FIRST
         + _TAKE_IDENTITY_ONLY
         + "Make the face belong to the poster:\n"
         f"- Lighting: relight the face for {card['light']}.\n"
@@ -173,6 +187,7 @@ def character_prompt(shell_id: str) -> str | None:
         f"{card['lead']}, but with the face of the person in image 2, facing "
         "the camera straight on, head and shoulders, neutral relaxed "
         "expression.\n"
+        + _IDENTITY_FIRST
         + _TAKE_IDENTITY_ONLY
         + f"- Lighting: {card['light']}.\n"
         f"- Colour: apply {card['colour']}.\n"

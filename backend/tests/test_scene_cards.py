@@ -109,3 +109,23 @@ def test_the_card_actually_reaches_the_model_for_a_shell_that_has_one(storage):
         assert b"Render the face at high detail" not in joined
     finally:
         session.close()
+
+
+@pytest.mark.parametrize("shell_id", sorted(SCENE_CARDS))
+def test_identity_is_stated_as_the_hard_constraint(shell_id):
+    """Without this the integration instructions win outright and the face
+    stops being the user's. Measured: the first cards scored +0.468 on the Ek
+    Love Story landscape; adding this took it to a mean of +0.836."""
+    for p in (swap_prompt(shell_id), character_prompt(shell_id)):
+        assert "IDENTITY IS THE PRIORITY" in p
+        assert "favour recognisability over the effect" in p
+
+
+@pytest.mark.parametrize("shell_id", sorted(SCENE_CARDS))
+def test_no_card_pushes_the_face_into_shadow(shell_id):
+    """A face of ~155px has nothing left to recognise once it is half in
+    shadow, and the wide posters are exactly where that happens."""
+    light = SCENE_CARDS[shell_id]["light"].lower()
+    for banned in ("no frontal fill", "no flat frontal fill", "deep warm shadow"):
+        assert banned not in light, f"{shell_id}: {banned!r} eats the face"
+    assert "readable" in light, f"{shell_id} must keep the features readable"
