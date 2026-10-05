@@ -46,6 +46,12 @@ from sqlalchemy.orm import Session
 from starme.config import Settings
 from starme.linode_storage import LinodeObjectStorage
 from starme.models import AppSelfie, ArtworkSwap
+from starme.scene_cards import (
+    character_prompt as card_character_prompt,
+)
+from starme.scene_cards import (
+    swap_prompt as card_swap_prompt,
+)
 
 #: A selfie past this is refused before anything is uploaded. Matches the
 #: render path's portrait ceiling so the two cannot disagree.
@@ -495,6 +501,10 @@ def run_artwork_swap(
         """One model call. Returns the aspect so results can be matched up."""
         aspect, artwork, artwork_type = item
         try:
+            # A shell with a scene card gets its own prompt, carrying this
+            # poster's light, grade, style and the lead's expression. Without
+            # one the global prompts still apply, so a new show swaps on day
+            # one and gains the integration pass when its card is written.
             if aspect == CHARACTER:
                 # Portrait, not square, and its own prompt: this one is a
                 # single-character head-and-shoulders still, not a repaint of
@@ -505,11 +515,12 @@ def run_artwork_swap(
                 # 43.3 / 41.1 / 59.0s. The square call was the long pole of
                 # every batch despite having fewer pixels, so the whole batch
                 # waited on the cheapest-looking image in it.
-                size, prompt = OPENAI_SIZES["portrait"], CHARACTER_PROMPT
+                size = OPENAI_SIZES["portrait"]
+                prompt = card_character_prompt(row.shell_id) or CHARACTER_PROMPT
             else:
                 shape = read_dimensions(artwork[:65536])
                 size = openai_size(*shape) if shape else None
-                prompt = None
+                prompt = card_swap_prompt(row.shell_id)
             return aspect, swap_face_onto_artwork(
                 artwork=artwork, artwork_type=artwork_type,
                 selfie=selfie, selfie_type=selfie_type,
