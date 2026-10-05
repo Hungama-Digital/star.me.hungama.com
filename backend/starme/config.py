@@ -120,13 +120,20 @@ class Settings(BaseSettings):
     #:     low      16.6s   +0.958
     #:     medium   33.2s   +0.956 / +0.947 / +0.961
     #:
-    #: Identity survives intact at every level - the assumption that the
-    #: cheaper settings lose the likeness first is simply wrong, and what they
-    #: actually drop is skin and fabric micro-texture, invisible at phone
-    #: size. "low" because the batch has a 30 second budget and this is the
-    #: only lever that moves it without dropping an image. Raise it if a large
-    #: screen ever becomes the target.
-    openai_image_quality: str = "low"
+    #: "low" was tried for the 30 second budget and REVERTED. It was measured
+    #: on one poster, Camouflage, whose face is large, and it held up there at
+    #: +0.958. Across all three posters it does not:
+    #:
+    #:                        low      medium
+    #:     camouflage lands  +0.957    +0.920
+    #:     pehchan landscape +0.789    +0.918
+    #:     ek-love  landscape +0.434   +0.809   <- not the right man
+    #:
+    #: Likeness tracks the face's pixel size, and a wide two-hander gives the
+    #: model ~150px to work with. At "low" that is not enough and the face
+    #: comes back generic. "medium" is the floor that survives every poster,
+    #: and the batch costs 45 to 55s because of it. That trade is deliberate.
+    openai_image_quality: str = "medium"
     openai_base_url: str = "https://api.openai.com/v1"
     # Where selfies, series artwork and swapped results live in the bucket.
     # Deliberately NOT linode_prefix ("starme/renders"), which the delivery
