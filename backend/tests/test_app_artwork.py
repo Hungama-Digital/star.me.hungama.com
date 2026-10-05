@@ -399,9 +399,10 @@ def test_one_job_returns_portrait_and_landscape(storage) -> None:
         assert done.result_url.endswith(f"{swap_id}.png")
         assert done.landscape_url.endswith(f"{swap_id}-landscape.png")
         assert done.character_url.endswith(f"{swap_id}-character.png")
-        # three outputs, each asking for its own shape: portrait, landscape,
-        # and the square single-character still
-        assert sorted(calls) == ["1024x1024", "1024x1536", "1536x1024"]
+        # three outputs: portrait, landscape, and the character still, which
+        # is ALSO portrait - the square variant measured 8 to 25s slower and
+        # was the long pole of every batch
+        assert sorted(calls) == ["1024x1536", "1024x1536", "1536x1024"]
         assert len({done.result_object_key, done.landscape_object_key,
                     done.character_object_key}) == 3
     finally:

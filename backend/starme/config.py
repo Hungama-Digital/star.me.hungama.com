@@ -115,12 +115,18 @@ class Settings(BaseSettings):
     #:     medium   46.1s   +0.917
     #:     high     81.2s   +0.948
     #:
+    #: Re-measured 5 Oct 2026 under the real concurrent load, portrait size:
+    #:
+    #:     low      16.6s   +0.958
+    #:     medium   33.2s   +0.956 / +0.947 / +0.961
+    #:
     #: Identity survives intact at every level - the assumption that the
     #: cheaper settings lose the likeness first is simply wrong, and what they
-    #: actually drop is skin and fabric micro-texture. So the 35 seconds high
-    #: costs buys nothing the user can see on a phone. Raise it if a large
+    #: actually drop is skin and fabric micro-texture, invisible at phone
+    #: size. "low" because the batch has a 30 second budget and this is the
+    #: only lever that moves it without dropping an image. Raise it if a large
     #: screen ever becomes the target.
-    openai_image_quality: str = "medium"
+    openai_image_quality: str = "low"
     openai_base_url: str = "https://api.openai.com/v1"
     # Where selfies, series artwork and swapped results live in the bucket.
     # Deliberately NOT linode_prefix ("starme/renders"), which the delivery

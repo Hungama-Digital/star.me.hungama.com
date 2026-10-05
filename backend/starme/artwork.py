@@ -496,9 +496,16 @@ def run_artwork_swap(
         aspect, artwork, artwork_type = item
         try:
             if aspect == CHARACTER:
-                # Square, and its own prompt: this one is a single-character
-                # head-and-shoulders still, not a repaint of the poster.
-                size, prompt = OPENAI_SIZES["square"], CHARACTER_PROMPT
+                # Portrait, not square, and its own prompt: this one is a
+                # single-character head-and-shoulders still, not a repaint of
+                # the poster.
+                #
+                # Measured 5 Oct 2026, same input, same prompt, run together:
+                # 1024x1536 took 33.2 / 33.3 / 35.2s while 1024x1024 took
+                # 43.3 / 41.1 / 59.0s. The square call was the long pole of
+                # every batch despite having fewer pixels, so the whole batch
+                # waited on the cheapest-looking image in it.
+                size, prompt = OPENAI_SIZES["portrait"], CHARACTER_PROMPT
             else:
                 shape = read_dimensions(artwork[:65536])
                 size = openai_size(*shape) if shape else None
