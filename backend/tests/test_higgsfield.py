@@ -132,3 +132,43 @@ def test_higgsfield_orders_use_the_portrait_file_not_an_asset(tmp_path: Path) ->
     )
     *_, face = _seedance_order_inputs(order, settings)  # type: ignore[arg-type]
     assert face == str(faces / "T1.png")
+
+
+def test_character_sheet_is_made_once_and_sent_with_its_closeup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import base64
+
+    from starme.higgsfield import character_sheet
+
+    portrait = tmp_path / "face.png"
+    portrait.write_bytes(b"png")
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        assert request.url.path == "/v1/images/edits"
+        assert b"the young man in the denim shirt" in request.content
+        return httpx.Response(200, json={"data": [{"b64_json": base64.b64encode(b"S").decode()}]})
+
+    monkeypatch.setattr("starme.higgsfield._run", lambda cmd: Path(cmd[-1]).write_bytes(b"c"))
+    settings = Settings(render_work_dir=str(tmp_path), openai_api_key="sk-test")  # type: ignore[arg-type]
+    costume = "the young man in the denim shirt"
+
+    first = character_sheet(portrait, costume, settings, httpx.MockTransport(handler))
+    again = character_sheet(portrait, costume, settings, httpx.MockTransport(handler))
+
+    assert [p.name for p in first] == ["sheet.png", "closeup.png"]
+    assert first == again and len(calls) == 1
+    assert first[0].read_bytes() == b"S"
+
+
+def test_refused_sheet_falls_back_to_the_portrait(tmp_path: Path) -> None:
+    from starme.higgsfield import character_sheet, swap_prompt
+
+    portrait = tmp_path / "face.png"
+    portrait.write_bytes(b"png")
+    refuse = httpx.MockTransport(lambda _: httpx.Response(400, json={"error": "moderation"}))
+    settings = Settings(render_work_dir=str(tmp_path), openai_api_key="sk-test")  # type: ignore[arg-type]
+    assert character_sheet(portrait, "x", settings, refuse) == [portrait]
+    assert "@[Image 1](image_1) and @[Image 2](image_2)" in swap_prompt("him", "", 2)

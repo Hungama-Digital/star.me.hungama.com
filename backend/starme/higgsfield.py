@@ -6,6 +6,11 @@ November 2026, where it beat Seedance on likeness in the close-ups. It keeps
 the contract of ``execute_seedance_render``, so episode assembly, the face-QA
 re-rolls and the QC gate run unchanged around it.
 
+Before any swap, the selfie becomes a three-panel character sheet with
+gpt-image-2 (front, back, close-up, in the episode costume): Prabhakar's
+manual step, and the references the EP-01 test used. The sheet and its
+close-up panel go to Genjutsu together. Made once per selfie and cached.
+
 Two differences from Seedance:
 - The face reference is the subscriber's portrait FILE, uploaded with each
   call. Higgsfield accepts real faces directly, so there is no asset://
@@ -19,7 +24,10 @@ Billing per output second, rounded up: about $0.318/s at 480p, $0.681/s at
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import logging
 import mimetypes
 import time
 from dataclasses import asdict
@@ -37,6 +45,7 @@ from starme.media_pipeline import (
 )
 from starme.render_pipeline import SeedanceRenderResult, SeedanceRenderSpec
 
+LOGGER = logging.getLogger(__name__)
 BASE_URL = "https://api.higgsfield.ai"
 APP = "/higgsfield/genjutsu/object-swap/v1.0"
 PAD_SECONDS = 1.5
@@ -44,21 +53,103 @@ POLL_SECONDS = 10.0
 DONE = {"completed", "failed", "nsfw", "canceled"}
 
 
-def swap_prompt(subject_video_desc: str, extra_notes: str = "") -> str:
+# Prabhakar's "Character sheet.docx" prompt, as run on 28/10/2026, with the
+# person and costume made generic.
+SHEET_PROMPT = (
+    "The character is the person in the attached photo. Keep their exact face: bone "
+    "structure, eyes, nose, mouth, jawline, hairline and hair, facial hair, skin tone "
+    "and age. Do not make them younger, slimmer or more symmetrical. They wear the "
+    "same outfit as {costume}. No sunglasses.\n\n"
+    "Create one landscape image with three panels on a seamless, solid grey studio "
+    "background, separated by thin vertical divider lines.\n"
+    "Panel 1, Full-Body Front View: standing upright in a neutral pose, facing the "
+    "camera, arms relaxed at the sides, the entire figure from head to toe visible.\n"
+    "Panel 2, Full-Body Back View: the same pose facing away from the camera, clearly "
+    "showing the back of the costume, hairstyle, accessories and footwear.\n"
+    "Panel 3, Close-Up Portrait: a frontal head-and-shoulders close-up, looking "
+    "directly at the camera.\n"
+    "Visual Style and Quality: Hyperrealistic RAW photograph, shot on a full-frame "
+    "DSLR camera with an 85mm lens, a real human being with natural skin pores, fine "
+    "facial details, realistic eyes and authentic fabric textures.\n"
+    "Strict Requirements: the exact same facial identity, body proportions, "
+    "hairstyle, costume and accessories across all three panels. Soft, even studio "
+    "lighting with consistent exposure. No cartoon style, 3D render, CGI, "
+    "illustration, text, labels, logos or watermarks."
+)
+
+
+def character_sheet(
+    portrait: Path,
+    costume: str,
+    settings: Settings,
+    transport: httpx.BaseTransport | None = None,
+) -> list[Path]:
+    """[sheet, close-up panel] for this selfie and costume, made once and cached.
+
+    Falls back to the bare portrait when the image model is missing or refuses:
+    the swap still runs and face QA still judges it, it just loses the sheet's
+    help on profile and back-of-head shots.
+    """
+    raw = portrait.read_bytes()
+    key = hashlib.sha256(raw + costume.encode()).hexdigest()[:20]
+    folder = Path(settings.render_work_dir).resolve() / "sheets" / key
+    sheet, closeup = folder / "sheet.png", folder / "closeup.png"
+    if closeup.is_file():
+        return [sheet, closeup]
+    if settings.openai_api_key is None:
+        LOGGER.warning("No STARME_OPENAI_API_KEY; swapping from the bare portrait")
+        return [portrait]
+    with httpx.Client(
+        base_url=settings.openai_base_url.rstrip("/"),
+        transport=transport,
+        timeout=httpx.Timeout(600.0, connect=15.0),
+        headers={"Authorization": f"Bearer {settings.openai_api_key.get_secret_value()}"},
+    ) as client:
+        response = client.post(
+            "/images/edits",
+            data={
+                "model": settings.openai_image_model,
+                "prompt": SHEET_PROMPT.format(costume=costume or "the episode's lead"),
+                "n": "1",
+                "size": "1536x1024",  # 3:2, as the test sheet
+                "quality": "high",
+            },
+            files=[("image[]", ("selfie.png", raw, "image/png"))],
+        )
+    items = [] if response.is_error else response.json().get("data") or []
+    if not items or not items[0].get("b64_json"):
+        LOGGER.warning(
+            "Character sheet failed (%s %s); swapping from the bare portrait",
+            response.status_code,
+            response.text[:200],
+        )
+        return [portrait]
+    folder.mkdir(parents=True, exist_ok=True)
+    sheet.write_bytes(base64.b64decode(items[0]["b64_json"]))
+    # Panel 3 is the right third: the close-up the EP-01 close-ups needed.
+    _run(
+        ["ffmpeg", "-y", "-v", "error", "-i", str(sheet)]
+        + ["-vf", "crop=iw/3:ih:2*iw/3:0", str(closeup)]
+    )
+    return [sheet, closeup]
+
+
+def swap_prompt(subject_video_desc: str, extra_notes: str = "", references: int = 1) -> str:
     """The EP-01 test prompt with the subscriber-specific looks taken out: the
-    reference image carries the identity, the shell names who to replace."""
+    references carry the identity, the shell names who to replace."""
     subject = subject_video_desc or "the main male lead"
+    refs = " and ".join(f"@[Image {n}](image_{n})" for n in range(1, references + 1))
     return (
         "No subtitles, no captions, no on-screen text of any kind. "
         f"Replace the main subject, {subject} @[Video 1](video_1), with the person "
-        "in the reference image @[Image 1](image_1). Face replacement is the only "
+        f"in the reference images {refs}. Face replacement is the only "
         "task. In every frame, including close-ups, over-the-shoulder and wide shots, "
         "he has the reference person's exact face: eyes, brow, nose, face shape, "
         "chin and cheeks, hair and hairline, facial hair, skin tone and age. The "
         "original actor's face, hair, facial hair and jewellery must be completely "
         "gone; he must not look like the original actor.\n"
         "Keep his exact performance: dialogue, lip movements, expressions, eye "
-        "direction, blinks, breathing, head movements and timing, and his costume.\n"
+        "direction, blinks, breathing, head movements and timing.\n"
         "Do not change any other person, the location, the lighting, the camera or "
         f"the edit. {extra_notes}"
     ).strip()
@@ -153,12 +244,17 @@ def execute_higgsfield_render(
         + ["-af", f"apad=pad_dur={PAD_SECONDS}"]
         + ["-c:v", "libx264", "-crf", "14", "-c:a", "aac", str(padded)]
     )
+    references = [
+        ref
+        for p in spec.reference_asset_uris
+        for ref in character_sheet(Path(p), spec.subject_video_desc, settings, transport)
+    ]
     with HiggsfieldClient(settings.higgsfield_api_key.get_secret_value(), transport) as client:
         request_id = client.submit(
             {
                 "video_url": client.upload(padded),
-                "image_urls": [client.upload(Path(p)) for p in spec.reference_asset_uris],
-                "prompt": swap_prompt(spec.subject_video_desc, spec.extra_notes),
+                "image_urls": [client.upload(p) for p in references],
+                "prompt": swap_prompt(spec.subject_video_desc, spec.extra_notes, len(references)),
                 "resolution": settings.higgsfield_resolution,
             }
         )
