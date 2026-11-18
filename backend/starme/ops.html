@@ -209,6 +209,7 @@ async function entries() {
 
 // Video detail (also the QC decision screen)
 const CHECKS = ['Face looks like the user, not the original actor', 'Expression, blinks and lip movement match the original', 'Close-ups and side profiles match the user', 'Original beard, earring and clothes are gone', 'Other people, room, light and camera unchanged', 'No subtitles, captions or stray text', 'Audio in sync, no frozen or jumping frames', 'Nothing offensive or off-brand'];
+const imgUrl = (id, name) => '/ops/api/video/' + encodeURIComponent(id) + '/image/' + name;
 async function videoDetail(id) {
   const d = await api('video/' + encodeURIComponent(id));
   const qc = d.status === 'AWAITING_QC' && canAct();
@@ -220,6 +221,10 @@ async function videoDetail(id) {
       <div><div><strong style="color:var(--ink)">${esc(d.title)}</strong> · ${esc(d.role)} · ${esc(d.detail)}</div><div class="muted mono">${esc(d.user)}</div>
       <div class="muted">Submitted ${when(d.created_at)} · updated ${when(d.updated_at)}</div>
       <div class="muted">Consent ${esc(d.consent.version)} on ${when(d.consent.accepted_at)}${d.consent.revoked_at ? ' · <span class="pill p-r">Revoked</span>' : ''}</div></div></div>
+      ${d.render_images.length ? `<div><div class="lbl">Face sent to Higgsfield${d.render_images.includes('sheet') ? ' · character sheet' : ' · sheet not made yet'}</div>
+        <div class="row" style="flex-wrap:nowrap;align-items:flex-start">${d.render_images.includes('sheet')
+          ? `<a href="${imgUrl(d.id, 'sheet')}" target="_blank" style="flex:1"><img src="${imgUrl(d.id, 'sheet')}" alt="Character sheet" style="width:100%;border-radius:10px;border:1px solid var(--line)"></a>`
+          : `<img src="${imgUrl(d.id, 'portrait')}" alt="Portrait used for rendering" style="width:120px;border-radius:10px">`}</div></div>` : ''}
       ${d.first_look ? `<div><div class="lbl">First look · ${esc(d.first_look.status)}</div><video controls preload="metadata" src="${safeUrl(d.first_look.url)}"></video></div>` : ''}
       ${d.episodes.map((e) => `<div><div class="lbl">Episode ${e.number}</div><video controls preload="metadata" src="${safeUrl(e.url)}"></video></div>`).join('') || '<p class="muted">No episodes rendered yet.</p>'}
     </section>

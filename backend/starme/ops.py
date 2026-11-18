@@ -20,9 +20,11 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from starme.artwork import FAILED, QUEUED, RUNNING, SUCCEEDED
+from starme.catalogue import SYNTHETIC_SHELLS
 from starme.config import Settings, get_settings
 from starme.database import get_session
 from starme.delivery import signed_url
+from starme.higgsfield import sheet_folder
 from starme.jobs import enqueue_full_render
 from starme.models import (
     AppSelfie,
@@ -36,7 +38,7 @@ from starme.models import (
 from starme.ops_auth import current_user, require
 from starme.ops_auth import router as auth_router
 from starme.schemas import JobState, OrderState
-from starme.services import audit
+from starme.services import _reference_portrait, audit
 
 PAGE = Path(__file__).with_name("ops.html")
 IN_PIPELINE = [
@@ -348,6 +350,33 @@ def qc(session: SessionDep, settings: SettingsDep) -> dict[str, list[dict[str, o
     return groups
 
 
+def _render_images(order: Order, settings: Settings) -> dict[str, Path]:
+    """The portrait the render used and, once made, its character sheet."""
+    portrait = _reference_portrait(order, settings)
+    if portrait is None:
+        return {}
+    out = {"portrait": portrait}
+    shell = next((s for s in SYNTHETIC_SHELLS if s.id == order.shell_id), None)
+    folder = sheet_folder(portrait.read_bytes(), shell.role_video_desc if shell else "", settings)
+    for name in ("sheet", "closeup"):
+        if (folder / f"{name}.png").is_file():
+            out[name] = folder / f"{name}.png"
+    return out
+
+
+@api.get("/api/video/{order_id}/image/{name}")
+def render_image(
+    order_id: str,
+    name: Literal["portrait", "sheet", "closeup"],
+    session: SessionDep,
+    settings: SettingsDep,
+) -> FileResponse:
+    path = _render_images(_order(session, order_id), settings).get(name)
+    if path is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not made yet")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
 @api.get("/api/video/{order_id}")
 def video(order_id: str, session: SessionDep, settings: SettingsDep) -> dict[str, object]:
     order = _order(session, order_id)
@@ -355,6 +384,7 @@ def video(order_id: str, session: SessionDep, settings: SettingsDep) -> dict[str
     row = _video_row(order, _latest_selfies(session, {order.tester_reference}))
     return {
         **row,
+        "render_images": sorted(_render_images(order, settings)),
         "role": order.role_id,
         "consent": {
             "version": order.consent.consent_version,

@@ -70,12 +70,14 @@ services:
       - ./media:/media:ro
       - starme_faces:/faces:ro
       - starme_renders:/renders
+      - starme_higgsfield:/app/.config/higgsfield
     depends_on:
       api:
         condition: service_started
 
 volumes:
   starme_faces:
+  starme_higgsfield:
   starme_postgres:
   starme_redis:
   starme_renders:

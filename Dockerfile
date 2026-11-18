@@ -15,6 +15,17 @@ RUN mkdir /renders && chown starme:starme /renders
 # volume inherits starme ownership on first mount; the API runs unprivileged.
 RUN mkdir /faces && chown starme:starme /faces
 
+# Higgsfield CLI: renders bill the workspace's dashboard credits through it.
+# Pinned and checksum-verified. Its sign-in lives in a volume at
+# /app/.config/higgsfield, made here so the volume inherits starme ownership.
+ARG HF_CLI_VERSION=1.2.2
+ARG HF_CLI_SHA256=6a642f61f409a00d724de3079c1a7a25777eb1e49a2e0c3814e8a6ea3f49bb51
+ADD https://github.com/higgsfield-ai/cli/releases/download/v${HF_CLI_VERSION}/hf_${HF_CLI_VERSION}_linux_amd64.tar.gz /tmp/hf.tgz
+RUN echo "${HF_CLI_SHA256}  /tmp/hf.tgz" | sha256sum -c - \
+    && tar -xzf /tmp/hf.tgz -C /usr/local/bin hf && rm /tmp/hf.tgz \
+    && ln -s /usr/local/bin/hf /usr/local/bin/higgsfield \
+    && mkdir -p /app/.config/higgsfield && chown -R starme:starme /app/.config
+
 WORKDIR /app
 COPY pyproject.toml README.md alembic.ini ./
 COPY backend ./backend

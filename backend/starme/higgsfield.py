@@ -18,8 +18,12 @@ Two differences from Seedance:
 - Genjutsu renders whole seconds and drops the tail (6.2s in, 5.7s out), so
   each clip goes up padded with frozen frames and comes back trimmed.
 
-Billing per output second, rounded up: about $0.318/s at 480p, $0.681/s at
-720p. Failed and NSFW-blocked jobs are not charged.
+Two ways to pay, chosen by STARME_HIGGSFIELD_BILLING:
+- "dashboard" (default, Amol 18/11/2026): the ``higgsfield`` CLI, signed in
+  once on the server with a browser login and billed to the selected
+  workspace's dashboard credits, the same route as the EP-01 test.
+- "api": the public API with STARME_HIGGSFIELD_API_KEY and its own balance.
+Failed and NSFW-blocked jobs are not charged on either.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ import hashlib
 import json
 import logging
 import mimetypes
+import subprocess
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -78,6 +83,12 @@ SHEET_PROMPT = (
 )
 
 
+def sheet_folder(portrait: bytes, costume: str, settings: Settings) -> Path:
+    """Where the sheet for this selfie and costume lives; the CMS reads it too."""
+    key = hashlib.sha256(portrait + costume.encode()).hexdigest()[:20]
+    return Path(settings.render_work_dir).resolve() / "sheets" / key
+
+
 def character_sheet(
     portrait: Path,
     costume: str,
@@ -91,8 +102,7 @@ def character_sheet(
     help on profile and back-of-head shots.
     """
     raw = portrait.read_bytes()
-    key = hashlib.sha256(raw + costume.encode()).hexdigest()[:20]
-    folder = Path(settings.render_work_dir).resolve() / "sheets" / key
+    folder = sheet_folder(raw, costume, settings)
     sheet, closeup = folder / "sheet.png", folder / "closeup.png"
     if closeup.is_file():
         return [sheet, closeup]
@@ -193,8 +203,17 @@ class HiggsfieldClient:
         put.raise_for_status()
         return str(slot["public_url"])
 
-    def submit(self, arguments: dict[str, Any]) -> str:
+    def swap(self, video: Path, images: list[Path], prompt: str, resolution: str) -> str:
+        arguments = {
+            "video_url": self.upload(video),
+            "image_urls": [self.upload(p) for p in images],
+            "prompt": prompt,
+            "resolution": resolution,
+        }
         return str(self._ok(self._api.post(APP, json=arguments))["request_id"])
+
+    def result_url(self, request_id: str, *, timeout_seconds: float) -> str:
+        return str(self.wait(request_id, timeout_seconds=timeout_seconds)["video"]["url"])
 
     def wait(self, request_id: str, *, timeout_seconds: float) -> dict[str, Any]:
         deadline = time.monotonic() + timeout_seconds
@@ -219,14 +238,95 @@ class HiggsfieldClient:
         return destination
 
 
+class HiggsfieldCli:
+    """Dashboard credits through the ``higgsfield`` CLI. Its OAuth login lives
+    in ~/.config/higgsfield (a volume on the server) and refreshes itself; the
+    workspace selected there is the one billed."""
+
+    def __enter__(self) -> HiggsfieldCli:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    @staticmethod
+    def _hf(*args: str, timeout: float = 600) -> Any:
+        done = subprocess.run(  # noqa: S603
+            ["higgsfield", *args, "--json"],  # noqa: S607 - CLI baked into the image
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if done.returncode:
+            raise RuntimeError(
+                f"higgsfield {args[0]} {args[1]}: {(done.stderr or done.stdout)[:300]}"
+            )
+        return json.loads(done.stdout)
+
+    def swap(self, video: Path, images: list[Path], prompt: str, resolution: str) -> str:
+        video_id = self._hf("upload", "create", str(video))["id"]
+        image_args = [
+            a for p in images for a in ("--image", self._hf("upload", "create", str(p))["id"])
+        ]
+        job = self._hf(
+            "generate",
+            "create",
+            "hf_mult_replace_object",
+            "--prompt",
+            prompt,
+            *image_args,
+            "--video",
+            video_id,
+            "--resolution",
+            resolution,
+        )
+        return str(job[0])
+
+    def result_url(self, job_id: str, *, timeout_seconds: float) -> str:
+        subprocess.run(  # noqa: S603
+            [  # noqa: S607 - CLI baked into the image
+                "higgsfield",
+                "generate",
+                "wait",
+                job_id,
+                "--quiet",
+                "--timeout",
+                f"{int(timeout_seconds)}s",
+                "--interval",
+                "10s",
+            ],
+            capture_output=True,
+            timeout=timeout_seconds + 60,
+        )
+        job = self._hf("generate", "get", job_id)
+        if job.get("status") != "completed" or not job.get("result_url"):
+            raise RuntimeError(f"Higgsfield job {job_id} ended {job.get('status')} (not charged)")
+        return str(job["result_url"])
+
+    def download(self, url: str, destination: Path) -> Path:
+        with httpx.Client(timeout=600, follow_redirects=True) as client:
+            response = client.get(url)
+        response.raise_for_status()
+        destination.write_bytes(response.content)
+        return destination
+
+
+def _swapper(
+    settings: Settings, transport: httpx.BaseTransport | None
+) -> HiggsfieldClient | HiggsfieldCli:
+    if settings.higgsfield_billing == "dashboard":
+        return HiggsfieldCli()
+    if settings.higgsfield_api_key is None:
+        raise RuntimeError("STARME_HIGGSFIELD_API_KEY is required for API billing")
+    return HiggsfieldClient(settings.higgsfield_api_key.get_secret_value(), transport)
+
+
 def execute_higgsfield_render(
     spec_data: dict[str, Any],
     settings: Settings | None = None,
     transport: httpx.BaseTransport | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
-    if settings.higgsfield_api_key is None:
-        raise RuntimeError("STARME_HIGGSFIELD_API_KEY is required")
     spec = SeedanceRenderSpec.from_dict(spec_data)
     work_dir = Path(settings.render_work_dir).resolve() / spec.reference
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -249,17 +349,15 @@ def execute_higgsfield_render(
         for p in spec.reference_asset_uris
         for ref in character_sheet(Path(p), spec.subject_video_desc, settings, transport)
     ]
-    with HiggsfieldClient(settings.higgsfield_api_key.get_secret_value(), transport) as client:
-        request_id = client.submit(
-            {
-                "video_url": client.upload(padded),
-                "image_urls": [client.upload(p) for p in references],
-                "prompt": swap_prompt(spec.subject_video_desc, spec.extra_notes, len(references)),
-                "resolution": settings.higgsfield_resolution,
-            }
+    with _swapper(settings, transport) as client:
+        request_id = client.swap(
+            padded,
+            references,
+            swap_prompt(spec.subject_video_desc, spec.extra_notes, len(references)),
+            settings.higgsfield_resolution,
         )
-        done = client.wait(request_id, timeout_seconds=settings.higgsfield_timeout_seconds)
-        client.download(str(done["video"]["url"]), raw)
+        url = client.result_url(request_id, timeout_seconds=settings.higgsfield_timeout_seconds)
+        client.download(url, raw)
     # Back to the source's exact length and frame size, so the structural gate
     # and the splice compare like for like.
     _run(

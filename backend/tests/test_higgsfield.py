@@ -53,6 +53,7 @@ def test_render_uploads_submits_and_never_leaks_the_key(
     settings = Settings(
         render_work_dir=str(tmp_path / "r"),
         higgsfield_api_key="kid:secret",  # type: ignore[arg-type]
+        higgsfield_billing="api",
     )
     spec = SeedanceRenderSpec(
         reference="b1",
@@ -97,7 +98,9 @@ def test_failed_request_is_reported_not_retried_silently(
         original_audio_path="",
         reference_asset_uris=(str(tmp_path / "face.png"),),
     )
-    settings = Settings(render_work_dir=str(tmp_path), higgsfield_api_key="k:s")  # type: ignore[arg-type]
+    settings = Settings(
+        render_work_dir=str(tmp_path), higgsfield_api_key="k:s", higgsfield_billing="api"
+    )  # type: ignore[arg-type]
     with pytest.raises(RuntimeError, match="402.*not_enough_credits"):
         execute_higgsfield_render(asdict(spec), settings, httpx.MockTransport(handler))
 
@@ -172,3 +175,47 @@ def test_refused_sheet_falls_back_to_the_portrait(tmp_path: Path) -> None:
     settings = Settings(render_work_dir=str(tmp_path), openai_api_key="sk-test")  # type: ignore[arg-type]
     assert character_sheet(portrait, "x", settings, refuse) == [portrait]
     assert "@[Image 1](image_1) and @[Image 2](image_2)" in swap_prompt("him", "", 2)
+
+
+def test_dashboard_billing_drives_the_signed_in_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from starme.higgsfield import HiggsfieldCli, _swapper
+
+    commands: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **_: object) -> SimpleNamespace:
+        commands.append(cmd)
+        verb = cmd[1:3]
+        out: object = {}
+        if verb == ["upload", "create"]:
+            out = {"id": f"up-{len(commands)}"}
+        elif verb == ["generate", "create"]:
+            out = ["job-1"]
+        elif verb == ["generate", "get"]:
+            out = {"status": "completed", "result_url": "https://cdn.example/out.mp4"}
+        return SimpleNamespace(returncode=0, stdout=json.dumps(out), stderr="")
+
+    monkeypatch.setattr("starme.higgsfield.subprocess.run", fake_run)
+    assert isinstance(_swapper(Settings(), None), HiggsfieldCli)  # dashboard is the default
+
+    cli = HiggsfieldCli()
+    job = cli.swap(tmp_path / "v.mp4", [tmp_path / "s.png", tmp_path / "c.png"], "p", "480p")
+    url = cli.result_url(job, timeout_seconds=600)
+
+    create = next(c for c in commands if c[1:3] == ["generate", "create"])
+    assert create[3] == "hf_mult_replace_object"
+    assert create.count("--image") == 2 and create[create.index("--video") + 1] == "up-1"
+    assert create[create.index("--resolution") + 1] == "480p"
+    assert url == "https://cdn.example/out.mp4"
+
+
+def test_dashboard_failure_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
+    from starme.higgsfield import HiggsfieldCli
+
+    def fake_run(cmd: list[str], **_: object) -> SimpleNamespace:
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"status": "failed"}), stderr="")
+
+    monkeypatch.setattr("starme.higgsfield.subprocess.run", fake_run)
+    with pytest.raises(RuntimeError, match="ended failed"):
+        HiggsfieldCli().result_url("job-9", timeout_seconds=60)

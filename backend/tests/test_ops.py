@@ -198,3 +198,31 @@ def test_qc_completed_rows_carry_playable_episodes() -> None:
     row = client.get("/ops/api/qc", headers=OFFICE).json()["before_qc"][0]
     assert [e["number"] for e in row["episodes"]] == [1, 2, 3]
     assert all("signature=" in e["url"] for e in row["episodes"])
+
+
+def test_video_page_shows_the_character_sheet(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from starme.catalogue import SYNTHETIC_SHELLS
+    from starme.higgsfield import sheet_folder
+    from starme.models import Order
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "faces_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "render_work_dir", str(tmp_path / "renders"))
+    headers = authenticated_headers("sheet-1")
+    order_id = create_order(headers, create_consent(headers)).json()["id"]
+    with SessionLocal() as session:
+        tester = session.get(Order, order_id).tester_reference  # type: ignore[union-attr]
+    (tmp_path / f"{tester}.png").write_bytes(b"portrait")
+    page = f"/ops/api/video/{order_id}"
+    assert client.get(page, headers=OFFICE).json()["render_images"] == ["portrait"]
+
+    costume = next(s for s in SYNTHETIC_SHELLS if s.id == "ek-love-story-001").role_video_desc
+    folder = sheet_folder(b"portrait", costume, settings)
+    folder.mkdir(parents=True)
+    (folder / "sheet.png").write_bytes(b"SHEET")
+    assert client.get(page, headers=OFFICE).json()["render_images"] == ["portrait", "sheet"]
+    got = client.get(f"{page}/image/sheet", headers=OFFICE)
+    assert got.status_code == 200 and got.content == b"SHEET"
+    assert client.get(f"{page}/image/closeup", headers=OFFICE).status_code == 404
+    client.cookies.clear()
+    assert client.get(f"{page}/image/sheet", headers=OFFICE).status_code == 401
