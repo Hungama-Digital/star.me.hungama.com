@@ -80,6 +80,7 @@ video{width:100%;max-height:560px;background:#000;border-radius:8px}
 <a href="#/overview" data-r="overview">Overview</a>
 <a href="#/entries" data-r="entries">Entries</a>
 <a href="#/qc" data-r="qc">QC queue <span class="pill p-a" id="qcCount" hidden></span></a>
+<a href="#/qc-done" data-r="qc-done">QC Completed</a>
 <a href="#/artwork" data-r="artwork">Artwork feed</a>
 <a href="#/pipeline" data-r="pipeline">Pipeline</a>
 <a href="#/team" data-r="team" id="teamLink" hidden>Team</a>
@@ -270,7 +271,7 @@ async function artDetail(id) {
 
 // QC queue
 const qcTab = { v: 'waiting' };
-const QC_TABS = [['waiting', 'Waiting', 'p-a', 'Awaiting QC'], ['approved', 'QC approved', 'p-g', 'QC approved'], ['redo', 'Sent back', 'p-v', 'Sent back to render'], ['rejected', 'Rejected', 'p-r', 'Rejected in QC'], ['before_qc', 'Released before QC', 'p-n', 'Released before QC']];
+const QC_TABS = [['waiting', 'Waiting', 'p-a', 'Awaiting QC'], ['redo', 'Sent back', 'p-v', 'Sent back to render'], ['rejected', 'Rejected', 'p-r', 'Rejected in QC']];
 async function qcQueue() {
   const d = await api('qc');
   const [, , cls, label] = QC_TABS.find((t) => t[0] === qcTab.v);
@@ -285,6 +286,21 @@ async function qcQueue() {
     ${waiting ? `<td>${when(r.updated_at)}</td><td>${dur((Date.now() - new Date(r.updated_at)) / 1000)}</td>` : `<td>${esc(r.decided_by || (qcTab.v === 'before_qc' ? 'Auto-released' : ''))}</td><td>${when(r.decided_at || r.updated_at)}</td><td>${esc(r.note || '')}</td>`}
     <td><a class="btn ${waiting ? 'pri' : ''}" href="#/video/${esc(r.id)}">${waiting ? 'Review' : 'Open'}</a></td></tr>`).join('') || `<tr><td colspan="7" class="muted">${waiting ? 'Queue is empty.' : 'Nothing here yet.'}</td></tr>`}</tbody></table></div>`;
   view.querySelectorAll('[data-qt]').forEach((b) => b.onclick = () => { qcTab.v = b.dataset.qt; qcQueue().catch(fail); });
+  view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = (e) => { if (e.target.tagName !== 'A') location.hash = tr.dataset.go; });
+}
+
+// QC Completed: every video the user can watch, approved or auto-released.
+async function qcDone() {
+  const d = await api('qc');
+  const rows = [
+    ...d.approved.map((r) => ({ ...r, label: 'QC approved', cls: 'p-g', by: r.decided_by, at: r.decided_at })),
+    ...d.before_qc.map((r) => ({ ...r, label: 'Auto-released', cls: 'p-n', by: 'Before QC step', at: r.updated_at })),
+  ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  view.innerHTML = head('Released to users', 'QC Completed', `<span class="muted">${num(rows.length)} videos</span>`) + `
+  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>Status</th><th>Released by</th><th>Released on</th><th>Note</th><th></th></tr></thead>
+  <tbody>${rows.map((r) => `<tr class="click" data-go="#/video/${esc(r.id)}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<div><strong style="color:var(--ink)">${esc(r.name)}</strong><div class="muted mono">${esc(r.id.slice(0, 8))}</div></div></div></td>
+    <td>${esc(r.title)}</td><td><span class="pill ${r.cls}">${r.label}</span></td><td>${esc(r.by || '')}</td><td>${when(r.at)}</td><td>${esc(r.note || '')}</td>
+    <td><a class="btn" href="#/video/${esc(r.id)}">Open</a></td></tr>`).join('') || '<tr><td colspan="7" class="muted">No released videos yet.</td></tr>'}</tbody></table></div>`;
   view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = (e) => { if (e.target.tagName !== 'A') location.hash = tr.dataset.go; });
 }
 
@@ -403,7 +419,7 @@ function route() {
   document.querySelectorAll('nav .links a').forEach((a) => a.classList.toggle('on', a.dataset.r === top));
   view.innerHTML = '<p class="muted">Loading…</p>';
   if (!me) return;
-  const run = { overview: () => overview(), entries, team: teamView, password: passwordView, qc: qcQueue, artwork: artworkFeed, pipeline: pipelineView, video: () => videoDetail(id), art: () => artDetail(id) }[name] || overview;
+  const run = { overview: () => overview(), entries, team: teamView, password: passwordView, 'qc-done': qcDone, qc: qcQueue, artwork: artworkFeed, pipeline: pipelineView, video: () => videoDetail(id), art: () => artDetail(id) }[name] || overview;
   run().catch(fail);
 }
 window.onhashchange = route;
