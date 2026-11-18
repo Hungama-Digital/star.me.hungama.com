@@ -279,6 +279,21 @@ def _audit_trail(session: Session, ref: str) -> list[dict[str, object]]:
     ]
 
 
+def _episodes(order: Order, settings: Settings) -> list[dict[str, object]]:
+    """Signed links for the CMS player. Keys under orders/ are this user's own
+    render; anything else (shells/...) is a stock show file served to everyone,
+    which is what the August test orders got."""
+    ttl = settings.signed_url_ttl_seconds
+    return [
+        {
+            "number": e.episode_number,
+            "url": signed_url(e.object_key, "stream", ttl, settings),
+            "personalised": e.object_key.startswith("orders/"),
+        }
+        for e in sorted(order.episodes, key=lambda e: e.episode_number)
+    ]
+
+
 QC_EVENTS = {
     "order.qc_approved": "approved",
     "order.qc_redo": "redo",
@@ -287,7 +302,7 @@ QC_EVENTS = {
 
 
 @api.get("/api/qc")
-def qc(session: SessionDep) -> dict[str, list[dict[str, object]]]:
+def qc(session: SessionDep, settings: SettingsDep) -> dict[str, list[dict[str, object]]]:
     """Waiting videos plus QC history, grouped by outcome. READY videos with no
     QC decision were released before the gate existed (18/11/2026)."""
     decisions: dict[str, AuditEvent] = {}
@@ -305,7 +320,7 @@ def qc(session: SessionDep) -> dict[str, list[dict[str, object]]]:
                 Order.id.in_(decisions),
             )
         )
-        .options(selectinload(Order.consent))
+        .options(selectinload(Order.consent), selectinload(Order.episodes))
         .order_by(Order.updated_at.desc())
     ).all()
     selfies = _latest_selfies(session, {o.tester_reference for o in orders})
@@ -326,6 +341,7 @@ def qc(session: SessionDep) -> dict[str, list[dict[str, object]]]:
                 "decided_by": last.actor_reference if last and group != "waiting" else None,
                 "decided_at": _iso(last.occurred_at) if last and group != "waiting" else None,
                 "note": json.loads(last.payload_json or "{}").get("note") if last else None,
+                "episodes": _episodes(order, settings),
             }
         )
     groups["waiting"].reverse()  # oldest first: that is the order to review in

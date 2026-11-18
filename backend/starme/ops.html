@@ -296,12 +296,23 @@ async function qcDone() {
     ...d.approved.map((r) => ({ ...r, label: 'QC approved', cls: 'p-g', by: r.decided_by, at: r.decided_at })),
     ...d.before_qc.map((r) => ({ ...r, label: 'Auto-released', cls: 'p-n', by: 'Before QC step', at: r.updated_at })),
   ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const eps = (r, i) => r.episodes.map((e, j) => `<button class="btn" style="min-height:36px;padding:0 10px" data-play="${i}:${j}">Ep ${e.number}</button>`).join(' ') || '<span class="muted">None</span>';
+  const kind = (r) => !r.episodes.length ? '' : r.episodes.every((e) => e.personalised) ? '<span class="pill p-g">Face-swapped</span>' : '<span class="pill p-a">Stock show file</span>';
   view.innerHTML = head('Released to users', 'QC Completed', `<span class="muted">${num(rows.length)} videos</span>`) + `
-  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>Status</th><th>Released by</th><th>Released on</th><th>Note</th><th></th></tr></thead>
-  <tbody>${rows.map((r) => `<tr class="click" data-go="#/video/${esc(r.id)}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<div><strong style="color:var(--ink)">${esc(r.name)}</strong><div class="muted mono">${esc(r.id.slice(0, 8))}</div></div></div></td>
-    <td>${esc(r.title)}</td><td><span class="pill ${r.cls}">${r.label}</span></td><td>${esc(r.by || '')}</td><td>${when(r.at)}</td><td>${esc(r.note || '')}</td>
+  <div class="card" style="font-size:13px"><span class="pill p-g">Face-swapped</span> the user's own render. <span class="pill p-a">Stock show file</span> the same original episode every early test user received, not their face.</div>
+  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>Status</th><th>Episodes</th><th>Released by</th><th>Released on</th><th></th></tr></thead>
+  <tbody>${rows.map((r, i) => `<tr data-row="${i}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<div><strong style="color:var(--ink)">${esc(r.name)}</strong><div class="muted mono">${esc(r.id.slice(0, 8))}</div></div></div></td>
+    <td>${esc(r.title)}</td><td><span class="pill ${r.cls}">${r.label}</span></td><td><div class="row">${eps(r, i)} ${kind(r)}</div></td><td>${esc(r.by || '')}</td><td>${when(r.at)}</td>
     <td><a class="btn" href="#/video/${esc(r.id)}">Open</a></td></tr>`).join('') || '<tr><td colspan="7" class="muted">No released videos yet.</td></tr>'}</tbody></table></div>`;
-  view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = (e) => { if (e.target.tagName !== 'A') location.hash = tr.dataset.go; });
+  view.querySelectorAll('[data-play]').forEach((b) => b.onclick = () => {
+    const [i, j] = b.dataset.play.split(':').map(Number), r = rows[i], e = r.episodes[j];
+    view.querySelectorAll('tr.player').forEach((t) => t.remove());
+    const tr = document.createElement('tr');
+    tr.className = 'player';
+    tr.innerHTML = `<td colspan="7"><div class="row between" style="margin-bottom:8px"><strong style="color:var(--ink)">${esc(r.name)} · Episode ${e.number}</strong><button class="btn" style="min-height:36px" data-close>Close</button></div><video controls autoplay preload="metadata" src="${safeUrl(e.url)}"></video></td>`;
+    view.querySelector(`tr[data-row="${i}"]`).after(tr);
+    tr.querySelector('[data-close]').onclick = () => tr.remove();
+  });
 }
 
 // Artwork feed

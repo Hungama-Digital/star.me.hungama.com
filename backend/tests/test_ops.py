@@ -191,3 +191,10 @@ def test_qc_page_keeps_history_by_outcome(monkeypatch: pytest.MonkeyPatch) -> No
     assert [r["id"] for r in groups["rejected"]] == [rejected]
     assert groups["rejected"][0]["note"] == "n"
     assert [r["id"] for r in groups["before_qc"]] == [before]
+
+
+def test_qc_completed_rows_carry_playable_episodes() -> None:
+    rendered_order(authenticated_headers("gate-off"))  # gate off in tests: auto-released
+    row = client.get("/ops/api/qc", headers=OFFICE).json()["before_qc"][0]
+    assert [e["number"] for e in row["episodes"]] == [1, 2, 3]
+    assert all("signature=" in e["url"] for e in row["episodes"])
