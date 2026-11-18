@@ -170,3 +170,24 @@ def test_team_password_lets_any_email_in_as_a_reviewer(monkeypatch: pytest.Monke
     assert sign_in("qc@hungama.com") == 200  # personal password still works
     assert sign_in("not-an-email", "Team@Pass1") == 401
     assert sign_in("anyone@hungama.com", "team@pass1") == 401
+
+
+def test_qc_page_keeps_history_by_outcome(monkeypatch: pytest.MonkeyPatch) -> None:
+    before = rendered_order(authenticated_headers("early"))  # gate off: auto-released
+    monkeypatch.setattr(get_settings(), "video_qc_gate", True)
+    approved = rendered_order(authenticated_headers("a"))
+    rejected = rendered_order(authenticated_headers("b"))
+    waiting = rendered_order(authenticated_headers("c"))
+    for order_id, decision in [(approved, "approve"), (rejected, "reject")]:
+        client.post(
+            f"/ops/api/video/{order_id}/qc",
+            headers=OFFICE,
+            json={"decision": decision, "note": "n"},
+        )
+    groups = client.get("/ops/api/qc", headers=OFFICE).json()
+    assert [r["id"] for r in groups["waiting"]] == [waiting]
+    assert [r["id"] for r in groups["approved"]] == [approved]
+    assert groups["approved"][0]["decided_by"] == "qc@hungama.com"
+    assert [r["id"] for r in groups["rejected"]] == [rejected]
+    assert groups["rejected"][0]["note"] == "n"
+    assert [r["id"] for r in groups["before_qc"]] == [before]

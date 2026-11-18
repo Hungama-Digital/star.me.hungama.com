@@ -269,12 +269,22 @@ async function artDetail(id) {
 }
 
 // QC queue
+const qcTab = { v: 'waiting' };
+const QC_TABS = [['waiting', 'Waiting', 'p-a', 'Awaiting QC'], ['approved', 'QC approved', 'p-g', 'QC approved'], ['redo', 'Sent back', 'p-v', 'Sent back to render'], ['rejected', 'Rejected', 'p-r', 'Rejected in QC'], ['before_qc', 'Released before QC', 'p-n', 'Released before QC']];
 async function qcQueue() {
-  const d = await api('entries?kind=video&status=AWAITING_QC&limit=200');
-  const rows = [...d.rows].reverse(); // oldest first
-  view.innerHTML = head('Video only · nothing reaches the user until approved', 'QC queue', `<span class="muted">${num(d.total)} waiting</span>`) + `
-  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>Waiting since</th><th>Waited</th><th></th></tr></thead>
-  <tbody>${rows.map((r) => `<tr class="click" data-go="#/video/${esc(r.id)}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<strong style="color:var(--ink)">${esc(r.name)}</strong></div></td><td>${esc(r.title)}</td><td>${when(r.updated_at)}</td><td>${dur((Date.now() - new Date(r.updated_at)) / 1000)}</td><td><a class="btn pri" href="#/video/${esc(r.id)}">Review</a></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Queue is empty.</td></tr>'}</tbody></table></div>`;
+  const d = await api('qc');
+  const [, , cls, label] = QC_TABS.find((t) => t[0] === qcTab.v);
+  const rows = d[qcTab.v];
+  const waiting = qcTab.v === 'waiting';
+  const tabs = QC_TABS.map(([k, l]) => `<button class="btn ${k === qcTab.v ? 'sel' : ''}" data-qt="${k}">${l} <span class="muted" style="font-weight:400">${d[k].length}</span></button>`).join('');
+  view.innerHTML = head('Video only · nothing reaches the user until approved', 'QC queue', `<span class="muted">${num(d.waiting.length)} waiting</span>`) + `
+  <div class="row">${tabs}</div>
+  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>QC status</th>${waiting ? '<th>Waiting since</th><th>Waited</th>' : '<th>Decided by</th><th>When</th><th>Note</th>'}<th></th></tr></thead>
+  <tbody>${rows.map((r) => `<tr class="click" data-go="#/video/${esc(r.id)}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<div><strong style="color:var(--ink)">${esc(r.name)}</strong><div class="muted mono">${esc(r.id.slice(0, 8))}</div></div></div></td><td>${esc(r.title)}</td>
+    <td><span class="pill ${cls}">${label}</span>${qcTab.v === 'redo' && r.status !== 'AWAITING_QC' ? ' ' + pill(r.status) : ''}</td>
+    ${waiting ? `<td>${when(r.updated_at)}</td><td>${dur((Date.now() - new Date(r.updated_at)) / 1000)}</td>` : `<td>${esc(r.decided_by || (qcTab.v === 'before_qc' ? 'Auto-released' : ''))}</td><td>${when(r.decided_at || r.updated_at)}</td><td>${esc(r.note || '')}</td>`}
+    <td><a class="btn ${waiting ? 'pri' : ''}" href="#/video/${esc(r.id)}">${waiting ? 'Review' : 'Open'}</a></td></tr>`).join('') || `<tr><td colspan="7" class="muted">${waiting ? 'Queue is empty.' : 'Nothing here yet.'}</td></tr>`}</tbody></table></div>`;
+  view.querySelectorAll('[data-qt]').forEach((b) => b.onclick = () => { qcTab.v = b.dataset.qt; qcQueue().catch(fail); });
   view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = (e) => { if (e.target.tagName !== 'A') location.hash = tr.dataset.go; });
 }
 

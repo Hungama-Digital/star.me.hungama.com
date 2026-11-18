@@ -279,6 +279,59 @@ def _audit_trail(session: Session, ref: str) -> list[dict[str, object]]:
     ]
 
 
+QC_EVENTS = {
+    "order.qc_approved": "approved",
+    "order.qc_redo": "redo",
+    "order.qc_rejected": "rejected",
+}
+
+
+@api.get("/api/qc")
+def qc(session: SessionDep) -> dict[str, list[dict[str, object]]]:
+    """Waiting videos plus QC history, grouped by outcome. READY videos with no
+    QC decision were released before the gate existed (18/11/2026)."""
+    decisions: dict[str, AuditEvent] = {}
+    for event in session.scalars(
+        select(AuditEvent)
+        .where(AuditEvent.event_type.in_(QC_EVENTS))
+        .order_by(AuditEvent.occurred_at)
+    ):
+        decisions[event.subject_reference] = event  # latest wins
+    orders = session.scalars(
+        select(Order)
+        .where(
+            or_(
+                Order.status.in_([OrderState.AWAITING_QC, OrderState.READY]),
+                Order.id.in_(decisions),
+            )
+        )
+        .options(selectinload(Order.consent))
+        .order_by(Order.updated_at.desc())
+    ).all()
+    selfies = _latest_selfies(session, {o.tester_reference for o in orders})
+    groups: dict[str, list[dict[str, object]]] = {
+        k: [] for k in ["waiting", "approved", "redo", "rejected", "before_qc"]
+    }
+    for order in orders:
+        last = decisions.get(order.id)
+        if order.status == OrderState.AWAITING_QC:
+            group = "waiting"  # a redo that came back waits again
+        elif last is not None:
+            group = QC_EVENTS[last.event_type]
+        else:
+            group = "before_qc"
+        groups[group].append(
+            {
+                **_video_row(order, selfies),
+                "decided_by": last.actor_reference if last and group != "waiting" else None,
+                "decided_at": _iso(last.occurred_at) if last and group != "waiting" else None,
+                "note": json.loads(last.payload_json or "{}").get("note") if last else None,
+            }
+        )
+    groups["waiting"].reverse()  # oldest first: that is the order to review in
+    return groups
+
+
 @api.get("/api/video/{order_id}")
 def video(order_id: str, session: SessionDep, settings: SettingsDep) -> dict[str, object]:
     order = _order(session, order_id)
