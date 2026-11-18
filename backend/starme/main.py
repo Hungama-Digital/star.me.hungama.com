@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from starme import __version__
 from starme.api import router
 from starme.config import get_settings
+from starme.ops import router as ops_router
 
 
 def create_app() -> FastAPI:
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
         redoc_url=None,
     )
     app.include_router(router)
+    app.include_router(ops_router)
     return app
 
 

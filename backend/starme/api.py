@@ -59,13 +59,13 @@ from starme.schemas import (
     JobResponse,
     JobState,
     ListingItem,
-    ShowEpisodes,
     OrderCreateRequest,
     OrderResponse,
     OrderState,
     RevocationResponse,
     SelfieResponse,
     ServiceState,
+    ShowEpisodes,
     SyntheticShell,
 )
 from starme.security import open_client, utcnow
@@ -115,6 +115,9 @@ def owned_order(session: Session, order_id: str, client: ClientSession) -> Order
 
 
 def order_response(order: Order, settings: Settings) -> OrderResponse:
+    # A video waiting for QC looks like it is still rendering to the App:
+    # no episode links until a reviewer approves it in the CMS.
+    held = order.status == OrderState.AWAITING_QC
     first_look = None
     if order.first_look is not None:
         first_look = FirstLookResponse(
@@ -143,11 +146,11 @@ def order_response(order: Order, settings: Settings) -> OrderResponse:
                 settings,
             ),
         )
-        for episode in sorted(order.episodes, key=lambda item: item.episode_number)
+        for episode in ([] if held else sorted(order.episodes, key=lambda e: e.episode_number))
     ]
     return OrderResponse(
         id=order.id,
-        status=OrderState(order.status),
+        status=OrderState.FULL_RENDERING if held else OrderState(order.status),
         shell_id=order.shell_id,
         role_id=order.role_id,
         package_id=order.package_id,

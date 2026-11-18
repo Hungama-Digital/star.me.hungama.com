@@ -108,6 +108,14 @@ class Settings(BaseSettings):
     # write. Operator-placed portraits under media_dir/faces still work.
     faces_dir: str = "/faces"
 
+    # ── Ops CMS (/ops) ─────────────────────────────────────────────────────
+    # Finished videos wait in AWAITING_QC until a reviewer approves them in
+    # the CMS. Artwork is never gated.
+    video_qc_gate: bool = True
+    # The CMS has no login: it is reachable only from these networks, judged
+    # by the X-Real-IP nginx sets from $remote_addr (clients cannot forge it).
+    ops_allowed_networks: str = "10.0.0.0/8,127.0.0.1/32"
+
     # ── App artwork swap (selfie -> series key art) ────────────────────────
     # gpt-image-2 repaints the artwork character's face. Chosen on measured
     # likeness against Neeraj's reference on the real Mars posters, 4 Sep 2026:

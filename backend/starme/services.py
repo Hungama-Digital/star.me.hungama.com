@@ -346,8 +346,12 @@ def complete_full_render(session: Session, job_id: str) -> None:
             )
     job.status = JobState.COMPLETE
     job.completed_at = datetime.now(UTC)
-    order.status = OrderState.READY
-    audit(session, "order.ready", order.tester_reference, "order", order.id)
+    if settings.video_qc_gate:
+        order.status = OrderState.AWAITING_QC
+        audit(session, "order.awaiting_qc", order.tester_reference, "order", order.id)
+    else:
+        order.status = OrderState.READY
+        audit(session, "order.ready", order.tester_reference, "order", order.id)
     session.commit()
 
 

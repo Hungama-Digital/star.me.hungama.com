@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StarME Ops</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+.t-dark{--bg:#0b0c0e;--surface:#131417;--border:#26282e;--line:#1c1e22;--text:#d0d3d8;--muted:#8a8f98;--graybg:#23252a;--gray:#c9ccd1;--ph:#1c1e23;--ctl:#2e3137;--th:#16171a;--hover:#191a1f;--accent:#7c6cf2;--link:#a99bff;--accbg:#221e3d;--acctext:#b4a8ff;--ink:#edeef0;--selbg:#2a2c33;--selbd:#4a4d57;--gbg:#12261a;--gfg:#4ade80;--abg:#2a2110;--afg:#fbbf24;--rbg:#2c1515;--rfg:#f87171;--rbd:#7f2a2a}
+.t-light{--bg:#fbfbfa;--surface:#ffffff;--border:#e9e9e7;--line:#f1f1ef;--text:#37352f;--muted:#6f6e69;--graybg:#f1f1ef;--gray:#37352f;--ph:#efefed;--ctl:#dcdcd8;--th:#fafaf9;--hover:#f7f7f5;--accent:#6a56e8;--link:#5b47e0;--accbg:#eeebfd;--acctext:#4c3bc4;--ink:#191919;--selbg:#191919;--selbd:#191919;--gbg:#e8f5ec;--gfg:#1f7a3d;--abg:#fdf3dc;--afg:#8a5a00;--rbg:#fde8e8;--rfg:#b42318;--rbd:#e9a3a3}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:var(--link)}
+h1,h2{letter-spacing:-.02em;color:var(--ink);margin:0}
+h1{font-size:28px}h2{font-size:17px}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+nav{flex:1 1 220px;max-width:100%;background:var(--surface);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;gap:20px}
+nav .links{display:flex;flex-direction:column;gap:2px}
+nav .links a{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;color:var(--text);text-decoration:none}
+nav .links a:hover{background:var(--hover)}
+nav .links a.on{background:var(--accbg);color:var(--ink);font-weight:600}
+main{flex:999 1 560px;min-width:0;padding:28px 32px 48px;display:flex;flex-direction:column;gap:20px}
+.logo{display:flex;gap:10px;align-items:center;padding:0 12px}
+.mark{width:28px;height:28px;border-radius:8px;background:#6a56e8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:0}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.lbl{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.kpi{font-size:30px;font-weight:700;color:var(--ink);margin-top:6px}
+.muted{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.between{justify-content:space-between}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--ctl);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.pri{background:#6a56e8;border-color:#6a56e8;color:#fff}
+.btn.sel{background:var(--selbg);border-color:var(--selbd);color:#fff}
+.btn.bad{border-color:var(--rbd);color:var(--rfg)}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-g{background:var(--gbg);color:var(--gfg)}.p-a{background:var(--abg);color:var(--afg)}.p-r{background:var(--rbg);color:var(--rfg)}.p-v{background:var(--accbg);color:var(--acctext)}.p-n{background:var(--graybg);color:var(--gray)}
+.tblbox{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--th);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--hover)}
+.av{width:36px;height:36px;border-radius:8px;object-fit:cover;background:var(--ph);flex:none}
+.ph{background:var(--ph);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.bar{height:8px;background:var(--graybg);border-radius:99px;overflow:hidden}.bar span{display:block;height:8px;background:var(--accent)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:140px;border-bottom:1px solid var(--border)}
+.bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+input,select,textarea{min-height:44px;border:1px solid var(--ctl);background:var(--surface);color:var(--ink);border-radius:8px;padding:0 10px;font:inherit}
+textarea{padding:10px;width:100%}
+label.chk{display:flex;gap:10px;align-items:flex-start;min-height:40px;cursor:pointer}
+label.chk input{min-height:0;width:18px;height:18px;margin-top:2px;accent-color:#6a56e8}
+.mono{font-family:'JetBrains Mono',Menlo,monospace;font-size:12px}
+.seg{flex:1;min-height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-weight:600;cursor:pointer}
+.seg.on{background:var(--surface);color:var(--ink)}
+.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.art{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;background:var(--ph);display:block}
+video{width:100%;max-height:560px;background:#000;border-radius:8px}
+.err{background:var(--rbg);color:var(--rfg);border:1px solid var(--rbd);border-radius:8px;padding:12px}
+</style>
+</head>
+<body>
+<div id="app" class="app t-dark">
+<nav aria-label="Main">
+<div class="logo"><span class="mark" aria-hidden="true">S</span><div><div style="font-weight:700;color:var(--ink)">StarME Ops</div><div class="muted" style="font-size:12px">Backend console</div></div></div>
+<div class="links">
+<a href="#/overview" data-r="overview">Overview</a>
+<a href="#/entries" data-r="entries">Entries</a>
+<a href="#/qc" data-r="qc">QC queue <span class="pill p-a" id="qcCount" hidden></span></a>
+<a href="#/artwork" data-r="artwork">Artwork feed</a>
+<a href="#/pipeline" data-r="pipeline">Pipeline</a>
+</div>
+<div role="group" aria-label="Theme" style="display:flex;gap:4px;padding:4px;margin:0 12px;background:var(--graybg);border-radius:10px">
+<button class="seg" data-theme="dark">Dark</button><button class="seg" data-theme="light">Light</button>
+</div>
+<div class="muted" style="margin-top:auto;padding:0 12px;font-size:11px">Office network / VPN only<br>Confidential | Hungama Digital Media Entertainment Pvt. Ltd.</div>
+</nav>
+<main id="view" aria-live="polite"></main>
+</div>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeUrl = (u) => (/^https?:\/\//i.test(u || '') || /^\//.test(u || '') ? esc(u) : '');
+const num = (n) => (n ?? 0).toLocaleString('en-IN');
+// Indian system: lakhs and crores once numbers get big.
+const big = (n) => n >= 1e7 ? (n / 1e7).toFixed(2) + ' Cr' : n >= 1e5 ? (n / 1e5).toFixed(2) + ' L' : num(n);
+const when = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso), p = (x) => String(x).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const dur = (s) => s == null ? 'n/a' : s < 60 ? Math.round(s) + 's' : Math.floor(s / 60) + 'm ' + Math.round(s % 60) + 's';
+const STATUS = {
+  QUEUED: ['Queued', 'p-n'], FIRST_LOOK_RENDERING: ['First look rendering', 'p-v'], AWAITING_FIRST_LOOK: ['Waiting for user', 'p-n'],
+  RETAKE_REQUIRED: ['Retake asked', 'p-a'], FULL_RENDERING: ['Rendering', 'p-v'], AWAITING_QC: ['Awaiting QC', 'p-a'],
+  READY: ['Released', 'p-g'], FAILED: ['Failed', 'p-r'], CANCELED: ['Canceled', 'p-n'],
+  queued: ['Queued', 'p-n'], running: ['Generating', 'p-v'], succeeded: ['Released', 'p-g'], failed: ['Failed', 'p-r'],
+};
+const pill = (s, detail) => {
+  if (s === 'failed' && /^Taken down/.test(detail || '')) return '<span class="pill p-r">Taken down</span>';
+  const [label, cls] = STATUS[s] || [s, 'p-n'];
+  return `<span class="pill ${cls}">${esc(label)}</span>`;
+};
+async function api(path, body) {
+  const res = await fetch('/ops/api/' + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+  return res.json();
+}
+const view = $('#view');
+const fail = (e) => { view.insertAdjacentHTML('afterbegin', `<div class="err">Could not load: ${esc(e.message)}</div>`); };
+let timer = null;
+
+// Theme
+function setTheme(t) {
+  $('#app').className = 'app t-' + t;
+  document.querySelectorAll('[data-theme]').forEach((b) => b.classList.toggle('on', b.dataset.theme === t));
+  try { localStorage.setItem('starme-ops-theme', t); } catch (e) {}
+}
+document.querySelectorAll('[data-theme]').forEach((b) => b.onclick = () => setTheme(b.dataset.theme));
+let saved = 'dark';
+try { saved = localStorage.getItem('starme-ops-theme') || 'dark'; } catch (e) {}
+setTheme(saved);
+
+const head = (label, title, right = '') => `<header class="row between" style="align-items:flex-end"><div><div class="lbl">${label}</div><h1 style="margin-top:4px">${title}</h1></div><div class="row">${right}</div></header>`;
+const statusBars = (obj) => {
+  const entries = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+  const top = Math.max(1, ...entries.map((e) => e[1]));
+  return entries.length ? entries.map(([s, n]) => `<div style="display:grid;grid-template-columns:150px 1fr 60px;gap:12px;align-items:center;margin-top:10px"><span>${pill(s)}</span><div class="bar"><span style="width:${Math.round(n / top * 100)}%"></span></div><strong style="text-align:right;color:var(--ink)">${num(n)}</strong></div>`).join('') : '<p class="muted">Nothing in this period.</p>';
+};
+
+// Overview
+async function overview(days = 1) {
+  const d = await api('overview?days=' + days);
+  const ranges = [[1, 'Today'], [7, '7 days'], [30, '30 days']].map(([v, l]) => `<button class="btn ${v === days ? 'sel' : ''}" data-days="${v}">${l}</button>`).join('');
+  const released = (d.video_by_status.READY || 0) + (d.artwork_by_status.succeeded || 0);
+  const failed = (d.video_by_status.FAILED || 0) + (d.artwork_by_status.failed || 0);
+  const top = Math.max(1, ...d.series);
+  view.innerHTML = head('Live data · ' + when(new Date().toISOString()).slice(0, 10), 'Overview', ranges) + `
+  <section class="grid">
+    <div class="card"><div class="lbl">Entries</div><div class="kpi">${big(d.videos + d.artworks)}</div><div class="muted">Video ${num(d.videos)} · Artwork ${num(d.artworks)}</div></div>
+    <div class="card"><div class="lbl">Selfies uploaded</div><div class="kpi">${big(d.selfies)}</div></div>
+    <div class="card"><div class="lbl">Videos in pipeline</div><div class="kpi">${num(d.videos_in_pipeline)}</div><div class="muted">Right now</div></div>
+    <div class="card"><div class="lbl">Awaiting QC</div><div class="kpi">${num(d.awaiting_qc)}</div><a href="#/qc">Open queue</a></div>
+    <div class="card"><div class="lbl">Released</div><div class="kpi">${big(released)}</div></div>
+    <div class="card"><div class="lbl">Failed</div><div class="kpi" style="color:var(--rfg)">${num(failed)}</div><a href="#/pipeline">See errors</a></div>
+    <div class="card"><div class="lbl">Artwork time to user</div><div class="kpi">${dur(d.artwork_median_s)}</div><div class="muted">Median · p95 ${dur(d.artwork_p95_s)}</div></div>
+  </section>
+  <section class="grid2">
+    <div class="card"><h2>Video orders by status</h2>${statusBars(d.video_by_status)}</div>
+    <div class="card"><h2>Artwork by status</h2>${statusBars(d.artwork_by_status)}</div>
+  </section>
+  <section class="grid2">
+    <div class="card"><h2 style="margin-bottom:12px">Entries per ${days === 1 ? 'hour' : 'day'}</h2><div class="bars" role="img" aria-label="Entries over time">${d.series.map((n) => `<div title="${n}" style="height:${Math.round(n / top * 100)}%"></div>`).join('')}</div></div>
+    <div class="card"><h2 style="margin-bottom:8px">Latest activity</h2>${d.activity.map((a) => `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="muted mono" style="width:120px">${when(a.at)}</span><span class="pill p-n">${esc(a.type)}</span><a href="#/${a.subject === 'order' ? 'video' : a.subject === 'artwork' ? 'art' : 'entries'}/${esc(a.ref)}" class="mono">${esc(String(a.ref).slice(0, 8))}</a></div>`).join('') || '<p class="muted">No activity yet.</p>'}</div>
+  </section>`;
+  view.querySelectorAll('[data-days]').forEach((b) => b.onclick = () => overview(+b.dataset.days).catch(fail));
+}
+
+// Entries
+const ent = { kind: 'all', status: '', q: '', offset: 0 };
+async function entries() {
+  const p = new URLSearchParams({ kind: ent.kind, q: ent.q, limit: 50, offset: ent.offset });
+  if (ent.status) p.set('status', ent.status);
+  const d = await api('entries?' + p);
+  const tabs = [['all', 'All'], ['video', 'Video'], ['artwork', 'Artwork']].map(([k, l]) => `<button class="btn ${k === ent.kind ? 'sel' : ''}" data-kind="${k}">${l}</button>`).join('');
+  const opts = ['', ...Object.keys(STATUS)].map((s) => `<option value="${s}" ${s === ent.status ? 'selected' : ''}>${s ? STATUS[s][0] + ' (' + s + ')' : 'All statuses'}</option>`).join('');
+  view.innerHTML = head('Every submission, video and artwork', 'Entries', `<span class="muted">${num(d.total)} total</span>`) + `
+  <div class="row">${tabs}</div>
+  <form class="card row" id="f" style="padding:14px">
+    <label>Search <input name="q" type="search" value="${esc(ent.q)}" placeholder="Name, user or entry ID"></label>
+    <label>Status <select name="status">${opts}</select></label>
+    <button class="btn pri">Apply</button>
+  </form>
+  <div class="card tblbox" style="padding:0"><table>
+  <thead><tr><th>User</th><th>Type</th><th>Title</th><th>Submitted</th><th>Updated</th><th>Status</th><th>Entry</th></tr></thead>
+  <tbody>${d.rows.map((r) => `<tr class="click" data-go="#/${r.kind === 'video' ? 'video' : 'art'}/${esc(r.id)}">
+    <td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="" loading="lazy">` : '<span class="av ph"></span>'}<div><strong style="color:var(--ink)">${esc(r.name)}</strong><div class="muted mono">${esc(r.user)}</div></div></div></td>
+    <td>${r.kind === 'video' ? 'Video' : 'Artwork'}</td><td>${esc(r.title)}</td><td>${when(r.created_at)}</td><td>${when(r.updated_at)}</td>
+    <td>${pill(r.status, r.detail)}</td><td class="mono">${esc(r.id.slice(0, 8))}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">No entries match.</td></tr>'}</tbody></table></div>
+  <div class="row between"><span class="muted">Showing ${d.rows.length ? ent.offset + 1 : 0} to ${ent.offset + d.rows.length} of ${num(d.total)}</span>
+  <div class="row"><button class="btn" id="prev" ${ent.offset ? '' : 'disabled'}>Previous</button><button class="btn" id="next" ${ent.offset + 50 < d.total ? '' : 'disabled'}>Next</button></div></div>`;
+  view.querySelectorAll('[data-kind]').forEach((b) => b.onclick = () => { ent.kind = b.dataset.kind; ent.offset = 0; entries().catch(fail); });
+  $('#f').onsubmit = (e) => { e.preventDefault(); const f = new FormData(e.target); ent.q = f.get('q'); ent.status = f.get('status'); ent.offset = 0; entries().catch(fail); };
+  $('#prev').onclick = () => { ent.offset = Math.max(0, ent.offset - 50); entries().catch(fail); };
+  $('#next').onclick = () => { ent.offset += 50; entries().catch(fail); };
+  view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = () => location.hash = tr.dataset.go);
+}
+
+// Video detail (also the QC decision screen)
+const CHECKS = ['Face looks like the user, not the original actor', 'Expression, blinks and lip movement match the original', 'Close-ups and side profiles match the user', 'Original beard, earring and clothes are gone', 'Other people, room, light and camera unchanged', 'No subtitles, captions or stray text', 'Audio in sync, no frozen or jumping frames', 'Nothing offensive or off-brand'];
+async function videoDetail(id) {
+  const d = await api('video/' + encodeURIComponent(id));
+  const qc = d.status === 'AWAITING_QC';
+  view.innerHTML = `<div><a href="#/entries">Entries</a> <span class="muted">/ ${esc(d.id)}</span></div>` +
+  head('Video order', esc(d.name) + ' ' + pill(d.status)) + `
+  <div class="grid2" style="align-items:start">
+    <section class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div class="row" style="flex-wrap:nowrap">${d.image ? `<img src="${safeUrl(d.image)}" alt="Selfie" style="width:96px;height:96px;object-fit:cover;border-radius:10px">` : '<div class="ph" style="width:96px;height:96px">No selfie</div>'}
+      <div><div><strong style="color:var(--ink)">${esc(d.title)}</strong> · ${esc(d.role)} · ${esc(d.detail)}</div><div class="muted mono">${esc(d.user)}</div>
+      <div class="muted">Submitted ${when(d.created_at)} · updated ${when(d.updated_at)}</div>
+      <div class="muted">Consent ${esc(d.consent.version)} on ${when(d.consent.accepted_at)}${d.consent.revoked_at ? ' · <span class="pill p-r">Revoked</span>' : ''}</div></div></div>
+      ${d.first_look ? `<div><div class="lbl">First look · ${esc(d.first_look.status)}</div><video controls preload="metadata" src="${safeUrl(d.first_look.url)}"></video></div>` : ''}
+      ${d.episodes.map((e) => `<div><div class="lbl">Episode ${e.number}</div><video controls preload="metadata" src="${safeUrl(e.url)}"></video></div>`).join('') || '<p class="muted">No episodes rendered yet.</p>'}
+    </section>
+    <section style="display:flex;flex-direction:column;gap:16px">
+      ${qc ? `<div class="card" style="display:flex;flex-direction:column;gap:10px"><h2>QC decision</h2><div class="muted">Nothing reaches the user until you approve.</div>
+        ${CHECKS.map((c, i) => `<label class="chk"><input type="checkbox" data-chk="${i}"><span>${esc(c)}</span></label>`).join('')}
+        <textarea id="note" rows="2" placeholder="Note (required for redo or reject)"></textarea>
+        <button class="btn pri" id="approve" disabled>Approve and release to user</button>
+        <div class="row"><button class="btn" id="redo">Send back to render again</button><button class="btn bad" id="reject">Reject order</button></div>
+        <div class="muted" style="font-size:12px">Approve unlocks when every check is ticked.</div></div>` : ''}
+      <div class="card tblbox" style="padding:0"><div style="padding:16px 16px 4px"><h2>Render jobs</h2></div><table><thead><tr><th>Step</th><th>Status</th><th>Tries</th><th>Started</th><th>Took</th></tr></thead>
+      <tbody>${d.jobs.map((j) => `<tr><td>${esc(j.kind)}</td><td>${pill(j.status)}${j.failure ? `<div class="mono" style="color:var(--rfg);margin-top:4px">${esc(j.failure)}</div>` : ''}</td><td>${j.attempts}</td><td>${when(j.started_at)}</td><td>${dur(j.seconds)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No jobs.</td></tr>'}</tbody></table></div>
+      <div class="card"><h2 style="margin-bottom:8px">Audit trail</h2>${d.audit.map((a) => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="muted mono" style="width:120px">${when(a.at)}</span><span>${esc(a.type)}</span><span class="muted">${esc(a.by)}</span>${a.payload && a.payload.note ? `<span>"${esc(a.payload.note)}"</span>` : ''}</div>`).join('') || '<p class="muted">Nothing yet.</p>'}</div>
+    </section>
+  </div>`;
+  if (!qc) return;
+  const boxes = [...view.querySelectorAll('[data-chk]')];
+  boxes.forEach((b) => b.onchange = () => $('#approve').disabled = !boxes.every((x) => x.checked));
+  const decide = async (decision) => {
+    const note = $('#note').value.trim();
+    if (decision !== 'approve' && !note) { $('#note').focus(); return; }
+    if (decision === 'reject' && !confirm('Reject this order? The user will see it as failed.')) return;
+    await api('video/' + encodeURIComponent(id) + '/qc', { decision, note }).catch((e) => alert(e.message));
+    refreshQcCount(); videoDetail(id).catch(fail);
+  };
+  $('#approve').onclick = () => decide('approve');
+  $('#redo').onclick = () => decide('redo');
+  $('#reject').onclick = () => decide('reject');
+}
+
+// Artwork detail
+async function artDetail(id) {
+  const d = await api('artwork/' + encodeURIComponent(id));
+  const img = (u, label) => u ? `<figure style="margin:0"><img class="art" src="${safeUrl(u)}" alt="${label}" loading="lazy"><figcaption class="muted" style="margin-top:6px">${label}</figcaption></figure>` : '';
+  view.innerHTML = `<div><a href="#/artwork">Artwork feed</a> <span class="muted">/ ${esc(d.id)}</span></div>` +
+  head('Artwork · released automatically, no QC gate', esc(d.name) + ' ' + pill(d.status, d.detail),
+    d.status === 'succeeded' ? '<button class="btn bad" id="down">Take down</button>' : '') + `
+  <div class="card"><div class="muted">${esc(d.title)} · ${esc(d.user)} · submitted ${when(d.created_at)} · took ${dur(d.seconds)} · ${d.attempts} attempt(s)</div>${d.detail ? `<div class="err" style="margin-top:10px">${esc(d.detail)}</div>` : ''}</div>
+  <div class="cards">${img(d.image, 'Selfie')}${img(d.result, 'Result')}${img(d.landscape, 'Landscape')}${img(d.character, 'Character')}${img(d.template, 'Original artwork')}</div>
+  <div class="card"><h2 style="margin-bottom:8px">Audit trail</h2>${d.audit.map((a) => `<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="muted mono" style="width:120px">${when(a.at)}</span><span>${esc(a.type)}</span><span class="muted">${esc(a.by)}</span></div>`).join('') || '<p class="muted">Nothing yet.</p>'}</div>`;
+  const down = $('#down');
+  if (down) down.onclick = async () => {
+    const note = prompt('Why is this artwork being taken down? The user will see it as failed.');
+    if (note === null) return;
+    await api('artwork/' + encodeURIComponent(id) + '/takedown', { note }).catch((e) => alert(e.message));
+    artDetail(id).catch(fail);
+  };
+}
+
+// QC queue
+async function qcQueue() {
+  const d = await api('entries?kind=video&status=AWAITING_QC&limit=200');
+  const rows = [...d.rows].reverse(); // oldest first
+  view.innerHTML = head('Video only · nothing reaches the user until approved', 'QC queue', `<span class="muted">${num(d.total)} waiting</span>`) + `
+  <div class="card tblbox" style="padding:0"><table><thead><tr><th>User</th><th>Title</th><th>Waiting since</th><th>Waited</th><th></th></tr></thead>
+  <tbody>${rows.map((r) => `<tr class="click" data-go="#/video/${esc(r.id)}"><td><div class="row" style="flex-wrap:nowrap">${r.image ? `<img class="av" src="${safeUrl(r.image)}" alt="">` : '<span class="av ph"></span>'}<strong style="color:var(--ink)">${esc(r.name)}</strong></div></td><td>${esc(r.title)}</td><td>${when(r.updated_at)}</td><td>${dur((Date.now() - new Date(r.updated_at)) / 1000)}</td><td><a class="btn pri" href="#/video/${esc(r.id)}">Review</a></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Queue is empty.</td></tr>'}</tbody></table></div>`;
+  view.querySelectorAll('[data-go]').forEach((tr) => tr.onclick = (e) => { if (e.target.tagName !== 'A') location.hash = tr.dataset.go; });
+}
+
+// Artwork feed
+const feed = { status: '' };
+async function artworkFeed() {
+  const p = new URLSearchParams({ kind: 'artwork', limit: 60 });
+  if (feed.status) p.set('status', feed.status);
+  const d = await api('entries?' + p);
+  const f = [['', 'All'], ['succeeded', 'Released'], ['running', 'Generating'], ['failed', 'Failed or taken down']].map(([s, l]) => `<button class="btn ${s === feed.status ? 'sel' : ''}" data-st="${s}">${l}</button>`).join('');
+  view.innerHTML = head('Runtime · released automatically, no human gate', 'Artwork feed', '<span class="pill p-g">Live · refreshes every 10 s</span>') + `
+  <div class="row">${f}</div>
+  <section class="cards">${d.rows.map((r) => `<article class="card" style="padding:0;cursor:pointer" data-go="#/art/${esc(r.id)}">
+    ${r.result ? `<img class="art" src="${safeUrl(r.result)}" alt="" loading="lazy" style="border-radius:12px 12px 0 0">` : `<div class="art ph" style="border-radius:12px 12px 0 0">${r.status === 'failed' ? 'No result' : 'Generating'}</div>`}
+    <div style="padding:12px;display:flex;flex-direction:column;gap:6px"><div class="row between"><strong style="color:var(--ink)">${esc(r.name)}</strong>${pill(r.status, r.detail)}</div>
+    <div class="muted" style="font-size:12px">${esc(r.title)} · ${when(r.created_at)}${r.seconds ? ' · ' + dur(r.seconds) : ''}</div></div></article>`).join('') || '<p class="muted">No artwork yet.</p>'}</section>`;
+  view.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { feed.status = b.dataset.st; artworkFeed().catch(fail); });
+  view.querySelectorAll('[data-go]').forEach((c) => c.onclick = () => location.hash = c.dataset.go);
+  timer = setTimeout(() => artworkFeed().catch(fail), 10000);
+}
+
+// Pipeline
+async function pipelineView() {
+  const d = await api('pipeline');
+  const kv = (obj) => Object.entries(obj || {}).map(([k, v]) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${STATUS[k] ? pill(k) : esc(k)}</span><strong style="color:var(--ink)">${num(v)}</strong></div>`).join('') || '<p class="muted">Nothing active.</p>';
+  view.innerHTML = head('How data moves right now', 'Pipeline', `<span class="pill p-n">Render provider: ${esc(d.provider)}</span><span class="pill ${d.qc_gate ? 'p-g' : 'p-a'}">Video QC gate ${d.qc_gate ? 'on' : 'off'}</span>`) + `
+  ${d.stuck.length ? `<div class="err"><strong>${d.stuck.length} job(s) running for more than 30 min:</strong> ${d.stuck.map((s) => `<a href="#/video/${esc(s.id)}">${esc(s.id.slice(0, 8))}</a> (${esc(s.step)}, since ${when(s.since)})`).join(', ')}</div>` : ''}
+  <section class="grid">
+    <div class="card"><h2>Video orders now</h2>${kv(d.orders_now)}</div>
+    <div class="card"><h2>Artwork now</h2>${kv(d.artwork_now)}</div>
+    <div class="card"><h2>Render jobs</h2>${d.jobs.map((j) => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${esc(j.kind)} ${pill(j.status)}</span><strong style="color:var(--ink)">${num(j.count)}</strong></div>`).join('') || '<p class="muted">No jobs queued or running.</p>'}</div>
+    <div class="card"><h2>Worker queues</h2>${d.queues ? kv(d.queues) : '<p class="muted">Queue depth unavailable.</p>'}</div>
+  </section>
+  <div class="card tblbox" style="padding:0"><div style="padding:16px 16px 4px"><h2>Errors in the last 24 hours</h2></div><table><thead><tr><th>When</th><th>Entry</th><th>Step</th><th>Error</th><th>Tries</th></tr></thead>
+  <tbody>${d.errors.map((e) => `<tr><td>${when(e.at)}</td><td><a class="mono" href="#/${e.kind === 'video' ? 'video' : 'art'}/${esc(e.id)}">${esc(e.id.slice(0, 8))}</a></td><td>${esc(e.step)}</td><td class="mono" style="color:var(--rfg)">${esc(e.error)}</td><td>${e.tries}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No errors.</td></tr>'}</tbody></table></div>`;
+}
+
+async function refreshQcCount() {
+  try {
+    const d = await api('entries?kind=video&status=AWAITING_QC&limit=1');
+    const el = $('#qcCount'); el.textContent = d.total; el.hidden = !d.total;
+  } catch (e) {}
+}
+
+function route() {
+  clearTimeout(timer);
+  const [, name = 'overview', id] = location.hash.split('/');
+  const top = { video: 'entries', art: 'artwork' }[name] || name;
+  document.querySelectorAll('nav .links a').forEach((a) => a.classList.toggle('on', a.dataset.r === top));
+  view.innerHTML = '<p class="muted">Loading…</p>';
+  const run = { overview: () => overview(), entries, qc: qcQueue, artwork: artworkFeed, pipeline: pipelineView, video: () => videoDetail(id), art: () => artDetail(id) }[name] || overview;
+  run().catch(fail);
+}
+window.onhashchange = route;
+route();
+refreshQcCount();
+setInterval(refreshQcCount, 30000);
+</script>
+</body>
+</html>

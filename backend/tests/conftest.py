@@ -9,6 +9,8 @@ os.environ["STARME_OPERATOR_API_KEY"] = "test-operator-key"
 os.environ["STARME_TOKEN_HASH_PEPPER"] = "test-token-pepper"
 os.environ["STARME_DELIVERY_SIGNING_KEY"] = "test-delivery-key"
 os.environ["STARME_QUEUE_BACKEND"] = "inline"
+# Existing flows expect READY on render; tests/test_ops.py switches the gate on.
+os.environ["STARME_VIDEO_QC_GATE"] = "false"
 
 from starme import models  # noqa: E402, F401
 from starme.database import Base, engine  # noqa: E402
