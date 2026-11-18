@@ -58,6 +58,9 @@ def episode_key(order: Order, number: int) -> str:
     return f"synthetic/orders/{order.id}/episode-{number}.mp4"
 
 
+REAL_PROVIDERS = {"seedance", "higgsfield"}
+
+
 def _seedance_order_inputs(
     order: Order, settings: Settings
 ) -> tuple[SyntheticShell, Path, list[Shot], str]:
@@ -67,21 +70,29 @@ def _seedance_order_inputs(
     route BytePlus accepts for real faces) - either on the order itself or via
     the operator-maintained tester mapping - and the shell must carry its
     content-owner role metadata plus on-disk masters and shot manifest.
+    Under Higgsfield the face reference is the portrait file instead.
     """
     if not settings.allow_sensitive_processing:
         raise RuntimeError(
             "STARME_ALLOW_SENSITIVE_PROCESSING must be enabled before real face rendering"
         )
-    face_uri = order.face_asset_id
-    if not face_uri.startswith("asset://"):
+    if settings.render_provider == "higgsfield":
+        # Higgsfield takes the portrait file itself; no provider registration.
+        portrait = _reference_portrait(order, settings)
+        if portrait is None:
+            raise RuntimeError("No portrait on file for this tester; real rendering is blocked")
+        face_uri = str(portrait)
+    else:
+        face_uri = order.face_asset_id
+    if settings.render_provider == "seedance" and not face_uri.startswith("asset://"):
         face_uri = settings.tester_face_assets.get(order.tester_reference, "")
-    if not face_uri.startswith("asset://"):
+    if settings.render_provider == "seedance" and not face_uri.startswith("asset://"):
         raise RuntimeError(
             "No registered asset:// face reference for this order or tester; "
             "real rendering is blocked"
         )
     if not settings.media_dir:
-        raise RuntimeError("STARME_MEDIA_DIR is required for the seedance render provider")
+        raise RuntimeError("STARME_MEDIA_DIR is required for real rendering")
     shell = next((item for item in SYNTHETIC_SHELLS if item.id == order.shell_id), None)
     if shell is None or not shell.role_character or not shell.role_video_desc:
         raise RuntimeError("Shell is missing content-owner role metadata for rendering")
@@ -149,6 +160,8 @@ def register_face_asset(
     """
     if len(raw) > MAX_PORTRAIT_BYTES:
         raise ValueError("That photo is too large. Please choose one under 15 MB.")
+    if settings.render_provider == "higgsfield":
+        return _store_portrait_only(raw, tester_reference, settings)
     storage = LinodeObjectStorage.from_settings(settings)
     if storage is None:
         raise RuntimeError("Object storage is not configured, so a face cannot be registered")
@@ -205,6 +218,30 @@ def register_face_asset(
     return asset.uri
 
 
+def _store_portrait_only(raw: bytes, tester_reference: str, settings: Settings) -> str:
+    """The Higgsfield path of register_face_asset: normalize, frame, prove a
+    face is there, then promote it. Same staging rule as the BytePlus path:
+    a failed retry never replaces a working portrait."""
+    portrait = Path(settings.faces_dir) / f"{tester_reference}.png"
+    staged = portrait.with_name(f"{tester_reference}.incoming.png")
+    _normalized_portrait(raw, staged)
+    try:
+        if settings.face_qa_enabled:
+            crop_to_face(staged, staged)
+            try:
+                reference_embedding(staged)
+            except ValueError as exc:
+                raise ValueError(
+                    "We could not find a clear face in that photo. Use a front-facing "
+                    "close-up in even light."
+                ) from exc
+    except BaseException:
+        staged.unlink(missing_ok=True)
+        raise
+    staged.replace(portrait)
+    return f"portrait://{tester_reference}"
+
+
 def _lead_portrait(shell: SyntheticShell, media_root: Path) -> Path | None:
     """The still of the ORIGINAL lead, beside the shell's own media.
 
@@ -246,7 +283,7 @@ def complete_first_look(session: Session, job_id: str) -> None:
     order = job.order
     order.status = OrderState.FIRST_LOOK_RENDERING
     session.flush()
-    if settings.render_provider == "seedance":
+    if settings.render_provider in REAL_PROVIDERS:
         try:
             shell, media_root, manifest, face_uri = _seedance_order_inputs(order, settings)
             shots = shots_for_episode(manifest, 1, shell.role_character)
@@ -293,7 +330,7 @@ def complete_full_render(session: Session, job_id: str) -> None:
     order = job.order
     order.status = OrderState.FULL_RENDERING
     session.flush()
-    if settings.render_provider == "seedance":
+    if settings.render_provider in REAL_PROVIDERS:
         try:
             shell, media_root, manifest, face_uri = _seedance_order_inputs(order, settings)
             work_root = Path(settings.render_work_dir)

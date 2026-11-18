@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6379/0"
     queue_backend: Literal["inline", "rq"] = "inline"
     storage_backend: Literal["disabled", "memory", "s3"] = "disabled"
-    render_provider: Literal["disabled", "stub", "cineiq", "seedance"] = "disabled"
+    render_provider: Literal["disabled", "stub", "cineiq", "seedance", "higgsfield"] = "disabled"
     signed_url_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     download_url_ttl_seconds: int = Field(default=1800, ge=60, le=3600)
     allow_sensitive_processing: bool = False
@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # it, borders and all (measured 26 August). 2.0's mask follows the head and
     # its fill reconstructs it.
     byteplus_masked_model: str = "dreamina-seedance-2-0-260128"
+    # Higgsfield Genjutsu object swap (STARME_RENDER_PROVIDER=higgsfield), the
+    # primary video provider from 18/11/2026; "seedance" stays as the switch
+    # back. Key is "KEY_ID:SECRET". 480p or 720p only, never 1080p (Amol).
+    higgsfield_api_key: SecretStr | None = None
+    higgsfield_resolution: Literal["480p", "720p"] = "480p"
+    higgsfield_timeout_seconds: int = Field(default=1800, ge=60, le=7200)
     #: Seedream, the artwork-swap fallback for when gpt-image-2 cannot serve.
     #:
     #: The version is load-bearing and NOT interchangeable. Measured 5 Oct

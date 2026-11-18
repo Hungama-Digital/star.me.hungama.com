@@ -415,7 +415,7 @@ def _swap_batch_once(
     # duration and invents footage for any second the input does not cover. Pad
     # to a whole second, ask for exactly that, trim the hold back off. The
     # direct path runs on 2.5, which infers duration, so it sends the cut as-is.
-    masked = settings.render_method == "masked"
+    masked = settings.render_method == "masked" and settings.render_provider != "higgsfield"
     provider_input = batch_input
     asked: int | None = None
     if masked:

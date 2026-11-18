@@ -349,6 +349,10 @@ RenderFn = Callable[[dict[str, Any], Settings], dict[str, Any]]
 
 def render_fn_for(settings: Settings) -> RenderFn:
     """The render callable this environment is configured to use."""
+    if settings.render_provider == "higgsfield":
+        from starme.higgsfield import execute_higgsfield_render
+
+        return execute_higgsfield_render
     if settings.render_method == "masked":
         return execute_masked_render
     return execute_seedance_render
