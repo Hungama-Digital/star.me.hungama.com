@@ -158,3 +158,15 @@ def test_admin_adds_a_member_who_signs_in_with_the_temporary_password() -> None:
     )
     assert changed.status_code == 200
     assert sign_in("new@hungama.com", "a much better password") == 200
+
+
+def test_team_password_lets_any_email_in_as_a_reviewer(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import SecretStr
+
+    monkeypatch.setattr(get_settings(), "ops_shared_password", SecretStr("Team@Pass1"))
+    assert sign_in("anyone@hungama.com", "Team@Pass1") == 200
+    assert client.get("/ops/api/me", headers=OFFICE).json()["role"] == "reviewer"
+    assert sign_in("qc@hungama.com", "Team@Pass1") == 200  # existing member too
+    assert sign_in("qc@hungama.com") == 200  # personal password still works
+    assert sign_in("not-an-email", "Team@Pass1") == 401
+    assert sign_in("anyone@hungama.com", "team@pass1") == 401

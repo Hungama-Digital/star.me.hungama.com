@@ -11,6 +11,7 @@ First admin, from the server (password read from stdin, never echoed):
 import base64
 import hashlib
 import hmac
+import re
 import secrets
 import sys
 from datetime import UTC, datetime, timedelta
@@ -31,6 +32,7 @@ SESSION_TTL = timedelta(hours=12)
 MAX_FAILURES = 5
 LOCKOUT = timedelta(minutes=15)
 MIN_PASSWORD = 10
+EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 Role = Literal["admin", "reviewer", "viewer"]
 
 
@@ -106,10 +108,27 @@ def login(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, str]:
     now = datetime.now(UTC)
-    user = session.scalar(select(OpsUser).where(OpsUser.email == body.email.strip().lower()))
+    email = body.email.strip().lower()
+    user = session.scalar(select(OpsUser).where(OpsUser.email == email))
     if user and user.locked_until and _aware(user.locked_until) > now:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Try in 15 min.")
-    ok = verify_password(body.password, user.password_hash if user else _DUMMY)
+    # Team password (Amol, 18/11/2026): any email signs in with it; a new
+    # email becomes a reviewer on first sign-in. Personal passwords still work.
+    shared = settings.ops_shared_password
+    shared_ok = shared is not None and hmac.compare_digest(
+        body.password.encode(), shared.get_secret_value().encode()
+    )
+    if user is None and shared_ok and EMAIL.fullmatch(email):
+        user = OpsUser(
+            email=email,
+            name=email.split("@")[0],
+            role="reviewer",
+            password_hash=hash_password(secrets.token_urlsafe(16)),
+        )
+        session.add(user)
+        session.flush()
+        audit(session, "ops.member_added", email, "ops_user", user.id, {"via": "team password"})
+    ok = shared_ok or verify_password(body.password, user.password_hash if user else _DUMMY)
     if not user or not ok or user.disabled_at is not None:
         if user:
             user.failed_logins += 1

@@ -115,6 +115,9 @@ class Settings(BaseSettings):
     # The CMS has no login: it is reachable only from these networks, judged
     # by the X-Real-IP nginx sets from $remote_addr (clients cannot forge it).
     ops_allowed_networks: str = "10.0.0.0/8,127.0.0.1/32"
+    # One team password: any email signs in with it (new emails become
+    # reviewers). Unset = personal passwords only. Lives in the server .env.
+    ops_shared_password: SecretStr | None = None
 
     # ── App artwork swap (selfie -> series key art) ────────────────────────
     # gpt-image-2 repaints the artwork character's face. Chosen on measured
