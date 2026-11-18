@@ -2,11 +2,36 @@ import pytest
 from fastapi.testclient import TestClient
 
 from starme.config import get_settings
+from starme.database import SessionLocal
 from starme.main import app
+from starme.models import OpsUser
+from starme.ops_auth import hash_password
 from tests.test_workflow import authenticated_headers, create_consent, create_order
 
 client = TestClient(app)
 OFFICE = {"X-Real-IP": "10.0.0.1"}
+PASSWORD = "correct horse battery"
+
+
+def member(email: str, role: str) -> None:
+    with SessionLocal() as session:
+        session.add(
+            OpsUser(email=email, name=email, role=role, password_hash=hash_password(PASSWORD))
+        )
+        session.commit()
+
+
+def sign_in(email: str, password: str = PASSWORD) -> int:
+    client.cookies.clear()
+    return client.post(
+        "/ops/api/login", headers=OFFICE, json={"email": email, "password": password}
+    ).status_code
+
+
+@pytest.fixture(autouse=True)
+def reviewer() -> None:
+    member("qc@hungama.com", "reviewer")
+    assert sign_in("qc@hungama.com") == 200
 
 
 @pytest.fixture
@@ -84,3 +109,52 @@ def test_redo_renders_again_and_reject_fails_the_order() -> None:
     ).json()
     assert rejected["status"] == "FAILED"
     assert client.get(f"/v1/orders/{order_id}", headers=headers).json()["status"] == "FAILED"
+
+
+def test_data_needs_a_signed_in_member() -> None:
+    client.post("/ops/api/logout", headers=OFFICE)
+    assert client.get("/ops", headers=OFFICE).status_code == 200  # the sign-in page itself
+    assert client.get("/ops/api/entries", headers=OFFICE).status_code == 401
+    assert client.get("/ops/api/me", headers=OFFICE).status_code == 401
+    assert sign_in("qc@hungama.com", "wrong password") == 401
+    assert sign_in("nobody@hungama.com") == 401
+    assert sign_in("qc@hungama.com") == 200
+    assert client.get("/ops/api/me", headers=OFFICE).json()["role"] == "reviewer"
+
+
+def test_five_wrong_passwords_lock_the_account() -> None:
+    for _ in range(5):
+        assert sign_in("qc@hungama.com", "wrong password") == 401
+    assert sign_in("qc@hungama.com") == 429
+
+
+@pytest.mark.usefixtures("qc_gate")
+def test_viewer_can_look_but_not_decide() -> None:
+    order_id = rendered_order(authenticated_headers())
+    member("view@hungama.com", "viewer")
+    assert sign_in("view@hungama.com") == 200
+    assert client.get(f"/ops/api/video/{order_id}", headers=OFFICE).status_code == 200
+    decision = client.post(
+        f"/ops/api/video/{order_id}/qc", headers=OFFICE, json={"decision": "approve"}
+    )
+    assert decision.status_code == 403
+    assert client.get("/ops/api/team", headers=OFFICE).status_code == 403
+
+
+def test_admin_adds_a_member_who_signs_in_with_the_temporary_password() -> None:
+    member("admin@hungama.com", "admin")
+    assert sign_in("admin@hungama.com") == 200
+    added = client.post(
+        "/ops/api/team",
+        headers=OFFICE,
+        json={"email": "New@Hungama.com", "name": "New", "role": "viewer"},
+    ).json()
+    assert added["email"] == "new@hungama.com"
+    assert sign_in("new@hungama.com", added["temporary_password"]) == 200
+    changed = client.post(
+        "/ops/api/password",
+        headers=OFFICE,
+        json={"current": added["temporary_password"], "new": "a much better password"},
+    )
+    assert changed.status_code == 200
+    assert sign_in("new@hungama.com", "a much better password") == 200

@@ -1,8 +1,9 @@
 """Ops CMS for the backend team: entries, video QC, artwork feed, pipeline.
 
-No login by decision (Amol, 18/11/2026): every route answers only to the
-office network / VPN, judged by the X-Real-IP nginx sets from $remote_addr.
-Anything else gets a 404, so the CMS is invisible from the internet.
+Two locks. Every route answers only to the office network / VPN, judged by
+the X-Real-IP nginx sets from $remote_addr (anything else gets a 404, so the
+CMS is invisible from the internet). Inside that, every /ops/api route but
+login needs a signed-in team member (ops_auth).
 """
 
 import ipaddress
@@ -23,7 +24,17 @@ from starme.config import Settings, get_settings
 from starme.database import get_session
 from starme.delivery import signed_url
 from starme.jobs import enqueue_full_render
-from starme.models import AppSelfie, ArtworkSwap, AuditEvent, ConsentRecord, Order, RenderJob
+from starme.models import (
+    AppSelfie,
+    ArtworkSwap,
+    AuditEvent,
+    ConsentRecord,
+    OpsUser,
+    Order,
+    RenderJob,
+)
+from starme.ops_auth import current_user, require
+from starme.ops_auth import router as auth_router
 from starme.schemas import JobState, OrderState
 from starme.services import audit
 
@@ -52,9 +63,11 @@ def ops_guard(request: Request, settings: Annotated[Settings, Depends(get_settin
 
 
 router = APIRouter(prefix="/ops", dependencies=[Depends(ops_guard)], include_in_schema=False)
+# Everything with data needs a signed-in member; the page itself and login do not.
+api = APIRouter(dependencies=[Depends(current_user)])
 SessionDep = Annotated[Session, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-CallerDep = Annotated[str, Depends(ops_guard)]
+ReviewerDep = Annotated[OpsUser, require("admin", "reviewer")]
 
 
 def _tally(session: Session, stmt: Any) -> dict[str, int]:
@@ -122,7 +135,7 @@ def page() -> FileResponse:
     return FileResponse(PAGE, headers={"Cache-Control": "no-store"})
 
 
-@router.get("/api/overview")
+@api.get("/api/overview")
 def overview(session: SessionDep, days: int = Query(1, ge=1, le=90)) -> dict[str, object]:
     since = datetime.now(UTC) - timedelta(days=days)
 
@@ -181,7 +194,7 @@ def overview(session: SessionDep, days: int = Query(1, ge=1, le=90)) -> dict[str
     }
 
 
-@router.get("/api/entries")
+@api.get("/api/entries")
 def entries(
     session: SessionDep,
     kind: Literal["all", "video", "artwork"] = "all",
@@ -266,7 +279,7 @@ def _audit_trail(session: Session, ref: str) -> list[dict[str, object]]:
     ]
 
 
-@router.get("/api/video/{order_id}")
+@api.get("/api/video/{order_id}")
 def video(order_id: str, session: SessionDep, settings: SettingsDep) -> dict[str, object]:
     order = _order(session, order_id)
     ttl = settings.signed_url_ttl_seconds
@@ -307,7 +320,7 @@ def video(order_id: str, session: SessionDep, settings: SettingsDep) -> dict[str
     }
 
 
-@router.get("/api/artwork/{swap_id}")
+@api.get("/api/artwork/{swap_id}")
 def artwork(swap_id: str, session: SessionDep) -> dict[str, object]:
     row = session.scalar(
         select(ArtworkSwap)
@@ -331,14 +344,14 @@ class QcDecision(BaseModel):
     note: str = Field(default="", max_length=2000)
 
 
-@router.post("/api/video/{order_id}/qc")
+@api.post("/api/video/{order_id}/qc")
 def decide(
-    order_id: str, body: QcDecision, session: SessionDep, settings: SettingsDep, caller: CallerDep
+    order_id: str, body: QcDecision, session: SessionDep, settings: SettingsDep, user: ReviewerDep
 ) -> dict[str, object]:
     order = _order(session, order_id)
     if order.status != OrderState.AWAITING_QC:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Order is {order.status}, not awaiting QC")
-    who = f"ops:{caller}"
+    who = user.email
     payload: dict[str, object] | None = {"note": body.note} if body.note else None
     if body.decision == "approve":
         order.status = OrderState.READY
@@ -365,9 +378,9 @@ class Takedown(BaseModel):
     note: str = Field(default="", max_length=2000)
 
 
-@router.post("/api/artwork/{swap_id}/takedown")
+@api.post("/api/artwork/{swap_id}/takedown")
 def takedown(
-    swap_id: str, body: Takedown, session: SessionDep, caller: CallerDep
+    swap_id: str, body: Takedown, session: SessionDep, user: ReviewerDep
 ) -> dict[str, object]:
     row = session.get(ArtworkSwap, swap_id)
     if row is None:
@@ -380,7 +393,7 @@ def takedown(
     audit(
         session,
         "artwork.taken_down",
-        f"ops:{caller}",
+        user.email,
         "artwork",
         row.id,
         {"note": body.note} if body.note else None,
@@ -402,7 +415,7 @@ def _queue_depths(settings: Settings) -> dict[str, int] | None:
         return None
 
 
-@router.get("/api/pipeline")
+@api.get("/api/pipeline")
 def pipeline(session: SessionDep, settings: SettingsDep) -> dict[str, object]:
     now = datetime.now(UTC)
     day = now - timedelta(days=1)
@@ -472,3 +485,7 @@ def pipeline(session: SessionDep, settings: SettingsDep) -> dict[str, object]:
         "stuck": [{"id": j.order_id, "step": j.kind, "since": _iso(j.started_at)} for j in stuck],
         "errors": errors[:30],
     }
+
+
+router.include_router(auth_router)
+router.include_router(api)
